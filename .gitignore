@@ -1,0 +1,12 @@
+# Reference clone of MopedMap (for architecture pattern)
+MopedMap/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Local build output
+*.html.tmp
