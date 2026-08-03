@@ -20,7 +20,12 @@ header .meta{color:var(--muted);font-size:12px}
 .panel{display:none}
 .panel.active{display:flex;flex-direction:column;flex:1;min-height:0}
 #tab-forecast.active{overflow:hidden}
-#tab-compare.active,#tab-accuracy.active{overflow:auto}
+#tab-compare.active,#tab-accuracy.active,#tab-help.active{overflow:auto}
+.help{line-height:1.55;font-size:13px}
+.help h2{font-size:16px;margin:0 0 6px}
+.help p{margin-bottom:8px}
+.help ul{margin:0 0 4px 18px}
+.help li{margin-bottom:5px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px}
 #tab-forecast .card{flex:none}
 #tab-forecast .card:last-child{flex:1;min-height:0;display:flex;flex-direction:column;margin-bottom:0}
@@ -58,6 +63,7 @@ a{color:var(--accent)}
   <button class="active" data-tab="forecast">Прогноз</button>
   <button data-tab="compare">Сравнение</button>
   <button data-tab="accuracy">Точность</button>
+  <button data-tab="help">Справка</button>
 </div>
 <div id="tab-forecast" class="panel active">
   <div class="card"><div class="conds" id="conditions"></div></div>
@@ -77,6 +83,38 @@ a{color:var(--accent)}
   <div class="card"><canvas id="maeChart" height="90"></canvas></div>
   <div class="card"><div class="tblwrap"><table id="mae7"></table></div></div>
   <div class="card"><div class="tblwrap"><table id="mae30"></table></div></div>
+</div>
+<div id="tab-help" class="panel">
+  <div class="card help">
+    <h2>Прогноз</h2>
+    <p>Вкладка открывается по умолчанию: здесь текущая погода и прогноз на 7 дней вперёд по всем моделям.</p>
+    <ul>
+      <li><b>Карточки текущей погоды</b> — температура, ощущается, ветер, порывы, осадки, вероятность осадков, давление (мм рт. ст.), облачность; ниже — максимум/минимум и осадки за сегодня.</li>
+      <li><b>Кнопки над графиком</b> (Температура, Ветер, Осадки, Влажность, Давление, Облачность) — переключают, что показывает график.</li>
+      <li><b>Каждая цветная линия — одна модель.</b> Толстая золотая линия — консенсус (согласованный прогноз всех моделей), синяя пунктирная — среднее.</li>
+      <li><b>График шире экрана:</b> листайте его влево-вправо, чтобы посмотреть все 7 дней (подписи на оси каждые 6 часов: 00, 06, 12, 18).</li>
+      <li><b>Вертикальная линия</b> — текущий момент времени.</li>
+      <li><b>Чекбоксы под графиком</b> — снимайте галочку с модели, чтобы убрать её с графика и не мешала смотреть остальные.</li>
+      <li><b>Наведите курсор на график</b> — появится табличка со всеми моделями в этот час, отсортированными от максимального значения к минимальному.</li>
+    </ul>
+    <h2>Сравнение</h2>
+    <p>Почасовая таблица прогноза на 7 дней по всем моделям. Сверху — выбор величины.</p>
+    <ul>
+      <li><b>Первые две колонки</b> — «Взвеш.» (консенсус) и «Среднее», дальше — модели.</li>
+      <li><b>Жирное число</b> — максимум или минимум среди моделей в этот час.</li>
+      <li><b>Красное число</b> — модель дала выше консенсуса, <b>синее</b> — ниже.</li>
+      <li><b>Прочерк «—»</b> — у модели нет данных на этот час (например, у ARPEGE данные только на первые дни).</li>
+      <li>Все колонки видны на одном экране; вниз прокручивайте, чтобы смотреть часы по порядку.</li>
+    </ul>
+    <h2>Точность</h2>
+    <p>Показывает, насколько точно каждая модель прогнозировала в прошлом: её прогнозы сравниваются с фактической погодой.</p>
+    <ul>
+      <li><b>Столбчатый график</b> — средняя ошибка каждой модели за последние 7 дней.</li>
+      <li><b>Таблицы «7 дней» и «30 дней»</b> — ошибка по величинам: Температура (°C), Осадки (мм), Ветер (м/с) и общий столбец «Средн.».</li>
+      <li><b>Чем меньше число, тем точнее модель.</b> Это MAE — средняя абсолютная ошибка: например, 1,5 у температуры означает «в среднем модель ошиблась на 1,5 °C». 0 — безошибочный прогноз.</li>
+      <li><b>Модели нет в таблице</b> — по ней пока недостаточно данных для проверки (например, Google WeatherNext).</li>
+    </ul>
+  </div>
 </div>
 <div class="attrib">Погодные модели: ECMWF, NOAA, DWD, Météo-France, UK Met Office, Environment Canada, JMA, KMA, BOM, CMA, Google.
   <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (CC BY 4.0)</div>
@@ -110,7 +148,7 @@ const hourLabel=(v,i)=>fmtTime(D.time[v]);
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
-  ['forecast','compare','accuracy'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
+  ['forecast','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
 }));
 
 // variable selector
