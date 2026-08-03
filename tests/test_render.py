@@ -11,8 +11,14 @@ def _payload():
         {"temperature_2m": {"a": 0.5, "b": 0.5}}, min_sources=2
     )
     daily = {
-        "a": {"time": ["d0"], "temperature_2m_max": [5.0]},
-        "b": {"time": ["d0"], "temperature_2m_max": [7.0]},
+        "a": {"time": ["d0"], "temperature_2m_max": [5.0],
+              "precipitation_probability_max": [10.0],
+              "sunrise": ["2026-08-03T04:19:00"],
+              "sunset": ["2026-08-03T20:33:00"]},
+        "b": {"time": ["d0"], "temperature_2m_max": [7.0],
+              "precipitation_probability_max": [30.0],
+              "sunrise": ["2026-08-03T04:20:00"],
+              "sunset": ["2026-08-03T20:34:00"]},
     }
     verification = {
         "7d": {"a": {"temperature_2m": 1.0}, "b": {"temperature_2m": 2.0}},
@@ -67,6 +73,37 @@ def test_moscow_now_iso_has_utc3_offset():
 
     value = meteo.moscow_now_iso()
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00", value)
+
+
+def test_daily_contains_new_variables():
+    p = _payload()
+    assert p["daily"]["precipitation_probability_max"] == [20.0]
+    assert p["daily"]["sunrise"] == ["2026-08-03T04:19:00"]
+    assert p["daily"]["sunset"] == ["2026-08-03T20:33:00"]
+
+
+def test_daily_string_fields_take_first_model():
+    p = _payload()
+    # строки берутся из первой модели с данными, а не усредняются
+    assert p["daily"]["sunrise"][0] == "2026-08-03T04:19:00"
+    assert isinstance(p["daily"]["sunrise"][0], str)
+
+
+def test_daily_time_passthrough():
+    hourly = {"a": {"time": ["h0"], "data": {"temperature_2m": [1.0]}}}
+    consensus = {
+        "time": ["h0"],
+        "weighted": {"temperature_2m": [1.0]},
+        "mean": {"temperature_2m": [1.0]},
+        "median": {"temperature_2m": [1.0]},
+    }
+    daily = {"a": {"time": ["2026-08-03", "2026-08-04"], "temperature_2m_max": [5.0, 6.0]}}
+    p = meteo.build_payload(
+        ["a"], {"a": "A"}, hourly, daily, consensus, {},
+        "2026-08-03T12:00:00+03:00",
+    )
+    assert p["daily_time"] == ["2026-08-03", "2026-08-04"]
+    assert p["daily"]["temperature_2m_max"] == [5.0, 6.0]
 
 
 def test_payload_hides_models_without_data():

@@ -18,6 +18,10 @@ def test_model_endpoints_valid():
         assert endpoint in ("forecast", "ensemble")
 
 
+def test_forecast_days_is_ten():
+    assert meteo.FORECAST_DAYS == 10
+
+
 def test_variables_nonempty():
     assert meteo.HOURLY_VARIABLES
     assert meteo.DAILY_VARIABLES

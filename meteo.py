@@ -3,7 +3,7 @@
 LAT = 57.63
 LON = 39.87
 TIMEZONE = "Europe/Moscow"
-FORECAST_DAYS = 7
+FORECAST_DAYS = 10
 
 # (model_code, display_name, endpoint) — endpoint: "forecast" or "ensemble"
 FORECAST_MODELS = [
@@ -33,6 +33,7 @@ HOURLY_VARIABLES = [
 DAILY_VARIABLES = [
     "temperature_2m_max", "temperature_2m_min", "precipitation_sum",
     "wind_speed_10m_max", "sunshine_duration",
+    "precipitation_probability_max", "sunrise", "sunset",
 ]
 
 VERIFICATION_VARIABLES = [
@@ -316,15 +317,19 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
                   consensus, verification, generated_at):
     codes = _models_with_data(model_codes, hourly_by_model) or list(model_codes)
     dvars = list(DAILY_VARIABLES)
+    TIME_DAILY = {"sunrise", "sunset"}
     daily_consensus = {}
     for v in dvars:
         cols = [m[v] for m in daily_by_model.values() if m.get(v)]
         if not cols:
             continue
-        length = max(len(c) for c in cols)
-        daily_consensus[v] = [
-            mean([c[i] for c in cols if i < len(c)]) for i in range(length)
-        ]
+        if v in TIME_DAILY:
+            daily_consensus[v] = list(cols[0])
+        else:
+            length = max(len(c) for c in cols)
+            daily_consensus[v] = [
+                mean([c[i] for c in cols if i < len(c)]) for i in range(length)
+            ]
     daily_time = next(
         (m.get("time") for m in daily_by_model.values() if m.get("time")),
         None,
