@@ -49,6 +49,7 @@ th{color:var(--muted);font-weight:500}
 td.plus{color:#d32f2f}
 td.minus{color:#1976d2}
 td.ext{font-weight:700}
+.tstab{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:8px}
 tr.now td{border-top:2px solid #1f2637;border-bottom:2px solid #1f2637;background:#eef1f8}
 tr.now td:first-child{border-left:2px solid #1f2637}
 tr.now td:last-child{border-right:2px solid #1f2637}
@@ -83,9 +84,9 @@ a{color:var(--accent)}
   </div>
 </div>
 <div id="tab-accuracy" class="panel">
-  <div class="card"><canvas id="maeChart" height="90"></canvas></div>
-  <div class="card"><div class="tblwrap"><table id="mae7"></table></div></div>
-  <div class="card"><div class="tblwrap"><table id="mae30"></table></div></div>
+  <div class="card"><h3 class="tstab">Средняя ошибка моделей за 7 дней</h3><canvas id="maeChart" height="90"></canvas></div>
+  <div class="card"><h3 class="tstab">Точность за 7 дней</h3><div class="tblwrap"><table id="mae7"></table></div></div>
+  <div class="card"><h3 class="tstab">Точность за 30 дней</h3><div class="tblwrap"><table id="mae30"></table></div></div>
 </div>
 <div id="tab-help" class="panel">
   <div class="card help">
@@ -115,6 +116,7 @@ a{color:var(--accent)}
       <li><b>Столбчатый график</b> — средняя ошибка каждой модели за последние 7 дней.</li>
       <li><b>Таблицы «7 дней» и «30 дней»</b> — ошибка по величинам: Температура (°C), Осадки (мм), Ветер (м/с) и общий столбец «Средн.».</li>
       <li><b>Чем меньше число, тем точнее модель.</b> Это MAE — средняя абсолютная ошибка: например, 1,5 у температуры означает «в среднем модель ошиблась на 1,5 °C». 0 — безошибочный прогноз.</li>
+      <li><b>Жирное значение в столбце</b> — самая точная модель по этой величине (минимальная ошибка).</li>
       <li><b>Модели нет в таблице</b> — по ней пока недостаточно данных для проверки (например, Google WeatherNext).</li>
     </ul>
   </div>
@@ -302,10 +304,12 @@ function buildMaeTables(){
     const ver=D.verification[days]||{};
     const el=document.getElementById(days==='7d'?'mae7':'mae30');
     const head='<tr><th>Модель</th>'+vnames.map(v=>`<th>${VAR_NAMES[v]}</th>`).join('')+'<th>Средн.</th></tr>';
-    const rows=codes.filter(c=>ver[c]).map(c=>{
-      const cells=vnames.map(v=>{const m=ver[c][v];return `<td>${m===null||m===undefined?'—':m.toFixed(2)}</td>`;});
-      const a=meanOf(ver[c],vnames);
-      return `<tr><td>${names[c]}</td>${cells.join('')}<td>${a===null?'—':a.toFixed(2)}</td></tr>`;
+    const mrows=codes.filter(c=>ver[c]);
+    const vals=mrows.map(c=>{const row=vnames.map(v=>ver[c][v]??null);row.push(meanOf(ver[c],vnames));return row;});
+    const mins=vals[0].map((_,j)=>Math.min(...vals.map(r=>typeof r[j]==='number'?r[j]:Infinity)));
+    const rows=mrows.map((c,i)=>{
+      const cells=vals[i].map((m,j)=>`<td class="${typeof m==='number'&&m===mins[j]?'ext':''}">${m===null||m===undefined?'—':m.toFixed(2)}</td>`).join('');
+      return `<tr><td>${names[c]}</td>${cells}</tr>`;
     }).join('');
     el.innerHTML=head+rows;
   });
