@@ -1429,7 +1429,7 @@ buildMaeTables();
 Run: `python -m pytest tests/test_render.py -v`
 Expected: PASS (3 tests)
 
-Note: `test_render_attribution_link` passes because the `__ATTRIBUTION__` template in the test contains `open-meteo.com` — the test template itself carries the attribution text; verify against the real `template.html` in Step 6.
+Note: `test_render_attribution_link` passes only because `render()` substitutes the `__ATTRIBUTION__` placeholder with the Open-Meteo attribution link. The test template does NOT itself contain `open-meteo.com` (this note was previously wrong). The real `template.html` hardcodes its attribution and does not use the placeholder — the substitution is a no-op there; verify against `template.html` in Step 6.
 
 - [ ] **Step 6: Run the full unit suite**
 
