@@ -280,8 +280,110 @@ def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=3
     }
 
 
-def main() -> None:
-    pass
+import json
+import os
+from datetime import datetime
+
+
+def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
+                  consensus, verification, generated_at):
+    dvars = list(DAILY_VARIABLES)
+    daily_consensus = {}
+    for v in dvars:
+        cols = [m[v] for m in daily_by_model.values() if m.get(v)]
+        if not cols:
+            continue
+        length = max(len(c) for c in cols)
+        daily_consensus[v] = [
+            mean([c[i] for c in cols if i < len(c)]) for i in range(length)
+        ]
+    daily_time = next(
+        (m.get("time") for m in daily_by_model.values() if m.get("time")),
+        None,
+    )
+    return {
+        "generated_at": generated_at,
+        "location": {"name": "Ярославль", "lat": LAT, "lon": LON},
+        "model_codes": model_codes,
+        "model_names": model_names,
+        "variables": list(HOURLY_VARIABLES),
+        "daily_variables": dvars,
+        "time": consensus["time"],
+        "weighted": consensus["weighted"],
+        "mean": consensus["mean"],
+        "median": consensus["median"],
+        "models": {
+            code: hourly_by_model[code]["data"]
+            for code in model_codes if code in hourly_by_model
+        },
+        "daily": daily_consensus,
+        "daily_time": daily_time,
+        "verification": verification,
+    }
+
+
+def render(template, payload):
+    html = template.replace(
+        "__DATA__", json.dumps(payload, ensure_ascii=False)
+    )
+    html = html.replace("__GENERATED_AT__", payload["generated_at"])
+    html = html.replace("__CITY__", payload["location"]["name"])
+    html = html.replace(
+        "__ATTRIBUTION__",
+        '<a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a>',
+    )
+    return html
+
+
+def write_index(html, path="index.html"):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+def main():
+    generated_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+    model_codes = [c for c, _n, _e in FORECAST_MODELS]
+    model_names = {c: n for c, n, _e in FORECAST_MODELS}
+    hourly_by_model = {}
+    daily_by_model = {}
+    for code, _name, endpoint in FORECAST_MODELS:
+        try:
+            resp = fetch_model(
+                code, endpoint, HOURLY_VARIABLES,
+                days=FORECAST_DAYS, timezone=TIMEZONE,
+            )
+        except Exception as exc:
+            print(f"[warn] {code}: {exc}")
+            continue
+        hourly_by_model[code] = normalize_model_response(resp, HOURLY_VARIABLES)
+        daily_by_model[code] = dict(resp.get("daily") or {})
+    if not hourly_by_model:
+        raise SystemExit("no model data available")
+    verification = {}
+    for days in (7, 30):
+        start, end = date_window(days)
+        verification[f"{days}d"] = verify_models(
+            model_codes, VERIFICATION_VARIABLES, start, end
+        )
+    weights_by_var = {
+        v: make_weights(verification["7d"], v)
+        for v in VERIFICATION_VARIABLES
+    }
+    consensus = assemble_consensus(
+        hourly_by_model, HOURLY_VARIABLES, weights_by_var
+    )
+    payload = build_payload(
+        model_codes, model_names, hourly_by_model, daily_by_model,
+        consensus, verification, generated_at,
+    )
+    here = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(here, "template.html"), encoding="utf-8") as f:
+        template = f.read()
+    write_index(render(template, payload))
+    print(
+        f"[ok] index.html written; models={len(hourly_by_model)} "
+        f"hours={len(consensus['time'])}"
+    )
 
 
 if __name__ == "__main__":
