@@ -96,6 +96,16 @@ def fetch_archive(start_date, end_date, variables, lat=LAT, lon=LON):
     return resp.json()
 
 
+def normalize_model_response(resp, variables):
+    hourly = resp.get("hourly") or {}
+    times = hourly.get("time") or []
+    data = {}
+    for var in variables:
+        arr = hourly.get(var)
+        data[var] = list(arr) if arr is not None else [None] * len(times)
+    return {"time": list(times), "data": data}
+
+
 def main() -> None:
     pass
 
