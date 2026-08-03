@@ -138,7 +138,7 @@ const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_hu
 const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08d1f','#b04faf','#4168d8','#6faf2f','#cc4f9a','#2f9d8f','#c98a2f'];
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
-const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,16);
+const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,13);
 const hourTicks=a=>{a.ticks=[];for(let i=0;i<D.time.length;i+=6)a.ticks.push({value:i});};
 const hourLabel=(v,i)=>fmtTime(D.time[v]);
 
