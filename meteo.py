@@ -159,6 +159,35 @@ def weather_code_consensus(codes):
     return max(top, key=lambda c: WEATHER_PRIORITY.get(c, 0))
 
 
+def make_weights(mae_by_model, variable):
+    inv = {}
+    for code, mae in mae_by_model.items():
+        m = mae.get(variable)
+        if m is not None and m > 0:
+            inv[code] = 1.0 / m
+    if not inv:
+        return {code: 1.0 / len(mae_by_model) for code in mae_by_model}
+    avg = sum(inv.values()) / len(inv)
+    for code in mae_by_model:
+        if code not in inv:
+            inv[code] = avg
+    total = sum(inv.values())
+    return {code: w / total for code, w in inv.items()}
+
+
+def weighted_consensus(values, weights):
+    pairs = [
+        (v, w) for v, w in zip(values, weights)
+        if v is not None and w is not None
+    ]
+    if not pairs:
+        return None
+    total = sum(w for _, w in pairs)
+    if total <= 0:
+        return None
+    return sum(v * w for v, w in pairs) / total
+
+
 def main() -> None:
     pass
 
