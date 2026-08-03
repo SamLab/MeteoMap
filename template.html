@@ -186,8 +186,10 @@ function updateLegend(){
     const lab=document.createElement('label');
     const cb=document.createElement('input');cb.type='checkbox';cb.checked=!ds.hidden;
     cb.addEventListener('change',()=>{ds.hidden=!cb.checked;mainChart.update();});
+    const dot=document.createElement('span');dot.className='dot';dot.style.background=modelColor(i);
     lab.appendChild(cb);
-    lab.innerHTML+='<span class="dot" style="background:'+modelColor(i)+'"></span>'+names[c];
+    lab.appendChild(dot);
+    lab.appendChild(document.createTextNode(names[c]));
     el.appendChild(lab);
   });
 }
