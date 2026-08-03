@@ -40,6 +40,62 @@ VERIFICATION_VARIABLES = [
 ]
 
 
+import requests
+
+ENDPOINTS = {
+    "forecast": "https://api.open-meteo.com/v1/forecast",
+    "ensemble": "https://api.open-meteo.com/v1/ensemble",
+    "historical": "https://historical-forecast-api.open-meteo.com/v1/forecast",
+    "archive": "https://archive-api.open-meteo.com/v1/archive",
+}
+
+
+def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
+                lat=LAT, lon=LON, timezone="UTC"):
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": ",".join(variables),
+        "daily": ",".join(DAILY_VARIABLES),
+        "timezone": timezone,
+        "forecast_days": days,
+        "models": code,
+    }
+    resp = requests.get(ENDPOINTS[endpoint], params=params, timeout=15)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def fetch_historical_model(code, start_date, end_date, variables,
+                           lat=LAT, lon=LON):
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date,
+        "end_date": end_date,
+        "hourly": ",".join(variables),
+        "timezone": "UTC",
+        "models": code,
+    }
+    resp = requests.get(ENDPOINTS["historical"], params=params, timeout=20)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def fetch_archive(start_date, end_date, variables, lat=LAT, lon=LON):
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "start_date": start_date,
+        "end_date": end_date,
+        "hourly": ",".join(variables),
+        "timezone": "UTC",
+    }
+    resp = requests.get(ENDPOINTS["archive"], params=params, timeout=20)
+    resp.raise_for_status()
+    return resp.json()
+
+
 def main() -> None:
     pass
 
