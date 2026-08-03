@@ -35,3 +35,9 @@ def test_normalize_converts_pressure_to_mmhg():
     out = meteo.normalize_model_response(resp, ["pressure_msl"])
     assert out["data"]["pressure_msl"] == [round(1013.25 * meteo.HPA_TO_MMHG, 1), None]
     assert out["data"]["pressure_msl"][0] == 760.0
+
+
+def test_normalize_clamps_negative_precipitation_to_zero():
+    resp = {"hourly": {"time": ["t0", "t1"], "precipitation": [-0.1, 1.2]}}
+    out = meteo.normalize_model_response(resp, ["precipitation"])
+    assert out["data"]["precipitation"] == [0.0, 1.2]

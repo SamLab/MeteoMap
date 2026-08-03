@@ -151,7 +151,7 @@ const hourTicks=a=>{a.ticks=[];for(let i=0;i<D.time.length;i+=6)a.ticks.push({va
 const DAY_NAMES=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONTH_NAMES=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const dayText=t=>{const d=new Date(t);return DAY_NAMES[d.getDay()]+' '+d.getDate()+' '+MONTH_NAMES[d.getMonth()];};
-const hourLabel=(v,i,ticks)=>{const t=D.time[v],prev=i>0?D.time[ticks[i-1].value]:null;return (i===0||!prev||prev.slice(0,10)!==t.slice(0,10)?[t.slice(11,16),dayText(t)]:[t.slice(11,16)]);};
+const hourLabel=(v)=>D.time[v].slice(11,16);
 
 // generated_at: московское время, русский формат даты
 (function(){
@@ -217,6 +217,7 @@ function setVar(v){
   }
   mainChart.options.scales.y.title.text=VAR_NAMES[v];
   mainChart.options.scales.y.title.display=true;
+  mainChart.options.scales.y.beginAtZero=(v==='precipitation');
   mainChart.update();
   updateLegend();
 }
@@ -248,12 +249,47 @@ const nowLine={
     ctx.restore();
   }
 };
+const dayBand={
+  id:'dayBand',
+  afterDatasetsDraw(chart){
+    const {ctx,chartArea,scales}=chart;
+    const x=scales.x;
+    ctx.save();
+    ctx.font='12px sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='bottom';
+    let prevDay=null;
+    x.ticks.forEach((t,i)=>{
+      const ts=D.time[t.value];
+      if(!ts)return;
+      const day=ts.slice(0,10);
+      if(day===prevDay)return;
+      prevDay=day;
+      const px=x.getPixelForTick(i);
+      ctx.save();
+      ctx.strokeStyle='#dde2ed';
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.moveTo(px,chartArea.top);
+      ctx.lineTo(px,chartArea.bottom);
+      ctx.stroke();
+      ctx.restore();
+      const d=new Date(ts);
+      const label=DAY_NAMES[d.getDay()]+' '+d.getDate()+' '+MONTH_NAMES[d.getMonth()];
+      const w=ctx.measureText(label).width;
+      const cx=Math.min(Math.max(px,chartArea.left+w/2),chartArea.right-w/2);
+      ctx.fillStyle='#5c6579';
+      ctx.fillText(label,cx,chartArea.top-5);
+    });
+    ctx.restore();
+  }
+};
 function makeMainChart(){
   const ctx=document.getElementById('mainChart').getContext('2d');
   const inner=document.getElementById('mainChart').parentElement;
-  inner.style.width=Math.max(D.time.length*16, inner.clientWidth)+'px';
-  mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},plugins:[nowLine],options:{
-    responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+  inner.style.width=Math.max(D.time.length*10, inner.clientWidth)+'px';
+  mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},plugins:[nowLine,dayBand],options:{
+    responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},layout:{padding:{top:26}},
     scales:{
       x:{afterBuildTicks:hourTicks,ticks:{color:'#5c6579',maxRotation:0,autoSkip:false,callback:hourLabel},grid:{color:'#dde2ed'}},
       y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'},title:{display:false,text:''}},

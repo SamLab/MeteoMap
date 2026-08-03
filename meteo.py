@@ -110,6 +110,8 @@ def normalize_model_response(resp, variables):
             data[var] = [
                 round(v * HPA_TO_MMHG, 1) if v is not None else None for v in arr
             ]
+        elif var == "precipitation":
+            data[var] = [max(0.0, v) if v is not None else None for v in arr]
         else:
             data[var] = list(arr)
     return {"time": list(times), "data": data}
