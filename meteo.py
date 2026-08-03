@@ -19,7 +19,7 @@ FORECAST_MODELS = [
     ("meteofrance_arpege_world025", "Météo-France ARPEGE", "forecast"),
     ("ukmo_global_deterministic_10km", "UKMO Global", "forecast"),
     ("ncep_gefs_seamless", "NOAA GEFS (ensemble mean)", "ensemble"),
-    ("google_weathernext", "Google WeatherNext", "ensemble"),
+    ("google_weathernext2_ensemble", "Google WeatherNext 2", "ensemble"),
 ]
 
 HOURLY_VARIABLES = [
@@ -44,7 +44,7 @@ import requests
 
 ENDPOINTS = {
     "forecast": "https://api.open-meteo.com/v1/forecast",
-    "ensemble": "https://api.open-meteo.com/v1/ensemble",
+    "ensemble": "https://ensemble-api.open-meteo.com/v1/ensemble",
     "historical": "https://historical-forecast-api.open-meteo.com/v1/forecast",
     "archive": "https://archive-api.open-meteo.com/v1/archive",
 }
