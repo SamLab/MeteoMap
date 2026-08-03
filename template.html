@@ -96,6 +96,8 @@ const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
 const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,16);
+const hourTicks=a=>{a.ticks=[];for(let i=0;i<D.time.length;i+=6)a.ticks.push({value:i});};
+const hourLabel=(v,i)=>fmtTime(D.time[v]);
 
 // generated_at: московское время, русский формат даты
 (function(){
@@ -171,11 +173,11 @@ function makeMainChart(){
   mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},options:{
     responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     scales:{
-      x:{ticks:{color:'#5c6579',maxTicksLimit:48,autoSkip:true,maxRotation:0},grid:{color:'#dde2ed'}},
+      x:{afterBuildTicks:hourTicks,ticks:{color:'#5c6579',maxRotation:0,autoSkip:false,callback:hourLabel},grid:{color:'#dde2ed'}},
       y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'},title:{display:false,text:''}},
       y1:{position:'right',min:0,max:100,ticks:{color:'#0891b2',callback:v=>v+'%'},grid:{display:false}}
     },
-    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}}
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,itemSort:(a,b)=>(b.parsed.y??-Infinity)-(a.parsed.y??-Infinity)}}
   }});
   setVar(CHART_VARS[0]);
 }

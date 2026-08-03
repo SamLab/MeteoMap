@@ -7,7 +7,7 @@ FORECAST_DAYS = 7
 
 # (model_code, display_name, endpoint) — endpoint: "forecast" or "ensemble"
 FORECAST_MODELS = [
-    ("ecmwf_ifs025", "ECMWF IFS 0.25°", "forecast"),
+    ("ecmwf_ifs025", "ECMWF IFS", "forecast"),
     ("ecmwf_aifs025", "ECMWF AIFS", "forecast"),
     ("cma_grapes_global", "CMA GRAPES", "forecast"),
     ("bom_access_global", "BOM ACCESS-G", "forecast"),
