@@ -151,7 +151,7 @@ const hourTicks=a=>{a.ticks=[];for(let i=0;i<D.time.length;i+=6)a.ticks.push({va
 const DAY_NAMES=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONTH_NAMES=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const dayText=t=>{const d=new Date(t);return DAY_NAMES[d.getDay()]+' '+d.getDate()+' '+MONTH_NAMES[d.getMonth()];};
-const hourLabel=(v,i,ticks)=>{const t=D.time[v],prev=i>0?D.time[ticks[i-1].value]:null;return (i===0||!prev||prev.slice(0,10)!==t.slice(0,10)?t.slice(11,16)+'\n'+dayText(t):t.slice(11,16));};
+const hourLabel=(v,i,ticks)=>{const t=D.time[v],prev=i>0?D.time[ticks[i-1].value]:null;return (i===0||!prev||prev.slice(0,10)!==t.slice(0,10)?[t.slice(11,16),dayText(t)]:[t.slice(11,16)]);};
 
 // generated_at: московское время, русский формат даты
 (function(){
@@ -251,7 +251,7 @@ const nowLine={
 function makeMainChart(){
   const ctx=document.getElementById('mainChart').getContext('2d');
   const inner=document.getElementById('mainChart').parentElement;
-  inner.style.width=Math.max(D.time.length*10, inner.clientWidth)+'px';
+  inner.style.width=Math.max(D.time.length*16, inner.clientWidth)+'px';
   mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},plugins:[nowLine],options:{
     responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     scales:{
