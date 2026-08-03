@@ -187,7 +187,7 @@ function buildCmpTable(){
     let cells=`<td>${fmtTime(t)}</td>`;
     const w=D.weighted[cmpVar]?.[i];
     codes.forEach((c)=>{
-      const v=D.models[c]?D.models[c][cmpVar]?.[i];
+      const v=D.models[c]?D.models[c][cmpVar]?.[i]:undefined;
       let cls='';
       if(typeof v==='number'&&typeof w==='number')cls=(v>w?'plus':'minus');
       cells+=`<td class="${cls}">${fmt(v)}</td>`;
