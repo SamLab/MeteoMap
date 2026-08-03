@@ -21,6 +21,8 @@ header .meta{color:var(--muted);font-size:12px}
 .panel.active{display:flex;flex-direction:column;flex:1;min-height:0}
 #tab-forecast.active{overflow:hidden}
 #tab-compare.active,#tab-accuracy.active,#tab-help.active{overflow:auto}
+#tab-weather.active{overflow:auto}
+#tab-weather .card{flex:none}
 .help{line-height:1.55;font-size:13px}
 .help h2{font-size:16px;margin:0 0 6px}
 .help p{margin-bottom:8px}
@@ -65,12 +67,19 @@ a{color:var(--accent)}
   <span class="meta">Обновлено: <span id="generated">__GENERATED_AT__</span> (каждые 30 минут)</span>
 </header>
 <div class="tabs">
-  <button class="active" data-tab="forecast">Прогноз</button>
+  <button class="active" data-tab="weather">Погода</button>
+  <button data-tab="forecast">Прогноз</button>
   <button data-tab="compare">Сравнение</button>
   <button data-tab="accuracy">Точность</button>
   <button data-tab="help">Справка</button>
 </div>
-<div id="tab-forecast" class="panel active">
+<div id="tab-weather" class="panel active">
+  <div class="card"><h3 class="tstab">Сейчас</h3><div id="weather-now"></div></div>
+  <div class="card"><h3 class="tstab">По часам</h3><div class="hours" id="weather-hours"></div></div>
+  <div class="card"><h3 class="tstab">На 10 дней</h3><div id="weather-10"></div></div>
+  <div class="card"><h3 class="tstab">Подробно на 10 дней</h3><div id="weather-detail"></div></div>
+</div>
+<div id="tab-forecast" class="panel">
   <div class="card"><div class="conds" id="conditions"></div></div>
   <div class="card">
     <div class="varsel" id="varsel"></div>
@@ -164,7 +173,7 @@ const hourLabel=(v)=>D.time[v].slice(11,16);
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
-  ['forecast','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
+  ['weather','forecast','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
 }));
 
 // variable selector
