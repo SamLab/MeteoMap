@@ -106,6 +106,59 @@ def normalize_model_response(resp, variables):
     return {"time": list(times), "data": data}
 
 
+import math
+from collections import Counter
+
+# WMO weather-code priority: higher = more adverse (used for tie-breaks)
+WEATHER_PRIORITY = {
+    0: 0, 1: 1, 2: 1, 3: 1, 45: 2, 48: 2,
+    51: 3, 53: 3, 55: 3, 56: 3, 57: 3,
+    61: 4, 63: 4, 65: 4, 66: 4, 67: 4,
+    71: 5, 73: 5, 75: 5, 77: 5,
+    80: 4, 81: 4, 82: 4, 85: 5, 86: 5,
+    95: 6, 96: 7, 99: 7,
+}
+
+
+def mean(values):
+    vals = [v for v in values if v is not None]
+    if not vals:
+        return None
+    return sum(vals) / len(vals)
+
+
+def median(values):
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return None
+    n = len(vals)
+    mid = n // 2
+    if n % 2:
+        return vals[mid]
+    return (vals[mid - 1] + vals[mid]) / 2
+
+
+def circular_mean(degrees):
+    vals = [v for v in degrees if v is not None]
+    if not vals:
+        return None
+    xs = sum(math.cos(math.radians(v)) for v in vals)
+    ys = sum(math.sin(math.radians(v)) for v in vals)
+    return math.degrees(math.atan2(round(ys, 12) or 0.0, round(xs, 12) or 0.0)) % 360
+
+
+def weather_code_consensus(codes):
+    vals = [c for c in codes if c is not None]
+    if not vals:
+        return None
+    counts = Counter(vals)
+    top_count = max(counts.values())
+    top = [c for c, n in counts.items() if n == top_count]
+    if len(top) == 1:
+        return top[0]
+    return max(top, key=lambda c: WEATHER_PRIORITY.get(c, 0))
+
+
 def main() -> None:
     pass
 
