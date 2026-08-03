@@ -50,6 +50,7 @@ td.plus{color:#d32f2f}
 td.minus{color:#1976d2}
 td.ext{font-weight:700}
 .tstab{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.tconcl{font-size:13px;background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:8px}
 tr.now td{border-top:2px solid #1f2637;border-bottom:2px solid #1f2637;background:#eef1f8}
 tr.now td:first-child{border-left:2px solid #1f2637}
 tr.now td:last-child{border-right:2px solid #1f2637}
@@ -85,8 +86,8 @@ a{color:var(--accent)}
 </div>
 <div id="tab-accuracy" class="panel">
   <div class="card"><h3 class="tstab">Средняя ошибка моделей за 7 дней</h3><canvas id="maeChart" height="90"></canvas></div>
-  <div class="card"><h3 class="tstab">Точность за 7 дней</h3><div class="tblwrap"><table id="mae7"></table></div></div>
-  <div class="card"><h3 class="tstab">Точность за 30 дней</h3><div class="tblwrap"><table id="mae30"></table></div></div>
+  <div class="card"><h3 class="tstab">Точность за 7 дней</h3><div class="tconcl" id="concl7"></div><div class="tblwrap"><table id="mae7"></table></div></div>
+  <div class="card"><h3 class="tstab">Точность за 30 дней</h3><div class="tconcl" id="concl30"></div><div class="tblwrap"><table id="mae30"></table></div></div>
 </div>
 <div id="tab-help" class="panel">
   <div class="card help">
@@ -303,8 +304,12 @@ function buildMaeTables(){
   ['7d','30d'].forEach(days=>{
     const ver=D.verification[days]||{};
     const el=document.getElementById(days==='7d'?'mae7':'mae30');
+    const concl=document.getElementById(days==='7d'?'concl7':'concl30');
+    const mrows=codes.filter(c=>ver[c]&&vnames.some(v=>typeof ver[c][v]==='number'));
+    if(!mrows.length){
+      el.innerHTML='';concl.textContent='Нет данных за этот период';return;
+    }
     const head='<tr><th>Модель</th>'+vnames.map(v=>`<th>${VAR_NAMES[v]}</th>`).join('')+'<th>Средн.</th></tr>';
-    const mrows=codes.filter(c=>ver[c]);
     const vals=mrows.map(c=>{const row=vnames.map(v=>ver[c][v]??null);row.push(meanOf(ver[c],vnames));return row;});
     const mins=vals[0].map((_,j)=>Math.min(...vals.map(r=>typeof r[j]==='number'?r[j]:Infinity)));
     const rows=mrows.map((c,i)=>{
@@ -312,11 +317,14 @@ function buildMaeTables(){
       return `<tr><td>${names[c]}</td>${cells}</tr>`;
     }).join('');
     el.innerHTML=head+rows;
+    const best=mrows.map(c=>({c,avg:meanOf(ver[c],vnames)})).sort((a,b)=>a.avg-b.avg);
+    const top=best[0],second=best[1];
+    concl.innerHTML='Точнее всех — <b>'+names[top.c]+'</b>: средняя ошибка <b>'+top.avg.toFixed(2)+'</b>'+(second&&typeof second.avg==='number'?', на <b>'+(second.avg-top.avg).toFixed(2)+'</b> лучше, чем у '+names[second.c]:'');
   });
   const ver=D.verification['7d']||{};
   const vnames2=['temperature_2m','precipitation','wind_speed_10m'];
-  const items=codes.filter(c=>ver[c]).map(c=>({c,avg:meanOf(ver[c],vnames2)}));
-  items.sort((a,b)=>b.avg-a.avg);
+  const items=codes.filter(c=>ver[c]).map(c=>({c,avg:meanOf(ver[c],vnames2)})).filter(x=>typeof x.avg==='number');
+  items.sort((a,b)=>a.avg-b.avg);
   new Chart(document.getElementById('maeChart').getContext('2d'),{type:'bar',
     data:{labels:items.map(x=>names[x.c]),datasets:[{label:'Средний MAE за 7 дней',data:items.map(x=>x.avg),backgroundColor:PALETTE.slice(0,items.length)}]},
     options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'MAE: '+(c.parsed.y===null?'—':c.parsed.y.toFixed(2))}}},
