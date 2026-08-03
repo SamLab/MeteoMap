@@ -43,6 +43,7 @@ th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:
 th{color:var(--muted);font-weight:500}
 td.plus{color:#d32f2f}
 td.minus{color:#1976d2}
+td.ext{font-weight:700}
 .attrib{margin-top:8px;color:var(--muted);font-size:11px;text-align:center;flex:none}
 a{color:var(--accent)}
 </style>
@@ -200,10 +201,14 @@ function buildCmpTable(){
   const rows=D.time.map((t,i)=>{
     let cells=`<td>${fmtTime(t)}</td>`;
     const w=D.weighted[cmpVar]?.[i];
-    codes.forEach((c)=>{
-      const v=D.models[c]?D.models[c][cmpVar]?.[i]:undefined;
+    const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
+    const nums=vals.filter(v=>typeof v==='number');
+    const mx=nums.length?Math.max(...nums):null;
+    const mn=nums.length?Math.min(...nums):null;
+    vals.forEach((v)=>{
       let cls='';
       if(typeof v==='number'&&typeof w==='number')cls=(v>w?'plus':'minus');
+      if(v!==null&&v!==undefined&&(v===mx||v===mn))cls+=' ext';
       cells+=`<td class="${cls}">${fmt(v)}</td>`;
     });
     cells+=`<td><b>${fmt(w)}</b></td>`;

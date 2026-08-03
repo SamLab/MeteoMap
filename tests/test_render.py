@@ -67,3 +67,40 @@ def test_moscow_now_iso_has_utc3_offset():
 
     value = meteo.moscow_now_iso()
     assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00", value)
+
+
+def test_payload_hides_models_without_data():
+    hourly = {
+        "a": {"time": ["h0"], "data": {"temperature_2m": [1.0]}},
+        "b": {"time": ["h0"], "data": {"temperature_2m": [None]}},
+        "c": {"time": ["h0"], "data": {"temperature_2m": [None], "wind_speed_10m": [5.0]}},
+    }
+    consensus = {
+        "time": ["h0"],
+        "weighted": {"temperature_2m": [1.0]},
+        "mean": {"temperature_2m": [1.0]},
+        "median": {"temperature_2m": [1.0]},
+    }
+    p = meteo.build_payload(
+        ["a", "b", "c"], {"a": "A", "b": "B", "c": "C"},
+        hourly, {}, consensus, {}, "2026-08-03T12:00:00+03:00",
+    )
+    assert p["model_codes"] == ["a", "c"]
+    assert p["model_names"] == {"a": "A", "c": "C"}
+    assert "b" not in p["models"]
+
+
+def test_payload_keeps_original_codes_when_all_empty():
+    hourly = {
+        "a": {"time": ["h0"], "data": {"temperature_2m": [None]}},
+    }
+    consensus = {
+        "time": ["h0"],
+        "weighted": {"temperature_2m": [None]},
+        "mean": {"temperature_2m": [None]},
+        "median": {"temperature_2m": [None]},
+    }
+    p = meteo.build_payload(
+        ["a"], {"a": "A"}, hourly, {}, consensus, {}, "2026-08-03T12:00:00+03:00",
+    )
+    assert p["model_codes"] == ["a"]

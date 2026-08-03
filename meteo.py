@@ -298,8 +298,21 @@ import os
 from datetime import datetime, timezone
 
 
+def _models_with_data(model_codes, hourly_by_model):
+    """Коды моделей, у которых есть хотя бы одно значение среди почасовых данных."""
+    return [
+        code for code in model_codes
+        if any(
+            v is not None
+            for arr in (hourly_by_model.get(code, {}).get("data") or {}).values()
+            for v in arr
+        )
+    ]
+
+
 def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
                   consensus, verification, generated_at):
+    codes = _models_with_data(model_codes, hourly_by_model) or list(model_codes)
     dvars = list(DAILY_VARIABLES)
     daily_consensus = {}
     for v in dvars:
@@ -317,8 +330,8 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     return {
         "generated_at": generated_at,
         "location": {"name": "Ярославль", "lat": LAT, "lon": LON},
-        "model_codes": model_codes,
-        "model_names": model_names,
+        "model_codes": codes,
+        "model_names": {c: model_names[c] for c in codes},
         "variables": list(HOURLY_VARIABLES),
         "daily_variables": dvars,
         "time": consensus["time"],
@@ -327,7 +340,7 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
         "median": consensus["median"],
         "models": {
             code: hourly_by_model[code]["data"]
-            for code in model_codes if code in hourly_by_model
+            for code in codes if code in hourly_by_model
         },
         "daily": daily_consensus,
         "daily_time": daily_time,
