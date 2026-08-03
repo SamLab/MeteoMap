@@ -18,7 +18,7 @@ FORECAST_MODELS = [
     ("gem_global", "GEM Global", "forecast"),
     ("meteofrance_arpege_world025", "Météo-France ARPEGE", "forecast"),
     ("ukmo_global_deterministic_10km", "UKMO Global", "forecast"),
-    ("ncep_gefs_seamless", "NOAA GEFS (ensemble mean)", "ensemble"),
+    ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
     ("google_weathernext2_ensemble", "Google WeatherNext 2", "ensemble"),
 ]
 
