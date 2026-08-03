@@ -39,6 +39,8 @@ VERIFICATION_VARIABLES = [
     "temperature_2m", "precipitation", "wind_speed_10m",
 ]
 
+HPA_TO_MMHG = 0.750061683
+
 
 import requests
 
@@ -102,7 +104,14 @@ def normalize_model_response(resp, variables):
     data = {}
     for var in variables:
         arr = hourly.get(var)
-        data[var] = list(arr) if arr is not None else [None] * len(times)
+        if arr is None:
+            data[var] = [None] * len(times)
+        elif var == "pressure_msl":
+            data[var] = [
+                round(v * HPA_TO_MMHG, 1) if v is not None else None for v in arr
+            ]
+        else:
+            data[var] = list(arr)
     return {"time": list(times), "data": data}
 
 
@@ -286,7 +295,7 @@ def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=3
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
@@ -344,8 +353,13 @@ def write_index(html, path="index.html"):
         f.write(html)
 
 
+def moscow_now_iso():
+    """Текущее московское время (UTC+3) в ISO-8601 с явным смещением."""
+    return datetime.now(timezone(timedelta(hours=3))).isoformat(timespec="seconds")
+
+
 def main():
-    generated_at = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+    generated_at = moscow_now_iso()
     model_codes = [c for c, _n, _e in FORECAST_MODELS]
     model_names = {c: n for c, n, _e in FORECAST_MODELS}
     hourly_by_model = {}

@@ -8,35 +8,42 @@
 <style>
 :root{--bg:#f4f6fa;--card:#ffffff;--line:#dde2ed;--text:#1f2637;--muted:#5c6579;--accent:#e09b00;--mean:#2563eb;--sel:#eaeef8}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px}
-.wrap{max-width:1200px;margin:0 auto}
-header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:16px}
-h1{font-size:22px}
-header .meta{color:var(--muted);font-size:13px}
-.tabs{display:flex;gap:8px;margin-bottom:16px}
-.tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:10px 16px;overflow:hidden}
+.wrap{max-width:1200px;margin:0 auto;height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px;flex:none}
+h1{font-size:19px}
+header .meta{color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:8px;margin-bottom:8px;flex:none}
+.tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
 .tabs button.active{color:var(--text);background:var(--accent);border-color:var(--accent)}
 .panel{display:none}
-.panel.active{display:block}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-.conds{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.panel.active{display:flex;flex-direction:column;flex:1;min-height:0}
+#tab-forecast.active{overflow:hidden}
+#tab-compare.active,#tab-accuracy.active{overflow:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+#tab-forecast .card{flex:none}
+#tab-forecast .card:last-child{flex:1;min-height:0;display:flex;flex-direction:column;margin-bottom:0}
+.conds{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:8px}
 .cond{text-align:center}
-.cond .val{font-size:26px;font-weight:600}
-.cond .lab{font-size:12px;color:var(--muted)}
-.varsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.varsel button{background:var(--sel);color:var(--text);border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+.cond .val{font-size:19px;font-weight:600}
+.cond .lab{font-size:11px;color:var(--muted)}
+.varsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;flex:none}
+.varsel button{background:var(--sel);color:var(--text);border:1px solid var(--line);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px}
 .varsel button.active{background:var(--accent);color:var(--text);border-color:var(--accent)}
-.legend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin-top:10px}
+.chartbox{flex:1;min-height:0;position:relative}
+.chartbox canvas{position:absolute;inset:0;width:100%;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:11px;color:var(--muted);margin-top:6px;flex:none}
 .legend label{display:flex;align-items:center;gap:5px;cursor:pointer}
-.legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-.tblwrap{overflow-x:auto}
+.legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.tblwrap{overflow:auto}
 table{border-collapse:collapse;font-size:12px;width:100%}
 th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--bg)}
 th{color:var(--muted);font-weight:500}
 td.plus{color:#d32f2f}
 td.minus{color:#1976d2}
-.attrib{margin-top:20px;color:var(--muted);font-size:12px;text-align:center}
+.attrib{margin-top:8px;color:var(--muted);font-size:11px;text-align:center;flex:none}
 a{color:var(--accent)}
 </style>
 </head>
@@ -44,7 +51,7 @@ a{color:var(--accent)}
 <div class="wrap">
 <header>
   <h1>🌤 MeteoMap — <span id="city">__CITY__</span></h1>
-  <span class="meta">Обновлено: <span id="generated">__GENERATED_AT__</span> (раз в час)</span>
+  <span class="meta">Обновлено: <span id="generated">__GENERATED_AT__</span> (каждые 30 минут)</span>
 </header>
 <div class="tabs">
   <button class="active" data-tab="forecast">Прогноз</button>
@@ -55,7 +62,7 @@ a{color:var(--accent)}
   <div class="card"><div class="conds" id="conditions"></div></div>
   <div class="card">
     <div class="varsel" id="varsel"></div>
-    <canvas id="mainChart" height="120"></canvas>
+    <div class="chartbox"><canvas id="mainChart" height="120"></canvas></div>
     <div class="legend" id="legend"></div>
   </div>
 </div>
@@ -80,7 +87,7 @@ const codes=D.model_codes, names=D.model_names;
 const VAR_NAMES={
  temperature_2m:'Температура (°C)',apparent_temperature:'Ощущается (°C)',dew_point_2m:'Точка росы (°C)',
  relative_humidity_2m:'Влажность (%)',precipitation:'Осадки (мм)',precipitation_probability:'Вероятность осадков (%)',
- snowfall:'Снег (см)',weather_code:'Погода (WMO)',pressure_msl:'Давление (гПа)',cloud_cover:'Облачность (%)',
+ snowfall:'Снег (см)',weather_code:'Погода (WMO)',pressure_msl:'Давление (мм рт. ст.)',cloud_cover:'Облачность (%)',
  wind_speed_10m:'Ветер (м/с)',wind_direction_10m:'Направление ветра (°)',wind_gusts_10m:'Порывы (м/с)',
  visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)'};
 const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_humidity_2m','pressure_msl','cloud_cover'];
@@ -88,6 +95,13 @@ const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
 const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,16);
+
+// generated_at: московское время, русский формат даты
+(function(){
+  const el=document.getElementById('generated');
+  const t=new Date(el.textContent.trim());
+  if(!isNaN(t))el.textContent=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(t);
+})();
 
 // tabs
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
@@ -122,7 +136,7 @@ function buildConditions(){
     ['Порывы',fmt(w.wind_gusts_10m?.[curIdx])+' м/с'],
     ['Осадки',fmt(w.precipitation?.[curIdx])+' мм'],
     ['Вероятность',fmt(w.precipitation_probability?.[curIdx])+'%'],
-    ['Давление',fmt(w.pressure_msl?.[curIdx])+' гПа'],
+    ['Давление',fmt(w.pressure_msl?.[curIdx])+' мм рт. ст.'],
     ['Облачность',fmt(w.cloud_cover?.[curIdx])+'%']];
   const mx=D.daily.temperature_2m_max?.[0], mn=D.daily.temperature_2m_min?.[0], pr=D.daily.precipitation_sum?.[0];
   if(mx!==undefined&&mx!==null)list.push(['Макс сегодня',fmt(mx)+'°']);

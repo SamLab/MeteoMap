@@ -60,3 +60,10 @@ def test_render_attribution_link(tmp_path):
     # render() adds attribution; verify it appears
     html = meteo.render(template, _payload())
     assert "open-meteo.com" in html
+
+
+def test_moscow_now_iso_has_utc3_offset():
+    import re
+
+    value = meteo.moscow_now_iso()
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+03:00", value)
