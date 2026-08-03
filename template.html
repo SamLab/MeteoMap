@@ -166,11 +166,29 @@ function setVar(v){
   mainChart.update();
   updateLegend();
 }
+const nowLine={
+  id:'nowLine',
+  afterDatasetsDraw(chart){
+    if(curIdx<0)return;
+    const x=chart.scales.x.getPixelForValue(curIdx);
+    const {top,bottom}=chart.chartArea;
+    const ctx=chart.ctx;
+    ctx.save();
+    ctx.strokeStyle='#1f2637';
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    ctx.moveTo(x,top);
+    ctx.lineTo(x,bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
 function makeMainChart(){
   const ctx=document.getElementById('mainChart').getContext('2d');
   const inner=document.getElementById('mainChart').parentElement;
   inner.style.width=Math.max(D.time.length*10, inner.clientWidth)+'px';
-  mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},options:{
+  mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},plugins:[nowLine],options:{
     responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     scales:{
       x:{afterBuildTicks:hourTicks,ticks:{color:'#5c6579',maxRotation:0,autoSkip:false,callback:hourLabel},grid:{color:'#dde2ed'}},
