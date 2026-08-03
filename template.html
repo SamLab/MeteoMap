@@ -49,6 +49,9 @@ th{color:var(--muted);font-weight:500}
 td.plus{color:#d32f2f}
 td.minus{color:#1976d2}
 td.ext{font-weight:700}
+tr.now td{border-top:2px solid #1f2637;border-bottom:2px solid #1f2637;background:#eef1f8}
+tr.now td:first-child{border-left:2px solid #1f2637}
+tr.now td:last-child{border-right:2px solid #1f2637}
 .attrib{margin-top:8px;color:var(--muted);font-size:11px;text-align:center;flex:none}
 a{color:var(--accent)}
 </style>
@@ -204,6 +207,16 @@ function setVar(v){
   mainChart.update();
   updateLegend();
 }
+const sumLbl=l=>l==='Консенсус (взвеш.)'||l==='Среднее';
+const tSort=(a,b)=>{
+  const la=a.dataset&&a.dataset.label, lb=b.dataset&&b.dataset.label;
+  const sa=sumLbl(la), sb=sumLbl(lb);
+  if(sa&&sb)return la==='Консенсус (взвеш.)'?-1:1;
+  if(sa)return -1;
+  if(sb)return 1;
+  return (b.parsed.y??-Infinity)-(a.parsed.y??-Infinity);
+};
+const tAfter=c=>c.dataset&&c.dataset.label==='Среднее'?'\u00A0':null;
 const nowLine={
   id:'nowLine',
   afterDatasetsDraw(chart){
@@ -233,7 +246,7 @@ function makeMainChart(){
       y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'},title:{display:false,text:''}},
       y1:{position:'right',min:0,max:100,ticks:{color:'#0891b2',callback:v=>v+'%'},grid:{display:false}}
     },
-    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,itemSort:(a,b)=>(b.parsed.y??-Infinity)-(a.parsed.y??-Infinity)}}
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,itemSort:tSort,callbacks:{afterLabel:tAfter}}}
   }});
   setVar(CHART_VARS[0]);
 }
@@ -276,7 +289,7 @@ function buildCmpTable(){
       if(v!==null&&v!==undefined&&(v===mx||v===mn))cls+=' ext';
       cells+=`<td class="${cls}">${fmt(v)}</td>`;
     });
-    return `<tr>${cells}</tr>`;
+    return `<tr class="${i===curIdx?'now':''}">${cells}</tr>`;
   }).join('');
   el.innerHTML=head+rows;
 }
