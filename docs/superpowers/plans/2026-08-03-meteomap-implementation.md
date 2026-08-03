@@ -723,7 +723,8 @@ import meteo
 
 
 def test_compute_mae_basic():
-    assert meteo.compute_mae([1.0, 3.0, 2.0], [0.0, 1.0, 4.0]) == 3.0
+    # MAE of |1-0|,|3-1|,|2-4| = 5/3 (the literal 3.0 here is MSE, wrong)
+    assert abs(meteo.compute_mae([1.0, 3.0, 2.0], [0.0, 1.0, 4.0]) - 5.0 / 3.0) < 1e-6
 
 
 def test_compute_mae_skips_none():
