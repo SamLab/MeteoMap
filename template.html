@@ -225,7 +225,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   ['weather','forecast','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
-  if(b.dataset.tab==='forecast'&&typeof mainChart!=='undefined'&&mainChart)requestAnimationFrame(()=>mainChart.resize());
+  if(b.dataset.tab==='forecast'&&typeof mainChart!=='undefined'&&mainChart)setTimeout(()=>mainChart.resize(),0);
 }));
 
 // variable selector
