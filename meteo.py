@@ -188,6 +188,48 @@ def weighted_consensus(values, weights):
     return sum(v * w for v, w in pairs) / total
 
 
+from datetime import date, timedelta
+
+
+def date_window(days):
+    today = date.today()
+    end = today - timedelta(days=1)
+    start = today - timedelta(days=days)
+    return start.isoformat(), end.isoformat()
+
+
+def compute_mae(predicted, actual):
+    pairs = [
+        (p, a) for p, a in zip(predicted, actual)
+        if p is not None and a is not None
+    ]
+    if not pairs:
+        return None
+    return sum(abs(p - a) for p, a in pairs) / len(pairs)
+
+
+def verify_models(model_codes, variables, start_date, end_date,
+                  fetch_hist=None, fetch_arch=None):
+    fetch_hist = fetch_hist or fetch_historical_model
+    fetch_arch = fetch_arch or fetch_archive
+    actual_data = normalize_model_response(
+        fetch_arch(start_date, end_date, variables), variables
+    )["data"]
+    result = {}
+    for code in model_codes:
+        try:
+            resp = fetch_hist(code, start_date, end_date, variables)
+        except Exception as exc:
+            print(f"[warn] verify {code}: {exc}")
+            continue
+        model_data = normalize_model_response(resp, variables)["data"]
+        result[code] = {
+            v: compute_mae(model_data[v], actual_data[v])
+            for v in variables
+        }
+    return result
+
+
 def main() -> None:
     pass
 
