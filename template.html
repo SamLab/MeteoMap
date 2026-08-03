@@ -6,7 +6,7 @@
 <title>MeteoMap — Ярославль</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-:root{--bg:#0f1320;--card:#1a2035;--line:#2a3350;--text:#e8ecf5;--muted:#8a93a8;--accent:#ffd54a;--mean:#64b5f6;--sel:#232c48}
+:root{--bg:#f4f6fa;--card:#ffffff;--line:#dde2ed;--text:#1f2637;--muted:#5c6579;--accent:#e09b00;--mean:#2563eb;--sel:#eaeef8}
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px}
 .wrap{max-width:1200px;margin:0 auto}
@@ -15,7 +15,7 @@ h1{font-size:22px}
 header .meta{color:var(--muted);font-size:13px}
 .tabs{display:flex;gap:8px;margin-bottom:16px}
 .tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px}
-.tabs button.active{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.tabs button.active{color:var(--text);background:var(--accent);border-color:var(--accent)}
 .panel{display:none}
 .panel.active{display:block}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
@@ -25,7 +25,7 @@ header .meta{color:var(--muted);font-size:13px}
 .cond .lab{font-size:12px;color:var(--muted)}
 .varsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .varsel button{background:var(--sel);color:var(--text);border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
-.varsel button.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.varsel button.active{background:var(--accent);color:var(--text);border-color:var(--accent)}
 .legend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin-top:10px}
 .legend label{display:flex;align-items:center;gap:5px;cursor:pointer}
 .legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
@@ -34,8 +34,8 @@ table{border-collapse:collapse;font-size:12px;width:100%}
 th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--bg)}
 th{color:var(--muted);font-weight:500}
-td.plus{color:#ff8a80}
-td.minus{color:#80d8ff}
+td.plus{color:#d32f2f}
+td.minus{color:#1976d2}
 .attrib{margin-top:20px;color:var(--muted);font-size:12px;text-align:center}
 a{color:var(--accent)}
 </style>
@@ -84,7 +84,7 @@ const VAR_NAMES={
  wind_speed_10m:'Ветер (м/с)',wind_direction_10m:'Направление ветра (°)',wind_gusts_10m:'Порывы (м/с)',
  visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)'};
 const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_humidity_2m','pressure_msl','cloud_cover'];
-const PALETTE=['#7fb3d5','#9d8cf5','#f5a25c','#8fd58f','#e06c6c','#5cc7d5','#c5b45c','#d58fd5','#6c8ae0','#a5d57a','#e08ac0','#7ad5b5','#d5a05c'];
+const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08d1f','#b04faf','#4168d8','#6faf2f','#cc4f9a','#2f9d8f','#c98a2f'];
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
 const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,16);
@@ -137,10 +137,10 @@ function setVar(v){
   curVar=v;
   const d=mainChart.data;
   d.datasets=codes.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
-  d.datasets.push({label:'Консенсус (взвеш.)',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#ffd54a',borderWidth:3,pointRadius:0,tension:0.2});
-  d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#64b5f6',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
+  d.datasets.push({label:'Консенсус (взвеш.)',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#e09b00',borderWidth:3,pointRadius:0,tension:0.2});
+  d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#2563eb',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
   if(v==='precipitation'){
-    d.datasets.push({label:'Вероятность осадков (%)',data:(D.weighted.precipitation_probability||[]).map(x=>x),borderColor:'#4dd0e1',borderWidth:2,borderDash:[2,2],pointRadius:0,yAxisID:'y1'});
+    d.datasets.push({label:'Вероятность осадков (%)',data:(D.weighted.precipitation_probability||[]).map(x=>x),borderColor:'#0891b2',borderWidth:2,borderDash:[2,2],pointRadius:0,yAxisID:'y1'});
   }else{
     d.datasets=d.datasets.filter(ds=>ds.label!=='Вероятность осадков (%)');
   }
@@ -154,9 +154,9 @@ function makeMainChart(){
   mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},options:{
     responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
     scales:{
-      x:{ticks:{color:'#8a93a8',maxTicksLimit:14},grid:{color:'#232c48'}},
-      y:{ticks:{color:'#8a93a8'},grid:{color:'#232c48'},title:{display:false,text:''}},
-      y1:{position:'right',min:0,max:100,ticks:{color:'#4dd0e1',callback:v=>v+'%'},grid:{display:false}}
+      x:{ticks:{color:'#5c6579',maxTicksLimit:14},grid:{color:'#dde2ed'}},
+      y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'},title:{display:false,text:''}},
+      y1:{position:'right',min:0,max:100,ticks:{color:'#0891b2',callback:v=>v+'%'},grid:{display:false}}
     },
     plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}}
   }});
@@ -221,7 +221,7 @@ function buildMaeTables(){
   new Chart(document.getElementById('maeChart').getContext('2d'),{type:'bar',
     data:{labels:items.map(x=>names[x.c]),datasets:[{label:'Средний MAE за 7 дней',data:items.map(x=>x.avg),backgroundColor:PALETTE.slice(0,items.length)}]},
     options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'MAE: '+(c.parsed.y===null?'—':c.parsed.y.toFixed(2))}}},
-      scales:{x:{ticks:{color:'#8a93a8'}},y:{ticks:{color:'#8a93a8'},grid:{color:'#232c48'}}}}});
+      scales:{x:{ticks:{color:'#5c6579'}},y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'}}}}});
 }
 
 buildConditions();
