@@ -230,6 +230,56 @@ def verify_models(model_codes, variables, start_date, end_date,
     return result
 
 
+def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=3):
+    hours = None
+    for model in hourly_by_model.values():
+        if model["time"]:
+            hours = model["time"]
+            break
+    if hours is None:
+        return {
+            "time": [], "weighted": {}, "mean": {}, "median": {}, "models": {},
+        }
+    n = len(hours)
+    model_codes = list(hourly_by_model)
+    weighted = {v: [None] * n for v in variables}
+    mean_out = {v: [None] * n for v in variables}
+    median_out = {v: [None] * n for v in variables}
+    models_out = {c: {v: [None] * n for v in variables} for c in model_codes}
+    for i in range(n):
+        for v in variables:
+            per_model = []
+            for code in model_codes:
+                arr = hourly_by_model[code]["data"].get(v)
+                val = arr[i] if arr and i < len(arr) else None
+                models_out[code][v][i] = val
+                per_model.append(val)
+            present = [x for x in per_model if x is not None]
+            if len(present) < min_sources:
+                continue
+            if v == "weather_code":
+                vote = weather_code_consensus(present)
+                weighted[v][i] = vote
+                mean_out[v][i] = vote
+                median_out[v][i] = vote
+                continue
+            wv = weights_by_var.get(v, {})
+            weights = [wv.get(code, 1.0) for code in model_codes]
+            weighted[v][i] = weighted_consensus(per_model, weights)
+            mean_out[v][i] = mean(per_model)
+            if v == "wind_direction_10m":
+                median_out[v][i] = circular_mean(per_model)
+            else:
+                median_out[v][i] = median(per_model)
+    return {
+        "time": hours,
+        "weighted": weighted,
+        "mean": mean_out,
+        "median": median_out,
+        "models": models_out,
+    }
+
+
 def main() -> None:
     pass
 
