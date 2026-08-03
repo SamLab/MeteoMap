@@ -58,6 +58,13 @@ tr.now td:first-child{border-left:2px solid #1f2637}
 tr.now td:last-child{border-right:2px solid #1f2637}
 .attrib{margin-top:8px;color:var(--muted);font-size:11px;text-align:center;flex:none}
 a{color:var(--accent)}
+.wnow{display:flex;align-items:center;gap:28px;flex-wrap:wrap;padding:4px 2px}
+.wbig{font-size:52px;font-weight:700}
+.wcond{font-size:17px;margin-top:2px}
+.wfeel{font-size:13px;color:var(--muted)}
+.wdet{display:flex;gap:18px;flex-wrap:wrap;font-size:12px}
+.wd .wdv{font-weight:600}
+.wd .wdl{color:var(--muted);font-size:11px}
 </style>
 </head>
 <body>
@@ -156,6 +163,24 @@ const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
 const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,13)+'ч';
+const temp=v=>v==null?'—':(Math.round(v)>0?'+':'')+Math.round(v)+'°';
+const num=v=>v==null||v===undefined?'—':Math.round(v);
+const WCODE={
+0:['Ясно','☀️'],1:['В основном ясно','🌤️'],2:['Переменная облачность','⛅'],3:['Пасмурно','☁️'],
+45:['Туман','🌫️'],48:['Изморозь','🌫️'],
+51:['Небольшая морось','🌦️'],53:['Морось','🌦️'],55:['Сильная морось','🌧️'],
+56:['Ледяная морось','🌧️'],57:['Ледяная морось','🌧️'],
+61:['Небольшой дождь','🌦️'],63:['Дождь','🌧️'],65:['Сильный дождь','🌧️'],
+66:['Ледяной дождь','🌧️'],67:['Ледяной дождь','🌧️'],
+71:['Небольшой снег','🌨️'],73:['Снег','❄️'],75:['Сильный снег','❄️'],77:['Снежные зерна','❄️'],
+80:['Небольшой ливень','🌧️'],81:['Ливень','🌧️'],82:['Сильный ливень','⛈️'],
+85:['Снегопад','🌨️'],86:['Снегопад','🌨️'],
+95:['Гроза','⛈️'],96:['Гроза с градом','⛈️'],99:['Гроза с градом','⛈️']};
+const wcode=c=>WCODE[c]||['—',''];
+const COMPASS=['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
+const COMPASS_FULL=['северный','северо-восточный','восточный','юго-восточный','южный','юго-западный','западный','северо-западный'];
+const rumbShort=deg=>deg==null?'—':COMPASS[Math.round(deg/45)%8];
+const rumbFull=deg=>deg==null?'—':COMPASS_FULL[Math.round(deg/45)%8];
 const hourTicks=a=>{a.ticks=[];for(let i=0;i<D.time.length;i+=6)a.ticks.push({value:i});};
 const DAY_NAMES=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
 const MONTH_NAMES=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
@@ -209,6 +234,32 @@ function buildConditions(){
   if(mn!==undefined&&mn!==null)list.push(['Мин сегодня',fmt(mn)+'°']);
   if(pr!==undefined&&pr!==null)list.push(['Осадки за день',fmt(pr)+' мм']);
   document.getElementById('conditions').innerHTML=list.map(([l,v])=>`<div class="cond"><div class="val">${v}</div><div class="lab">${l}</div></div>`).join('');
+}
+function buildWeatherNow(){
+  const w=D.weighted;
+  const [wtext,we]=wcode(w.weather_code?.[curIdx]);
+  const sr=(D.daily.sunrise?.[0]||'').slice(11,16)||'—';
+  const ss=(D.daily.sunset?.[0]||'').slice(11,16)||'—';
+  let dl='—';
+  if(D.daily.sunrise?.[0]&&D.daily.sunset?.[0]){
+    const ms=new Date(D.daily.sunset[0])-new Date(D.daily.sunrise[0]);
+    if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
+  }
+  const wind=w.wind_speed_10m?.[curIdx];
+  const dir=w.wind_direction_10m?.[curIdx];
+  const det=[
+    ['Ветер',wind==null?'—':num(wind)+' м/с, '+rumbShort(dir)],
+    ['Давление',num(w.pressure_msl?.[curIdx])+' мм рт. ст.'],
+    ['Влажность',num(w.relative_humidity_2m?.[curIdx])+'%'],
+    ['Восход / закат',sr+' / '+ss],
+    ['Долгота дня',dl],
+    ['Обновлено',(D.generated_at||'').slice(11,16)]
+  ];
+  document.getElementById('weather-now').innerHTML=
+    '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
+    '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
+    '<div class="wcond">'+wtext+'</div></div>'+
+    '<div class="wdet">'+det.map(x=>'<div class="wd"><div class="wdv">'+x[1]+'</div><div class="wdl">'+x[0]+'</div></div>').join('')+'</div></div>';
 }
 
 // main chart
@@ -387,6 +438,7 @@ function buildMaeTables(){
 }
 
 buildConditions();
+buildWeatherNow();
 buildVarSel('varsel',setVar);
 buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();});
 makeMainChart();
