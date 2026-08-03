@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeteoMap — Ярославль</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f1320;--card:#1a2035;--line:#2a3350;--text:#e8ecf5;--muted:#8a93a8;--accent:#ffd54a;--mean:#64b5f6;--sel:#232c48}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px}
+.wrap{max-width:1200px;margin:0 auto}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:22px}
+header .meta{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px}
+.tabs button.active{color:var(--bg);background:var(--accent);border-color:var(--accent)}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.conds{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.cond{text-align:center}
+.cond .val{font-size:26px;font-weight:600}
+.cond .lab{font-size:12px;color:var(--muted)}
+.varsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.varsel button{background:var(--sel);color:var(--text);border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+.varsel button.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;font-size:12px;width:100%}
+th,td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--bg)}
+th{color:var(--muted);font-weight:500}
+td.plus{color:#ff8a80}
+td.minus{color:#80d8ff}
+.attrib{margin-top:20px;color:var(--muted);font-size:12px;text-align:center}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🌤 MeteoMap — <span id="city">__CITY__</span></h1>
+  <span class="meta">Обновлено: <span id="generated">__GENERATED_AT__</span> (раз в час)</span>
+</header>
+<div class="tabs">
+  <button class="active" data-tab="forecast">Прогноз</button>
+  <button data-tab="compare">Сравнение</button>
+  <button data-tab="accuracy">Точность</button>
+</div>
+<div id="tab-forecast" class="panel active">
+  <div class="card"><div class="conds" id="conditions"></div></div>
+  <div class="card">
+    <div class="varsel" id="varsel"></div>
+    <canvas id="mainChart" height="120"></canvas>
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+<div id="tab-compare" class="panel">
+  <div class="card">
+    <div class="varsel" id="varsel2"></div>
+    <div class="tblwrap"><table id="cmpTable"></table></div>
+  </div>
+</div>
+<div id="tab-accuracy" class="panel">
+  <div class="card"><canvas id="maeChart" height="90"></canvas></div>
+  <div class="card"><div class="tblwrap"><table id="mae7"></table></div></div>
+  <div class="card"><div class="tblwrap"><table id="mae30"></table></div></div>
+</div>
+<div class="attrib">Погодные модели: ECMWF, NOAA, DWD, Météo-France, UK Met Office, Environment Canada, JMA, KMA, BOM, CMA, Google.
+  <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a> (CC BY 4.0)</div>
+</div>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+const D=JSON.parse(document.getElementById('data').textContent);
+const codes=D.model_codes, names=D.model_names;
+const VAR_NAMES={
+ temperature_2m:'Температура (°C)',apparent_temperature:'Ощущается (°C)',dew_point_2m:'Точка росы (°C)',
+ relative_humidity_2m:'Влажность (%)',precipitation:'Осадки (мм)',precipitation_probability:'Вероятность осадков (%)',
+ snowfall:'Снег (см)',weather_code:'Погода (WMO)',pressure_msl:'Давление (гПа)',cloud_cover:'Облачность (%)',
+ wind_speed_10m:'Ветер (м/с)',wind_direction_10m:'Направление ветра (°)',wind_gusts_10m:'Порывы (м/с)',
+ visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)'};
+const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_humidity_2m','pressure_msl','cloud_cover'];
+const PALETTE=['#7fb3d5','#9d8cf5','#f5a25c','#8fd58f','#e06c6c','#5cc7d5','#c5b45c','#d58fd5','#6c8ae0','#a5d57a','#e08ac0','#7ad5b5','#d5a05c'];
+const modelColor=i=>PALETTE[i%PALETTE.length];
+const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
+const fmtTime=t=>t.slice(5,10).replace('-','.')+' '+t.slice(11,16);
+
+// tabs
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  ['forecast','compare','accuracy'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
+}));
+
+// variable selector
+function buildVarSel(id,onSel){
+  const el=document.getElementById(id);
+  CHART_VARS.forEach(v=>{
+    const b=document.createElement('button');
+    b.textContent=VAR_NAMES[v];b.dataset.v=v;
+    b.addEventListener('click',()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');onSel(v);});
+    el.appendChild(b);
+  });
+  el.querySelector('button').classList.add('active');
+}
+
+// conditions
+const nowLocal=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());
+const curHour=nowLocal.replace(', ','T').slice(0,13)+':00';
+let curIdx=D.time.findIndex(t=>t>=curHour);
+if(curIdx<0)curIdx=0;
+function buildConditions(){
+  const w=D.weighted;
+  const list=[
+    ['Температура',fmt(w.temperature_2m?.[curIdx])+'°'],
+    ['Ощущается',fmt(w.apparent_temperature?.[curIdx])+'°'],
+    ['Ветер',fmt(w.wind_speed_10m?.[curIdx])+' м/с'],
+    ['Порывы',fmt(w.wind_gusts_10m?.[curIdx])+' м/с'],
+    ['Осадки',fmt(w.precipitation?.[curIdx])+' мм'],
+    ['Вероятность',fmt(w.precipitation_probability?.[curIdx])+'%'],
+    ['Давление',fmt(w.pressure_msl?.[curIdx])+' гПа'],
+    ['Облачность',fmt(w.cloud_cover?.[curIdx])+'%']];
+  const mx=D.daily.temperature_2m_max?.[0], mn=D.daily.temperature_2m_min?.[0], pr=D.daily.precipitation_sum?.[0];
+  if(mx!==undefined&&mx!==null)list.push(['Макс сегодня',fmt(mx)+'°']);
+  if(mn!==undefined&&mn!==null)list.push(['Мин сегодня',fmt(mn)+'°']);
+  if(pr!==undefined&&pr!==null)list.push(['Осадки за день',fmt(pr)+' мм']);
+  document.getElementById('conditions').innerHTML=list.map(([l,v])=>`<div class="cond"><div class="val">${v}</div><div class="lab">${l}</div></div>`).join('');
+}
+
+// main chart
+let mainChart,curVar='temperature_2m';
+function setVar(v){
+  curVar=v;
+  const d=mainChart.data;
+  d.datasets=codes.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
+  d.datasets.push({label:'Консенсус (взвеш.)',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#ffd54a',borderWidth:3,pointRadius:0,tension:0.2});
+  d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#64b5f6',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
+  if(v==='precipitation'){
+    d.datasets.push({label:'Вероятность осадков (%)',data:(D.weighted.precipitation_probability||[]).map(x=>x),borderColor:'#4dd0e1',borderWidth:2,borderDash:[2,2],pointRadius:0,yAxisID:'y1'});
+  }else{
+    d.datasets=d.datasets.filter(ds=>ds.label!=='Вероятность осадков (%)');
+  }
+  mainChart.options.scales.y.title.text=VAR_NAMES[v];
+  mainChart.options.scales.y.title.display=true;
+  mainChart.update();
+  updateLegend();
+}
+function makeMainChart(){
+  const ctx=document.getElementById('mainChart').getContext('2d');
+  mainChart=new Chart(ctx,{type:'line',data:{labels:D.time.map(fmtTime),datasets:[]},options:{
+    responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    scales:{
+      x:{ticks:{color:'#8a93a8',maxTicksLimit:14},grid:{color:'#232c48'}},
+      y:{ticks:{color:'#8a93a8'},grid:{color:'#232c48'},title:{display:false,text:''}},
+      y1:{position:'right',min:0,max:100,ticks:{color:'#4dd0e1',callback:v=>v+'%'},grid:{display:false}}
+    },
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}}
+  }});
+  setVar(CHART_VARS[0]);
+}
+function updateLegend(){
+  const el=document.getElementById('legend');
+  el.innerHTML='';
+  codes.forEach((c,i)=>{
+    const ds=mainChart.data.datasets[i];
+    if(!ds)return;
+    const lab=document.createElement('label');
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!ds.hidden;
+    cb.addEventListener('change',()=>{ds.hidden=!cb.checked;mainChart.update();});
+    lab.appendChild(cb);
+    lab.innerHTML+='<span class="dot" style="background:'+modelColor(i)+'"></span>'+names[c];
+    el.appendChild(lab);
+  });
+}
+
+// comparison table
+let cmpVar='temperature_2m';
+function buildCmpTable(){
+  const el=document.getElementById('cmpTable');
+  const cols=[{t:'Время'}].concat(codes.map(c=>({t:names[c]}))).concat([{t:'Взвеш.'},{t:'Среднее'}]);
+  const head='<tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr>';
+  const rows=D.time.map((t,i)=>{
+    let cells=`<td>${fmtTime(t)}</td>`;
+    const w=D.weighted[cmpVar]?.[i];
+    codes.forEach((c)=>{
+      const v=D.models[c]?D.models[c][cmpVar]?.[i];
+      let cls='';
+      if(typeof v==='number'&&typeof w==='number')cls=(v>w?'plus':'minus');
+      cells+=`<td class="${cls}">${fmt(v)}</td>`;
+    });
+    cells+=`<td><b>${fmt(w)}</b></td>`;
+    cells+=`<td>${fmt(D.mean[cmpVar]?.[i])}</td>`;
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  el.innerHTML=head+rows;
+}
+
+// accuracy
+function meanOf(o,keys){const a=keys.map(k=>o[k]).filter(x=>typeof x==='number');return a.length?a.reduce((s,x)=>s+x,0)/a.length:null;}
+function buildMaeTables(){
+  const vnames=['temperature_2m','precipitation','wind_speed_10m'];
+  ['7d','30d'].forEach(days=>{
+    const ver=D.verification[days]||{};
+    const el=document.getElementById(days==='7d'?'mae7':'mae30');
+    const head='<tr><th>Модель</th>'+vnames.map(v=>`<th>${VAR_NAMES[v]}</th>`).join('')+'<th>Средн.</th></tr>';
+    const rows=codes.filter(c=>ver[c]).map(c=>{
+      const cells=vnames.map(v=>{const m=ver[c][v];return `<td>${m===null||m===undefined?'—':m.toFixed(2)}</td>`;});
+      const a=meanOf(ver[c],vnames);
+      return `<tr><td>${names[c]}</td>${cells.join('')}<td>${a===null?'—':a.toFixed(2)}</td></tr>`;
+    }).join('');
+    el.innerHTML=head+rows;
+  });
+  const ver=D.verification['7d']||{};
+  const vnames2=['temperature_2m','precipitation','wind_speed_10m'];
+  const items=codes.filter(c=>ver[c]).map(c=>({c,avg:meanOf(ver[c],vnames2)}));
+  items.sort((a,b)=>b.avg-a.avg);
+  new Chart(document.getElementById('maeChart').getContext('2d'),{type:'bar',
+    data:{labels:items.map(x=>names[x.c]),datasets:[{label:'Средний MAE за 7 дней',data:items.map(x=>x.avg),backgroundColor:PALETTE.slice(0,items.length)}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'MAE: '+(c.parsed.y===null?'—':c.parsed.y.toFixed(2))}}},
+      scales:{x:{ticks:{color:'#8a93a8'}},y:{ticks:{color:'#8a93a8'},grid:{color:'#232c48'}}}}});
+}
+
+buildConditions();
+buildVarSel('varsel',setVar);
+buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();});
+makeMainChart();
+buildCmpTable();
+buildMaeTables();
+</script>
+</body>
+</html>
