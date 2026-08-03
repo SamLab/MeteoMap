@@ -10,3 +10,9 @@ venv/
 
 # Local build output
 *.html.tmp
+
+# SDD scratch (task briefs, review packages, reports)
+.superpowers/
+
+# Generated page
+index.html
