@@ -75,6 +75,13 @@ a{color:var(--accent)}
 .d10day{color:var(--muted)}
 .d10pp{color:#1976d2}
 .d10n{color:var(--muted)}
+.dhead{font-size:14px;font-weight:600;margin:12px 0 6px}
+.dparts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.dpart{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
+.dpart .pt{color:var(--muted);font-size:11px;margin-bottom:2px}
+.dpart .ptemp{font-size:17px;font-weight:600}
+.dpart .pw,.dpart .ppr,.dpart .phu{margin-top:2px}
+.dsun{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body>
@@ -300,6 +307,39 @@ function buildWeather10(){
       '<div class="d10t"><span class="d10n">ночью '+temp(tmin)+'</span> / днём '+temp(tmax)+'</div></div>';
   }).join('');
 }
+const PARTS=[['ночь','03'],['утро','09'],['день','15'],['вечер','21']];
+function partVal(day,hr,field){
+  const idx=D.time.findIndex(t=>t.slice(0,10)===day&&t.slice(11,13)===hr);
+  return idx>=0?D.weighted[field]?.[idx]:null;
+}
+function buildWeatherDetail(){
+  const dt=D.daily_time||[];
+  document.getElementById('weather-detail').innerHTML=dt.map((day,di)=>{
+    const d=new Date(day);
+    const sr=(D.daily.sunrise?.[di]||'').slice(11,16)||'—';
+    const ss=(D.daily.sunset?.[di]||'').slice(11,16)||'—';
+    let dl='—';
+    if(D.daily.sunrise?.[di]&&D.daily.sunset?.[di]){
+      const ms=new Date(D.daily.sunset[di])-new Date(D.daily.sunrise[di]);
+      if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
+    }
+    const cells=PARTS.map(x=>{
+      const t=partVal(day,x[1],'temperature_2m');
+      const ws=partVal(day,x[1],'wind_speed_10m');
+      const wd=partVal(day,x[1],'wind_direction_10m');
+      const pr=partVal(day,x[1],'pressure_msl');
+      const hu=partVal(day,x[1],'relative_humidity_2m');
+      return '<div class="dpart"><div class="pt">'+x[0]+'</div>'+
+        '<div class="ptemp">'+temp(t)+'</div>'+
+        '<div class="pw">'+(ws==null?'—':num(ws)+' м/с, '+rumbFull(wd))+'</div>'+
+        '<div class="ppr">'+(pr==null?'—':num(pr)+' мм')+'</div>'+
+        '<div class="phu">'+(hu==null?'—':num(hu)+'%')+'</div></div>';
+    }).join('');
+    return '<div class="dhead">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
+      '<div class="dparts">'+cells+'</div>'+
+      '<div class="dsun">Восход: '+sr+' · Закат: '+ss+' · Долгота дня: '+dl+'</div>';
+  }).join('');
+}
 
 // main chart
 let mainChart,curVar='temperature_2m';
@@ -480,6 +520,7 @@ buildConditions();
 buildWeatherNow();
 buildWeatherHours();
 buildWeather10();
+buildWeatherDetail();
 buildVarSel('varsel',setVar);
 buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();});
 makeMainChart();
