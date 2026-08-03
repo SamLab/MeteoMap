@@ -56,3 +56,19 @@ def test_verify_models_computes_mae_and_skips_failures():
     assert abs(result["a"]["temperature_2m"] - 1.5) < 1e-6
     assert result["a"]["precipitation"] == 0.0
     assert abs(result["a"]["wind_speed_10m"] - 1.5) < 1e-6
+
+
+def test_verify_models_tolerates_archive_failure():
+    variables = ["temperature_2m"]
+
+    def _broken_arch(*args, **kwargs):
+        raise RuntimeError("archive down")
+
+    result = meteo.verify_models(
+        ["a", "b"], variables, "2026-07-01", "2026-07-02",
+        fetch_hist=_hist, fetch_arch=_broken_arch,
+    )
+    assert result == {
+        "a": {"temperature_2m": None},
+        "b": {"temperature_2m": None},
+    }

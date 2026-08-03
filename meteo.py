@@ -212,9 +212,13 @@ def verify_models(model_codes, variables, start_date, end_date,
                   fetch_hist=None, fetch_arch=None):
     fetch_hist = fetch_hist or fetch_historical_model
     fetch_arch = fetch_arch or fetch_archive
-    actual_data = normalize_model_response(
-        fetch_arch(start_date, end_date, variables), variables
-    )["data"]
+    try:
+        actual_data = normalize_model_response(
+            fetch_arch(start_date, end_date, variables), variables
+        )["data"]
+    except Exception as exc:
+        print(f"[warn] verify archive: {exc}")
+        return {code: {v: None for v in variables} for code in model_codes}
     result = {}
     for code in model_codes:
         try:
