@@ -350,7 +350,7 @@ function buildWeatherDetail(){
       return '<div class="dpart"><div class="pt">'+(we?we+' ':'')+x[0]+'</div>'+
         '<div class="ptemp">'+temp(t)+'</div>'+
         '<div class="pw">'+(ws==null?'—':num(ws)+' м/с')+arrow+'</div>'+
-        '<div class="ppr">'+(pr==null?'—':num(pr)+' мм')+' / '+num(pp)+'%</div>'+
+        '<div class="ppr">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
         '<div class="phu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div>'+
         '<div class="pcl">облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
     }).join('');
