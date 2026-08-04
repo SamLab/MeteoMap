@@ -71,10 +71,11 @@ a{color:var(--accent)}
 .hour .he{font-size:18px;line-height:1.3}
 .hour .htemp{font-weight:600;font-size:14px}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px}
-.d10row{display:grid;grid-template-columns:100px 1fr 70px 190px;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.d10row{display:grid;grid-template-columns:100px 1fr auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .d10day{color:var(--muted)}
-.d10pp{color:#1976d2}
-.d10n{color:var(--muted)}
+.d10t{white-space:nowrap}
+.d10mm{color:var(--muted)}
+.d10cl{color:var(--muted)}
 .dhead{font-size:14px;font-weight:600;margin:12px 0 6px}
 .dparts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .dpart{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
@@ -306,14 +307,17 @@ function buildWeather10(){
   document.getElementById('weather-10').innerHTML=dt.map((day,di)=>{
     const idx=D.time.findIndex(t=>t.slice(0,10)===day&&t.slice(11,13)==='15');
     const [wtext,we]=idx<0?['','']:wcode(D.weighted.weather_code?.[idx]);
-    const pp=D.daily.precipitation_probability_max?.[di];
     const tmin=D.daily.temperature_2m_min?.[di];
     const tmax=D.daily.temperature_2m_max?.[di];
+    const pr=D.daily.precipitation_sum?.[di];
+    const pp=D.daily.precipitation_probability_max?.[di];
+    const cl=D.daily.cloud_cover_mean?.[di];
     const d=new Date(day);
     return '<div class="d10row"><div class="d10day">'+DOW_S[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()].slice(0,3)+'</div>'+
       '<div class="d10cond">'+we+' '+wtext+'</div>'+
-      '<div class="d10pp">'+(pp>0?num(pp)+'%':'')+'</div>'+
-      '<div class="d10t"><span class="d10n">ночью '+temp(tmin)+'</span> / днём '+temp(tmax)+'</div></div>';
+      '<div class="d10t">'+temp(tmax)+'/'+temp(tmin)+'</div>'+
+      '<div class="d10mm">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
+      '<div class="d10cl">облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
   }).join('');
 }
 const PARTS=[['ночь','03'],['утро','09'],['день','15'],['вечер','21']];
