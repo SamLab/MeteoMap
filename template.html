@@ -45,6 +45,7 @@ header .meta{color:var(--muted);font-size:12px}
 .legend label{display:flex;align-items:center;gap:5px;cursor:pointer}
 .legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 .tblwrap{overflow:auto}
+.tblwrap table{width:max-content;min-width:100%}
 table{border-collapse:collapse;font-size:12px;width:100%}
 th,td{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{color:var(--muted);font-weight:500}
@@ -86,6 +87,15 @@ a{color:var(--accent)}
 .dpart .pw,.dpart .ppr,.dpart .phu,.dpart .pcl{margin-top:2px}
 .pwarrow{display:inline-block;font-size:12px;transform-origin:center}
 .dsun{font-size:12px;color:var(--muted);margin-top:6px}
+@media(max-width:600px){
+  .d10row{grid-template-columns:76px 118px auto auto;gap:6px;font-size:12px;padding:8px 0}
+  .d10t{grid-column:3;justify-self:end}
+  .d10mm{grid-column:4;justify-self:end}
+  .d10cl,.d10hu{grid-column:2/5;margin-top:2px;white-space:nowrap}
+  .d10cl{grid-row:2}
+  .d10hu{grid-row:3}
+  .d10cl .lbl,.d10hu .lbl{color:var(--muted)}
+}
 </style>
 </head>
 <body>
@@ -436,8 +446,11 @@ const dayBand={
       ctx.lineTo(px,chartArea.bottom);
       ctx.stroke();
       ctx.restore();
+      let ni=i+1;
+      while(ni<D.time.length&&D.time[ni].slice(11,13)!=='00')ni++;
+      const px2=ni<D.time.length?x.getPixelForValue(ni):x.getPixelForValue(D.time.length-1);
       const w=ctx.measureText(label).width;
-      const cx=Math.min(Math.max(px,chartArea.left+w/2),chartArea.right-w/2);
+      const cx=Math.min(Math.max((px+px2)/2,chartArea.left+w/2),chartArea.right-w/2);
       ctx.fillStyle='#5c6579';
       ctx.fillText(label,cx,chartArea.top-5);
     }
