@@ -71,14 +71,14 @@ a{color:var(--accent)}
 .hour .he{font-size:18px;line-height:1.3}
 .hour .htemp{font-weight:600;font-size:14px}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px}
-.d10row{display:grid;grid-template-columns:100px 1fr auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.d10row{display:grid;grid-template-columns:100px auto auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .d10day{color:var(--muted)}
 .d10t{white-space:nowrap}
 .d10mm{color:var(--muted)}
 .d10cl{color:var(--muted)}
 .dhead{font-size:14px;font-weight:600;margin:12px 0 6px}
 .dparts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.dpart{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
+.dpart{background:transparent;border:2px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
 .dpart .pt{color:var(--muted);font-size:11px;margin-bottom:2px}
 .dpart .ptemp{font-size:17px;font-weight:600}
 .dpart .pw,.dpart .ppr,.dpart .phu,.dpart .pcl{margin-top:2px}
@@ -352,7 +352,7 @@ function buildWeatherDetail(){
         '<div class="pw">'+(ws==null?'—':num(ws)+' м/с')+arrow+'</div>'+
         '<div class="ppr">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
         '<div class="phu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div>'+
-        '<div class="pcl">облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
+        '<div class="pcl">Облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
     }).join('');
     return '<div class="dhead">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="dparts">'+cells+'</div>'+
@@ -478,14 +478,14 @@ function updateLegend(){
 let cmpVar='temperature_2m';
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
-  const cols=[{t:'Взвеш.'},{t:'Среднее'},{t:'Время'}].concat(codes.map(c=>({t:names[c]})));
+  const cols=[{t:'Время'},{t:'Взвеш.'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
   const head='<tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr>';
   const rows=D.time.map((t,i)=>{
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
-    let cells=`<td><b>${fmt(w)}</b></td>`;
+    let cells=`<td>${fmtTime(t)}</td>`;
+    cells+=`<td><b>${fmt(w)}</b></td>`;
     cells+=`<td>${fmt(mean)}</td>`;
-    cells+=`<td>${fmtTime(t)}</td>`;
     const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
     const nums=vals.filter(v=>typeof v==='number');
     const mx=nums.length?Math.max(...nums):null;
