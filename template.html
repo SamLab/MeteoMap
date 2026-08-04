@@ -81,7 +81,8 @@ a{color:var(--accent)}
 .dpart{background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
 .dpart .pt{color:var(--muted);font-size:11px;margin-bottom:2px}
 .dpart .ptemp{font-size:17px;font-weight:600}
-.dpart .pw,.dpart .ppr,.dpart .phu{margin-top:2px}
+.dpart .pw,.dpart .ppr,.dpart .phu,.dpart .pcl{margin-top:2px}
+.pwarrow{display:inline-block;font-size:12px;transform-origin:center}
 .dsun{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
 </head>
@@ -130,8 +131,8 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — температура, ощущается, состояние погоды, ветер, давление, влажность, восход/закат, долгота дня.</li>
       <li><b>По часам</b> — следующие 48 часов: время, иконка, температура, вероятность осадков.</li>
-      <li><b>На 10 дней</b> — день, состояние погоды, вероятность осадков, ночная и дневная температуры.</li>
-      <li><b>Подробно на 10 дней</b> — по частям суток (ночь/утро/день/вечер): температура, ветер, давление, влажность; внизу — восход/закат и долгота дня.</li>
+      <li><b>На 10 дней</b> — день, состояние погоды, дневная и ночная температуры, осадки и вероятность, облачность.</li>
+      <li><b>Подробно на 10 дней</b> — по частям суток (ночь/утро/день/вечер): иконка погоды, температура, ветер со стрелкой направления, осадки и вероятность, влажность, облачность; внизу — восход/закат и долгота дня.</li>
     </ul>
     <h2>Прогноз</h2>
     <p>Подробная почасовая вкладка: прогноз на 10 дней вперёд по всем моделям.</p>
@@ -340,13 +341,18 @@ function buildWeatherDetail(){
       const t=partVal(day,x[1],'temperature_2m');
       const ws=partVal(day,x[1],'wind_speed_10m');
       const wd=partVal(day,x[1],'wind_direction_10m');
-      const pr=partVal(day,x[1],'pressure_msl');
+      const pr=partVal(day,x[1],'precipitation');
+      const pp=partVal(day,x[1],'precipitation_probability');
       const hu=partVal(day,x[1],'relative_humidity_2m');
-      return '<div class="dpart"><div class="pt">'+x[0]+'</div>'+
+      const cl=partVal(day,x[1],'cloud_cover');
+      const [,we]=wcode(partVal(day,x[1],'weather_code'));
+      const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
+      return '<div class="dpart"><div class="pt">'+(we?we+' ':'')+x[0]+'</div>'+
         '<div class="ptemp">'+temp(t)+'</div>'+
-        '<div class="pw">'+(ws==null?'—':num(ws)+' м/с, '+rumbFull(wd))+'</div>'+
-        '<div class="ppr">'+(pr==null?'—':num(pr)+' мм')+'</div>'+
-        '<div class="phu">'+(hu==null?'—':num(hu)+'%')+'</div></div>';
+        '<div class="pw">'+(ws==null?'—':num(ws)+' м/с')+arrow+'</div>'+
+        '<div class="ppr">'+(pr==null?'—':num(pr)+' мм')+' / '+num(pp)+'%</div>'+
+        '<div class="phu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div>'+
+        '<div class="pcl">облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
     }).join('');
     return '<div class="dhead">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="dparts">'+cells+'</div>'+
