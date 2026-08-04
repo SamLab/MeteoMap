@@ -523,7 +523,7 @@ function buildMaeTables(){
     el.innerHTML=head+rows;
     const best=mrows.map(c=>({c,avg:meanOf(ver[c],vnames)})).sort((a,b)=>a.avg-b.avg);
     const top=best[0],second=best[1];
-    concl.innerHTML='Точнее всех — <b>'+names[top.c]+'</b>: средняя ошибка <b>'+top.avg.toFixed(2)+'</b>'+(second&&typeof second.avg==='number'?', на <b>'+(second.avg-top.avg).toFixed(2)+'</b> лучше, чем у '+names[second.c]:'');
+    concl.innerHTML='Точнее всех — <b>'+names[top.c]+'</b>: средняя ошибка <b>'+top.avg.toFixed(2)+'</b>'+(second&&typeof second.avg==='number'?', на <b>'+(second.avg-top.avg).toFixed(2)+' ('+(second.avg>top.avg?Math.round((second.avg-top.avg)/second.avg*100):0)+'%)</b> лучше, чем у '+names[second.c]:'');
   });
   const ver=D.verification['7d']||{};
   const vnames2=['temperature_2m','precipitation','wind_speed_10m'];
