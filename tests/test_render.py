@@ -15,12 +15,14 @@ def _payload():
               "precipitation_probability_max": [10.0],
               "sunrise": ["2026-08-03T04:19:00"],
               "sunset": ["2026-08-03T20:33:00"],
-              "cloud_cover_mean": [40.0]},
+              "cloud_cover_mean": [40.0],
+              "relative_humidity_2m_mean": [70.0]},
         "b": {"time": ["d0"], "temperature_2m_max": [7.0],
               "precipitation_probability_max": [30.0],
               "sunrise": ["2026-08-03T04:20:00"],
               "sunset": ["2026-08-03T20:34:00"],
-              "cloud_cover_mean": [50.0]},
+              "cloud_cover_mean": [50.0],
+              "relative_humidity_2m_mean": [80.0]},
     }
     verification = {
         "7d": {"a": {"temperature_2m": 1.0}, "b": {"temperature_2m": 2.0}},
@@ -87,6 +89,11 @@ def test_daily_contains_new_variables():
 def test_daily_cloud_cover_mean_is_averaged():
     p = _payload()
     assert p["daily"]["cloud_cover_mean"] == [45.0]
+
+
+def test_daily_relative_humidity_mean_is_averaged():
+    p = _payload()
+    assert p["daily"]["relative_humidity_2m_mean"] == [75.0]
 
 
 def test_daily_string_fields_take_first_model():

@@ -48,3 +48,19 @@ def test_weather_code_tiebreak_by_adversity():
 
 def test_weather_code_skips_none():
     assert meteo.weather_code_consensus([None, 0, 0]) == 0
+
+
+def test_weather_code_family_majority_beats_most_common_code():
+    # 3 overcast + 3 variable + 3 mostly-clear + 1 clear: clear-family 7 vs overcast 3
+    # → "clear" family wins → most common clear code 2 (partly cloudy) by adversity
+    assert meteo.weather_code_consensus([3, 2, 3, 1, 1, 1, 2, 2, 3, 0]) == 2
+
+
+def test_weather_code_family_rain_beats_showers():
+    # 4 rain + 2 showers → rain family wins, most common rain code 61
+    assert meteo.weather_code_consensus([61, 63, 65, 80, 80, 61]) == 61
+
+
+def test_weather_code_family_tie_prefers_more_adverse_family():
+    # rain and snow families tie 2:2 → snow (more adverse) wins
+    assert meteo.weather_code_consensus([61, 71, 71, 61]) == 71

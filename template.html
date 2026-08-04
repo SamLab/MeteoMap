@@ -72,7 +72,7 @@ a{color:var(--accent)}
 .hour .he{font-size:18px;line-height:1.3}
 .hour .htemp{font-weight:600;font-size:14px}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px}
-.d10row{display:grid;grid-template-columns:100px 170px auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.d10row{display:grid;grid-template-columns:100px 170px auto auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .d10day{color:var(--muted)}
 .d10cond{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .d10t{white-space:nowrap}
@@ -129,7 +129,7 @@ a{color:var(--accent)}
 <div id="tab-help" class="panel">
   <div class="card help">
     <h2>Погода</h2>
-    <p>Открывается по умолчанию: обзор погоды для непрофессионалов. Все числа — взвешенный консенсус (единый прогноз всех моделей с учётом их точности).</p>
+    <p>Открывается по умолчанию: обзор погоды для непрофессионалов. Все числа — консенсус (единый прогноз всех моделей с учётом их точности).</p>
     <ul>
       <li><b>Сейчас</b> — температура, ощущается, состояние погоды, ветер, давление, влажность, восход/закат, долгота дня.</li>
       <li><b>По часам</b> — следующие 48 часов: время, иконка, температура, вероятность осадков.</li>
@@ -147,17 +147,17 @@ a{color:var(--accent)}
       <li><b>Чекбоксы под графиком</b> — снимайте галочку с модели, чтобы убрать её с графика и не мешала смотреть остальные.</li>
       <li><b>Наведите курсор на график</b> — появится табличка со всеми моделями в этот час, отсортированными от максимального значения к минимальному.</li>
     </ul>
-    <h2>Консенсус (взвешенное) и среднее</h2>
+    <h2>Консенсус и среднее</h2>
     <p>На графике и в таблице сравнения кроме отдельных моделей показаны два сводных ряда, собранные из прогнозов всех моделей сразу.</p>
     <ul>
       <li><b>Среднее</b> — простое среднее арифметическое прогнозов всех моделей в этот час: каждая модель учитывается одинаково.</li>
-      <li><b>Взвешенное (консенсус)</b> — то же среднее, но с учётом точности моделей. За последние 7 дней для каждой модели и каждой величины (температура, осадки, ветер) считается средняя ошибка MAE, и чем меньше ошибка модели, тем больше её вес. Значение консенсуса — сумма прогнозов моделей, умноженных на их веса (веса нормированы так, чтобы в сумме давали 1).</li>
-      <li><b>Чем они отличаются:</b> среднее относится ко всем моделям одинаково, а взвешенное сильнее опирается на модели, которые в последние 7 дней ошибались меньше. Если точность у всех моделей одинаковая, значения совпадают. Если по модели нет данных для оценки точности, ей даётся средний вес.</li>
+      <li><b>Консенсус</b> — то же среднее, но с учётом точности моделей. За последние 7 дней для каждой модели и каждой величины (температура, осадки, ветер) считается средняя ошибка MAE, и чем меньше ошибка модели, тем больше её вес. Значение консенсуса — сумма прогнозов моделей, умноженных на их веса (веса нормированы так, чтобы в сумме давали 1).</li>
+      <li><b>Чем они отличаются:</b> среднее относится ко всем моделям одинаково, а консенсус сильнее опирается на модели, которые в последние 7 дней ошибались меньше. Если точность у всех моделей одинаковая, значения совпадают. Если по модели нет данных для оценки точности, ей даётся средний вес.</li>
     </ul>
     <h2>Сравнение</h2>
     <p>Почасовая таблица прогноза на 10 дней по всем моделям. Сверху — выбор величины.</p>
     <ul>
-      <li><b>Первые две колонки</b> — «Взвеш.» (консенсус) и «Среднее», дальше — модели.</li>
+      <li><b>Первые две колонки</b> — «Консенсус» и «Среднее», дальше — модели.</li>
       <li><b>Жирное число</b> — максимум или минимум среди моделей в этот час.</li>
       <li><b>Красное число</b> — модель дала выше консенсуса, <b>синее</b> — ниже.</li>
       <li><b>Прочерк «—»</b> — у модели нет данных на этот час (например, у ARPEGE данные только на первые дни).</li>
@@ -233,9 +233,9 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
 }));
 
 // variable selector
-function buildVarSel(id,onSel){
+function buildVarSel(id,onSel,vars){
   const el=document.getElementById(id);
-  CHART_VARS.forEach(v=>{
+  (vars||CHART_VARS).forEach(v=>{
     const b=document.createElement('button');
     b.textContent=VAR_NAMES[v];b.dataset.v=v;
     b.addEventListener('click',()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');onSel(v);});
@@ -316,12 +316,14 @@ function buildWeather10(){
     const pr=D.daily.precipitation_sum?.[di];
     const pp=D.daily.precipitation_probability_max?.[di];
     const cl=D.daily.cloud_cover_mean?.[di];
+    const hu=D.daily.relative_humidity_2m_mean?.[di];
     const d=new Date(day);
     return '<div class="d10row"><div class="d10day">'+DOW_S[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()].slice(0,3)+'</div>'+
       '<div class="d10cond">'+we+' '+wtext+'</div>'+
-      '<div class="d10t">'+temp(tmax)+'/'+temp(tmin)+'</div>'+
+      '<div class="d10t">'+temp(tmax)+' / '+temp(tmin)+'</div>'+
       '<div class="d10mm">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
-      '<div class="d10cl">облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
+      '<div class="d10cl">Облачность '+(cl==null?'—':num(cl)+'%')+'</div>'+
+      '<div class="d10hu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div></div>';
   }).join('');
 }
 const PARTS=[['ночь','03'],['утро','09'],['день','15'],['вечер','21']];
@@ -355,7 +357,7 @@ function buildWeatherDetail(){
         '<div class="pw">'+(ws==null?'—':num(ws)+' м/с')+arrow+'</div>'+
         '<div class="ppr">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
         '<div class="phu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div>'+
-        '<div class="pcl">Облака '+(cl==null?'—':num(cl)+'%')+'</div></div>';
+        '<div class="pcl">Облачность '+(cl==null?'—':num(cl)+'%')+'</div></div>';
     }).join('');
     return '<div class="dhead">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="dparts">'+cells+'</div>'+
@@ -369,7 +371,7 @@ function setVar(v){
   curVar=v;
   const d=mainChart.data;
   d.datasets=codes.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
-  d.datasets.push({label:'Консенсус (взвеш.)',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#e09b00',borderWidth:3,pointRadius:0,tension:0.2});
+  d.datasets.push({label:'Консенсус',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#e09b00',borderWidth:3,pointRadius:0,tension:0.2});
   d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#2563eb',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
   if(v==='precipitation'){
     d.datasets.push({label:'Вероятность осадков (%)',data:(D.weighted.precipitation_probability||[]).map(x=>x),borderColor:'#0891b2',borderWidth:2,borderDash:[2,2],pointRadius:0,yAxisID:'y1'});
@@ -382,11 +384,11 @@ function setVar(v){
   mainChart.update();
   updateLegend();
 }
-const sumLbl=l=>l==='Консенсус (взвеш.)'||l==='Среднее';
+const sumLbl=l=>l==='Консенсус'||l==='Среднее';
 const tSort=(a,b)=>{
   const la=a.dataset&&a.dataset.label, lb=b.dataset&&b.dataset.label;
   const sa=sumLbl(la), sb=sumLbl(lb);
-  if(sa&&sb)return la==='Консенсус (взвеш.)'?-1:1;
+  if(sa&&sb)return la==='Консенсус'?-1:1;
   if(sa)return -1;
   if(sb)return 1;
   return (b.parsed.y??-Infinity)-(a.parsed.y??-Infinity);
@@ -478,23 +480,25 @@ function updateLegend(){
 let cmpVar='temperature_2m';
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
-  const cols=[{t:'Время'},{t:'Взвеш.'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
+  const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
   const head='<tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr>';
+  const isWc=cmpVar==='weather_code';
+  const cell=v=>v===null||v===undefined?'—':(isWc?wcode(v)[1]+' '+wcode(v)[0]:fmt(v));
   const rows=D.time.map((t,i)=>{
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
     let cells=`<td>${fmtTime(t)}</td>`;
-    cells+=`<td><b>${fmt(w)}</b></td>`;
-    cells+=`<td>${fmt(mean)}</td>`;
+    cells+=`<td><b>${cell(w)}</b></td>`;
+    cells+=`<td>${cell(mean)}</td>`;
     const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
     const nums=vals.filter(v=>typeof v==='number');
     const mx=nums.length?Math.max(...nums):null;
     const mn=nums.length?Math.min(...nums):null;
     vals.forEach((v)=>{
       let cls='';
-      if(typeof v==='number'&&typeof w==='number')cls=(v>w?'plus':'minus');
-      if(v!==null&&v!==undefined&&(v===mx||v===mn))cls+=' ext';
-      cells+=`<td class="${cls}">${fmt(v)}</td>`;
+      if(!isWc&&typeof v==='number'&&typeof w==='number')cls=(v>w?'plus':'minus');
+      if(!isWc&&v!==null&&v!==undefined&&(v===mx||v===mn))cls+=' ext';
+      cells+=`<td class="${cls}">${cell(v)}</td>`;
     });
     return `<tr class="${i===curIdx?'now':''}">${cells}</tr>`;
   }).join('');
@@ -541,7 +545,7 @@ buildWeatherHours();
 buildWeather10();
 buildWeatherDetail();
 buildVarSel('varsel',setVar);
-buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();});
+buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();},CHART_VARS.concat(['weather_code']));
 makeMainChart();
 buildCmpTable();
 buildMaeTables();

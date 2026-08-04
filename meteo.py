@@ -33,7 +33,8 @@ HOURLY_VARIABLES = [
 DAILY_VARIABLES = [
     "temperature_2m_max", "temperature_2m_min", "precipitation_sum",
     "wind_speed_10m_max", "sunshine_duration",
-    "precipitation_probability_max", "cloud_cover_mean", "sunrise", "sunset",
+    "precipitation_probability_max", "cloud_cover_mean", "relative_humidity_2m_mean",
+    "sunrise", "sunset",
 ]
 
 VERIFICATION_VARIABLES = [
@@ -159,16 +160,56 @@ def circular_mean(degrees):
     return math.degrees(math.atan2(round(ys, 12) or 0.0, round(xs, 12) or 0.0)) % 360
 
 
+# Семейства погодных кодов: сперва выбираем семейство большинством голосов,
+# внутри семейства — самый частый код (tie-break по неблагоприятности).
+# Это не даёт «пасмурно» (1 код) победить, когда ясно/переменная облачность
+# суммарно в большинстве (3+3+1 против 3).
+WEATHER_FAMILIES = {
+    "clear": {0, 1, 2},      # ясно, в основном ясно, переменная облачность
+    "overcast": {3},          # пасмурно
+    "fog": {45, 48},
+    "drizzle": {51, 53, 55, 56, 57},
+    "rain": {61, 63, 65, 66, 67},
+    "snow": {71, 73, 75, 77},
+    "showers": {80, 81, 82},
+    "snow_showers": {85, 86},
+    "thunderstorm": {95, 96, 99},
+}
+
+
+def _weather_family(code):
+    for fam, members in WEATHER_FAMILIES.items():
+        if code in members:
+            return fam
+    return None
+
+
+def _family_priority(fam):
+    members = WEATHER_FAMILIES.get(fam)
+    if members is None:
+        return WEATHER_PRIORITY.get(fam, 0)
+    return max(WEATHER_PRIORITY.get(c, 0) for c in members)
+
+
 def weather_code_consensus(codes):
     vals = [c for c in codes if c is not None]
     if not vals:
         return None
-    counts = Counter(vals)
+    fam_of = {c: _weather_family(c) or c for c in set(vals)}
+    fam_votes = Counter(fam_of[c] for c in vals)
+    top_count = max(fam_votes.values())
+    top_fams = [f for f, n in fam_votes.items() if n == top_count]
+    if len(top_fams) == 1:
+        fam = top_fams[0]
+    else:
+        fam = max(top_fams, key=lambda f: (_family_priority(f), max(c for c in vals if fam_of[c] == f)))
+    members = [c for c in vals if fam_of[c] == fam]
+    counts = Counter(members)
     top_count = max(counts.values())
     top = [c for c, n in counts.items() if n == top_count]
     if len(top) == 1:
         return top[0]
-    return max(top, key=lambda c: WEATHER_PRIORITY.get(c, 0))
+    return max(top, key=lambda c: (WEATHER_PRIORITY.get(c, 0), c))
 
 
 def make_weights(mae_by_model, variable):
