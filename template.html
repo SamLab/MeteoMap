@@ -331,7 +331,7 @@ function buildWeather10(){
     return '<div class="d10row"><div class="d10day">'+DOW_S[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()].slice(0,3)+'</div>'+
       '<div class="d10cond">'+we+' '+wtext+'</div>'+
       '<div class="d10t">'+temp(tmax)+' / '+temp(tmin)+'</div>'+
-      '<div class="d10mm">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
+      '<div class="d10mm">Осадки '+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
       '<div class="d10cl">Облачность '+(cl==null?'—':num(cl)+'%')+'</div>'+
       '<div class="d10hu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div></div>';
   }).join('');
