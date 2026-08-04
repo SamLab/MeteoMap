@@ -67,12 +67,14 @@ a{color:var(--accent)}
 .wd .wdl{color:var(--muted);font-size:11px}
 .hours{display:flex;overflow-x:auto;padding:4px 0}
 .hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line)}
+.hour.nd{border-left:3px solid #9aa3b8}
 .hour .ht{color:var(--muted);font-size:11px}
 .hour .he{font-size:18px;line-height:1.3}
 .hour .htemp{font-weight:600;font-size:14px}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px}
-.d10row{display:grid;grid-template-columns:100px auto auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+.d10row{display:grid;grid-template-columns:100px 170px auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .d10day{color:var(--muted)}
+.d10cond{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .d10t{white-space:nowrap}
 .d10mm{color:var(--muted)}
 .d10cl{color:var(--muted)}
@@ -296,9 +298,10 @@ function buildWeatherHours(){
   document.getElementById('weather-hours').innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
+      const nd=(j>0&&D.time[j].slice(0,10)!==D.time[j-1].slice(0,10));
       const [wtext,we]=wcode(w.weather_code?.[j]);
       const pp=w.precipitation_probability?.[j];
-      return '<div class="hour"><div class="ht">'+t.slice(11,16)+'</div>'+
+      return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,16)+'</div>'+
         '<div class="he">'+we+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
         '<div class="hpp">'+(pp>0?num(pp)+'%':'&nbsp;')+'</div></div>';
     }).join('');
@@ -416,29 +419,26 @@ const dayBand={
     ctx.font='12px sans-serif';
     ctx.textAlign='center';
     ctx.textBaseline='bottom';
-    let prevDay=null;
-    x.ticks.forEach((t,i)=>{
-      const ts=D.time[t.value];
-      if(!ts)return;
-      const day=ts.slice(0,10);
-      if(day===prevDay)return;
-      prevDay=day;
-      const px=x.getPixelForTick(i);
+    for(let i=0;i<D.time.length;i++){
+      const ts=D.time[i];
+      if(!ts)continue;
+      if(i>0&&ts.slice(11,13)!=='00')continue;
+      const d=new Date(ts);
+      const label=DAY_NAMES[d.getDay()]+' '+d.getDate()+' '+MONTH_NAMES[d.getMonth()];
+      const px=x.getPixelForValue(i);
       ctx.save();
-      ctx.strokeStyle='#dde2ed';
-      ctx.setLineDash([4,4]);
+      ctx.strokeStyle='#9aa3b8';
+      ctx.lineWidth=2;
       ctx.beginPath();
       ctx.moveTo(px,chartArea.top);
       ctx.lineTo(px,chartArea.bottom);
       ctx.stroke();
       ctx.restore();
-      const d=new Date(ts);
-      const label=DAY_NAMES[d.getDay()]+' '+d.getDate()+' '+MONTH_NAMES[d.getMonth()];
       const w=ctx.measureText(label).width;
       const cx=Math.min(Math.max(px,chartArea.left+w/2),chartArea.right-w/2);
       ctx.fillStyle='#5c6579';
       ctx.fillText(label,cx,chartArea.top-5);
-    });
+    }
     ctx.restore();
   }
 };
