@@ -33,7 +33,7 @@ HOURLY_VARIABLES = [
 DAILY_VARIABLES = [
     "temperature_2m_max", "temperature_2m_min", "precipitation_sum",
     "wind_speed_10m_max", "sunshine_duration",
-    "precipitation_probability_max", "sunrise", "sunset",
+    "precipitation_probability_max", "cloud_cover_mean", "sunrise", "sunset",
 ]
 
 VERIFICATION_VARIABLES = [
