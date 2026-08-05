@@ -51,3 +51,21 @@ def test_assemble_weather_code_by_majority():
     )
     assert out["weighted"]["weather_code"][0] == 61
     assert out["weighted"]["weather_code"][1] == 0
+
+
+def test_assemble_cape_consensus():
+    hb = _series([0.0, 1500.0], [10.0, 1800.0], [5.0, 1200.0], var="cape")
+    out = meteo.assemble_consensus(
+        hb, ["cape"], {"cape": {}}, min_sources=2
+    )
+    assert out["weighted"]["cape"][0] == 5.0
+    assert out["mean"]["cape"][0] == 5.0
+    assert out["median"]["cape"][0] == 5.0
+
+
+def test_assemble_cape_respects_min_sources():
+    hb = _series([1200.0], [None], [None], var="cape")
+    out = meteo.assemble_consensus(
+        hb, ["cape"], {"cape": {}}, min_sources=3
+    )
+    assert out["weighted"]["cape"][0] is None

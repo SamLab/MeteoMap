@@ -28,6 +28,10 @@ def test_variables_nonempty():
     assert meteo.VERIFICATION_VARIABLES
 
 
+def test_cape_in_hourly_variables():
+    assert "cape" in meteo.HOURLY_VARIABLES
+
+
 def test_duplicate_model_codes():
     codes = [c for c, _n, _e in meteo.FORECAST_MODELS]
     assert len(codes) == len(set(codes))

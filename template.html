@@ -80,6 +80,7 @@ a{color:var(--accent)}
 .wcol{display:flex;gap:10px;min-width:220px;flex:1 1 230px}
 .wicon{font-size:26px;line-height:1;align-self:center}
 .wrows{font-size:13px;line-height:1.5;flex:1;display:flex;flex-direction:column;justify-content:center}
+.wr3{color:#c62828;font-weight:600}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:max-content;min-width:100%}
 .d10col{width:70px;flex:none;text-align:center;position:relative}
@@ -150,7 +151,7 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — в заголовке карточки текущее время и день (например, «Сейчас 22:41, Ср 5»); ниже — температура, ощущается, состояние погоды, ветер, давление, влажность, восход/закат, долгота дня.</li>
       <li><b>Сегодня</b> — следующие 48 часов по часам: время, иконка, температура, вероятность осадков. В заголовке — сводка за весь день: дождь, максимум и минимум температуры с временем.</li>
-      <li><b>Предупреждения</b> — дождь, гроза и град. В каждой колонке первая строка — ближайший час, где явление есть хотя бы у одной модели (её осадки и название), вторая — час, где явление есть в консенсусе (с числом моделей).</li>
+      <li><b>Предупреждения</b> — дождь, гроза и град. В каждой колонке первая строка — ближайший час, где явление есть хотя бы у одной модели (её осадки и название), вторая — час, где явление есть в консенсусе (с числом моделей). В колонке грозы красная строка — «высокий риск грозы», когда CAPE (энергия конвекции) у какой-либо модели превышает 1000 Дж/кг.</li>
       <li><b>На 16 дней</b> — день, состояние погоды, дневная и ночная температуры, осадки и вероятность, облачность.</li>
       <li><b>Подробно на 16 дней</b> — по частям суток (ночь/утро/день/вечер): иконка погоды, температура, ветер со стрелкой направления, осадки и вероятность, влажность, облачность; внизу — восход/закат и долгота дня.</li>
     </ul>
@@ -204,8 +205,8 @@ const VAR_NAMES={
  relative_humidity_2m:'Влажность (%)',precipitation:'Осадки (мм)',precipitation_probability:'Вероятность осадков (%)',
  snowfall:'Снег (см)',weather_code:'Погода (WMO)',pressure_msl:'Давление (мм рт. ст.)',cloud_cover:'Облачность (%)',
  wind_speed_10m:'Ветер (м/с)',wind_direction_10m:'Направление ветра (°)',wind_gusts_10m:'Порывы (м/с)',
- visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)'};
-const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_humidity_2m','pressure_msl','cloud_cover'];
+ visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)',cape:'CAPE (Дж/кг)'};
+const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_humidity_2m','pressure_msl','cloud_cover','cape'];
 const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08d1f','#b04faf','#4168d8','#6faf2f','#cc4f9a','#2f9d8f','#c98a2f'];
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
@@ -291,19 +292,13 @@ function buildWeatherNow(){
   const [wtext,we]=wcode(w.weather_code?.[curIdx]);
   const sr=(D.daily.sunrise?.[0]||'').slice(11,16)||'—';
   const ss=(D.daily.sunset?.[0]||'').slice(11,16)||'—';
-  let dl='—';
-  if(D.daily.sunrise?.[0]&&D.daily.sunset?.[0]){
-    const ms=new Date(D.daily.sunset[0])-new Date(D.daily.sunrise[0]);
-    if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
-  }
   const wind=w.wind_speed_10m?.[curIdx];
   const dir=w.wind_direction_10m?.[curIdx];
   const det=[
     ['Ветер',wind==null?'—':num(wind)+' м/с, '+rumbShort(dir)],
-    ['Давление',num(w.pressure_msl?.[curIdx])+' мм рт. ст.'],
+    ['Давление',num(w.pressure_msl?.[curIdx])+' рт. ст.'],
     ['Влажность',num(w.relative_humidity_2m?.[curIdx])+'%'],
-    ['Восход / закат',sr+' / '+ss],
-    ['Долгота дня',dl]
+    ['Восход / закат',sr+' / '+ss]
   ];
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
@@ -466,15 +461,20 @@ function buildWarnings(){
     const m=D.models[best.c];
     return wetVal(best.pr,m?m.precipitation_probability?.[i]:null);
   };
-  const col=(icon,list)=>{
+  const maxCape=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m)m=v;}return m;};
+  const findCape=()=>{for(let i=curIdx;i<ts.length;i++){if(maxCape(i)>1000)return i;}return -1;};
+  const col=(icon,list,extra=[])=>{
     const s=findSrc(list),c=findCon(list);
     const rows=[];
     if(s>=0)rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list)+' · '+sourceList(s,list).join(' и ')+'</div>');
     if(c>=0){const n=sourceCountAt(c,list);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+    rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
   };
-  el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S)+col('🧊',H)+'</div>';
+  const ci=findCape();
+  const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' высокий риск грозы · CAPE '+num(maxCape(ci))+' Дж/кг</div>'];
+  el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S,capeRow)+col('🧊',H)+'</div>';
 }
 
 // main chart

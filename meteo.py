@@ -27,7 +27,7 @@ HOURLY_VARIABLES = [
     "relative_humidity_2m", "precipitation", "precipitation_probability",
     "snowfall", "weather_code", "pressure_msl", "cloud_cover",
     "wind_speed_10m", "wind_direction_10m", "wind_gusts_10m",
-    "visibility", "shortwave_radiation",
+    "visibility", "shortwave_radiation", "cape",
 ]
 
 DAILY_VARIABLES = [
