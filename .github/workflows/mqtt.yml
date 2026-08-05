@@ -18,6 +18,15 @@ jobs:
       - name: Install paho-mqtt
         run: pip install paho-mqtt
 
+      - name: Probe broker TCP reachability
+        run: |
+          if nc -zvw 5 yar.gorod76.ru 1883 2>&1; then
+            echo "REACHABLE: TCP 1883 ok"
+          else
+            echo "NOT reachable: TCP 1883 timed out from GitHub Actions"
+            exit 1
+          fi
+
       - name: Publish weather feed
         env:
           MQTT_HOST: yar.gorod76.ru
