@@ -316,9 +316,12 @@ function buildWeatherHours(){
   }
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  for(let j=start;j<D.time.length;j++){
-    if(rainCodes.includes(w.weather_code?.[j])){parts.push('дождь в '+D.time[j].slice(11,16));break;}
+  let rainHour=-1;
+  for(let j=start;j<D.time.length&&D.time[j].slice(0,10)===today;j++){
+    if(rainCodes.includes(w.weather_code?.[j])){rainHour=j;break;}
   }
+  if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
+  else parts.push('без дождя');
   const mn=[];
   if(tiMax>=0)mn.push('макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
   if(tiMin>=0)mn.push('мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
