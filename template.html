@@ -421,18 +421,19 @@ function sourceCountAt(i,list){
 function buildT16Title(){
   const el=document.getElementById('t16title');
   if(!el)return;
-  const ts=D.time||[];
-  const find=list=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,list)>0)return i;}return -1;};
+  const ts=D.time||[],wc=D.weighted.weather_code||[];
+  const find=list=>{for(let i=curIdx;i<ts.length;i++){if(list.includes(wc[i]))return i;}return -1;};
+  const findSrc=()=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,[95,96,99])>0)return i;}return -1;};
   const src=i=>{
     const n=sourceCountAt(i,[95,96,99]);
     return n===1?'по 1 источнику':('по '+n+' источникам');
   };
   const fmt=i=>{const d=new Date(ts[i]);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16);};
   const ri=find([51,53,55,56,57,61,63,65,66,67,80,81,82]);
-  const ti=find([95,96,99]);
+  const ti=findSrc();
   const parts=[];
-  if(ri>=0)parts.push('ближайший дождь '+fmt(ri));
-  if(ti>=0)parts.push('ближайшая гроза '+fmt(ti)+' ('+src(ti)+')');
+  if(ri>=0)parts.push('дождь '+fmt(ri));
+  if(ti>=0)parts.push('гроза '+fmt(ti)+' ('+src(ti)+')');
   if(parts.length)el.textContent='На 16 дней ('+parts.join(' · ')+')';
 }
 
