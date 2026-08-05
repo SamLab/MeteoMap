@@ -305,7 +305,7 @@ function buildWeatherNow(){
   const det=[
     ['Ветер',wind==null?'—':num(wind)+' м/с, '+rumbShort(dir)],
     ['Давление',num(w.pressure_msl?.[curIdx])+' рт. ст.'],
-    ['Влажность',num(w.relative_humidity_2m?.[curIdx])+'%'],
+    ['Влаж.',num(w.relative_humidity_2m?.[curIdx])+'%'],
     ['Восход / закат',sr+' / '+ss],
     ['CAPE',cIdx<0?'—':num(w.cape[cIdx])+' в '+D.time[cIdx].slice(11,16)]
   ];
