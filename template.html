@@ -303,8 +303,7 @@ function buildWeatherNow(){
     ['Давление',num(w.pressure_msl?.[curIdx])+' мм рт. ст.'],
     ['Влажность',num(w.relative_humidity_2m?.[curIdx])+'%'],
     ['Восход / закат',sr+' / '+ss],
-    ['Долгота дня',dl],
-    ['Обновлено',(D.generated_at||'').slice(11,16)]
+    ['Долгота дня',dl]
   ];
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
@@ -335,8 +334,8 @@ function buildWeatherHours(){
   if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
   else parts.push('без дождя');
   const mn=[];
-  if(tiMax>=0)mn.push('максимум '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
-  if(tiMin>=0)mn.push('минимум '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
+  if(tiMax>=0)mn.push('макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
+  if(tiMin>=0)mn.push('мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
   if(mn.length)parts.push(mn.join(', '));
   const th=document.getElementById('hourstitle');
   if(th&&parts.length)th.textContent='Сегодня '+parts.join(', ');
