@@ -78,7 +78,8 @@ function fetch_payload($url) {
 
 function cur_idx($data, $now = null) {
     if ($now === null) {
-        $now = (new DateTime('now', new DateTimeZone('Europe/Moscow')))->format('Y-m-d\TH:00');
+        $dt = new DateTime('now', new DateTimeZone('Europe/Moscow'));
+        $now = $dt->format('Y-m-d\TH:00');
     }
     $times = isset($data['time']) ? $data['time'] : array();
     foreach ($times as $i => $t) {
