@@ -67,7 +67,6 @@ a{color:var(--accent)}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
 .hours{display:flex;overflow-x:auto;padding:4px 0}
-.hdayinfo{font-size:12px;color:var(--muted);margin-bottom:6px}
 .hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line)}
 .hour.nd{border-left:3px solid #9aa3b8}
 .hour .ht{color:var(--muted);font-size:11px}
@@ -115,7 +114,7 @@ a{color:var(--accent)}
 </div>
 <div id="tab-weather" class="panel active">
   <div class="card"><h3 class="tstab">Сейчас</h3><div id="weather-now"></div></div>
-  <div class="card"><h3 class="tstab">По часам</h3><div class="hours" id="weather-hours"></div></div>
+  <div class="card"><h3 class="tstab" id="hourstitle">По часам</h3><div class="hours" id="weather-hours"></div></div>
   <div class="card"><h3 class="tstab" id="t16title">На 16 дней</h3><div id="weather-10"></div></div>
   <div class="card"><h3 class="tstab">Подробно на 16 дней</h3><div id="weather-detail"></div></div>
 </div>
@@ -316,10 +315,11 @@ function buildWeatherHours(){
     if(tiMin<0||t<w.temperature_2m[tiMin])tiMin=j;
   }
   const info=[];
-  if(tiMax>=0)info.push('Макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
-  if(tiMin>=0)info.push('Мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
+  if(tiMax>=0)info.push('макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
+  if(tiMin>=0)info.push('мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
+  const th=document.getElementById('hourstitle');
+  if(th&&info.length)th.textContent='По часам — '+info.join(' · ');
   document.getElementById('weather-hours').innerHTML=
-    (info.length?'<div class="hdayinfo">'+info.join(' · ')+'</div>':'')+
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
       const nd=(j>0&&D.time[j].slice(0,10)!==D.time[j-1].slice(0,10));
@@ -424,17 +424,21 @@ function buildT16Title(){
   const ts=D.time||[],wc=D.weighted.weather_code||[];
   const find=list=>{for(let i=curIdx;i<ts.length;i++){if(list.includes(wc[i]))return i;}return -1;};
   const findSrc=()=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,[95,96,99])>0)return i;}return -1;};
-  const src=i=>{
-    const n=sourceCountAt(i,[95,96,99]);
-    return n===1?'по 1 источнику':('по '+n+' источникам');
+  const tstr=i=>{const d=new Date(ts[i]);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16);};
+  const wet=i=>{
+    const pr=D.weighted.precipitation?.[i],pp=D.weighted.precipitation_probability?.[i];
+    return (pr==null?'':' в '+fmt(pr)+'мм')+(pp==null?'':' с '+num(pp)+'%');
   };
-  const fmt=i=>{const d=new Date(ts[i]);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16);};
+  const stormModels=i=>codes.filter(c=>{
+    const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
+    return v===95||v===96||v===99;
+  }).map(c=>names[c]).join(', ');
   const ri=find([51,53,55,56,57,61,63,65,66,67,80,81,82]);
   const ti=findSrc();
   const parts=[];
-  if(ri>=0)parts.push('дождь '+fmt(ri));
-  if(ti>=0)parts.push('гроза '+fmt(ti)+' ('+src(ti)+')');
-  if(parts.length)el.textContent='На 16 дней ('+parts.join(' · ')+')';
+  if(ri>=0)parts.push('дождь '+tstr(ri)+wet(ri));
+  if(ti>=0)parts.push('гроза '+tstr(ti)+wet(ti)+' от '+stormModels(ti));
+  if(parts.length)el.textContent='На 16 дней — '+parts.join(' · ');
 }
 
 // main chart
