@@ -309,7 +309,7 @@ def verify_models(model_codes, variables, start_date, end_date,
     return result
 
 
-def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=3):
+def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=2):
     hours = None
     for model in hourly_by_model.values():
         if model["time"]:
