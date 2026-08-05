@@ -307,7 +307,7 @@ function buildWeatherNow(){
     ['Давление',num(w.pressure_msl?.[curIdx])+' рт. ст.'],
     ['Влажность',num(w.relative_humidity_2m?.[curIdx])+'%'],
     ['Восход / закат',sr+' / '+ss],
-    ['CAPE',cIdx<0?'—':num(w.cape[cIdx])+' Дж/кг в '+D.time[cIdx].slice(11,16)]
+    ['CAPE',cIdx<0?'—':num(w.cape[cIdx])+' в '+D.time[cIdx].slice(11,16)]
   ];
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
@@ -611,7 +611,7 @@ function buildCmpTable(){
   const rows=D.time.map((t,i)=>{
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
-    let cells=`<td>${fmtTime(t)}</td>`;
+    let cells=`<td>${DAY_NAMES_SHORT[new Date(t).getDay()]} ${fmtTime(t)}</td>`;
     cells+=`<td><b>${cell(w)}</b></td>`;
     cells+=`<td>${cell(mean)}</td>`;
     const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
