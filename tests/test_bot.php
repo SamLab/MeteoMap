@@ -73,5 +73,20 @@ $fixture = fixture();
 eq('cur_idx exact', cur_idx($fixture, '2026-08-05T10:00'), 10);
 eq('cur_idx empty-data', cur_idx(['time' => []], '2026-08-05T10:00'), 0);
 
+$f = fixture();
+eq('source_list rain', source_list($f, 14, [51,53,55,56,57,61,63,65,66,67,80,81,82]), ['ukmo', 'dwd']);
+eq('source_count rain', source_count($f, 14, [51,53,55,56,57,61,63,65,66,67,80,81,82]), 2);
+eq('source_names storm', source_names($f, 34, [95,96,99]), ['UKMO Global']);
+eq('find storm', find_nearest_source($f, 11, [95,96,99]), 34);
+eq('find hail', find_nearest_source($f, 11, [96,99]), 38);
+eq('find rain', find_rain_by_consensus($f, 11), 14);
+eq('rain today', rain_hour_today($f, 11), 14);
+eq('rain today none', rain_hour_today($f, 24), -1);
+$mm = today_minmax($f, 11);
+eq('max idx', $mm[0], 15);
+eq('min idx', $mm[1], 23);
+eq('wet_str', wet_str($f, 14), ' на 0.1мм с 17%');
+eq('wet_str zero', wet_str($f, 11), ' на 0мм с 0%');
+
 if ($fail) { fwrite(STDERR, "$fail failures\n"); exit(1); }
 echo "OK\n";

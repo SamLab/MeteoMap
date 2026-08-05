@@ -86,3 +86,74 @@ function cur_idx($data, $now = null): int {
     }
     return 0;
 }
+
+function source_list($data, $i, $list): array {
+    $out = [];
+    foreach (($data['model_codes'] ?? []) as $c) {
+        $v = $data['models'][$c]['weather_code'][$i] ?? null;
+        if (in_array($v, $list, true)) $out[] = $c;
+    }
+    return $out;
+}
+
+function source_count($data, $i, $list): int {
+    return count(source_list($data, $i, $list));
+}
+
+function source_names($data, $i, $list): array {
+    $res = [];
+    foreach (source_list($data, $i, $list) as $c) {
+        $res[] = $data['model_names'][$c] ?? $c;
+    }
+    return $res;
+}
+
+function find_nearest_source($data, $from, $list): int {
+    for ($i = $from; $i < count($data['time'] ?? []); $i++) {
+        if (source_count($data, $i, $list) > 0) return $i;
+    }
+    return -1;
+}
+
+function find_rain_by_consensus($data, $from): int {
+    $codes = [51,53,55,56,57,61,63,65,66,67,80,81,82];
+    foreach (($data['time'] ?? []) as $i => $t) {
+        if ($i < $from) continue;
+        if (in_array($data['weighted']['weather_code'][$i] ?? null, $codes, true)) return $i;
+    }
+    return -1;
+}
+
+function rain_hour_today($data, $start): int {
+    $codes = [51,53,55,56,57,61,63,65,66,67,80,81,82];
+    $today = isset($data['time'][$start]) ? substr((string)$data['time'][$start], 0, 10) : '';
+    foreach (($data['time'] ?? []) as $i => $t) {
+        if ($i < $start) continue;
+        if (substr((string)$t, 0, 10) !== $today) break;
+        if (in_array($data['weighted']['weather_code'][$i] ?? null, $codes, true)) return $i;
+    }
+    return -1;
+}
+
+function today_minmax($data, $start): array {
+    $tiMax = -1; $tiMin = -1;
+    $today = isset($data['time'][$start]) ? substr((string)$data['time'][$start], 0, 10) : '';
+    foreach (($data['time'] ?? []) as $i => $t) {
+        if ($i < $start) continue;
+        if (substr((string)$t, 0, 10) !== $today) break;
+        $v = $data['weighted']['temperature_2m'][$i] ?? null;
+        if ($v === null || $v === '') continue;
+        if ($tiMax < 0 || $v > $data['weighted']['temperature_2m'][$tiMax]) $tiMax = $i;
+        if ($tiMin < 0 || $v < $data['weighted']['temperature_2m'][$tiMin]) $tiMin = $i;
+    }
+    return [$tiMax, $tiMin];
+}
+
+function wet_str($data, $i): string {
+    $pr = $data['weighted']['precipitation'][$i] ?? null;
+    $pp = $data['weighted']['precipitation_probability'][$i] ?? null;
+    $s = '';
+    if ($pr !== null && $pr !== '') $s .= ' на ' . fmt($pr) . 'мм';
+    if ($pp !== null && $pp !== '') $s .= ' с ' . num($pp) . '%';
+    return $s;
+}
