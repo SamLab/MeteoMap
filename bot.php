@@ -68,7 +68,7 @@ function http_request($url, $json = null) {
         foreach ($attempts as $verify) {
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verify);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verify ? 2 : 0);
             if ($json !== null) {
@@ -86,7 +86,7 @@ function http_request($url, $json = null) {
         return $last;
     }
     if (ini_get('allow_url_fopen')) {
-        $opts = array('timeout' => 20, 'ignore_errors' => true);
+        $opts = array('timeout' => 12, 'ignore_errors' => true);
         if ($json !== null) {
             $opts['method'] = 'POST';
             $opts['header'] = "Content-Type: application/json\r\n";
@@ -314,12 +314,23 @@ function main() {
         return;
     }
     if (isset($_GET['debug'])) {
-        $d = fetch_payload(SITE_URL);
-        if (!$d) {
-            echo "fetch failed\n";
-        } else {
-            echo "fetched ok, hours=" . count($d['time']) . "\n";
+        echo "php: " . PHP_VERSION . "\n";
+        echo "curl: " . (function_exists('curl_init') ? 'yes' : 'no') . "\n";
+        echo "openssl: " . (extension_loaded('openssl') ? 'yes' : 'no') . "\n";
+        echo "allow_url_fopen: " . ini_get('allow_url_fopen') . "\n";
+        $body = http_request(SITE_URL);
+        $d = parse_payload($body);
+        if ($d) {
+            echo "site fetch ok, hours=" . count($d['time']) . "\n";
             echo build_summary($d) . "\n";
+        } else {
+            echo "site fetch failed: " . $body . "\n";
+        }
+        $me = telegram_api($token, 'getMe', array());
+        if (is_array($me) && !empty($me['ok'])) {
+            echo "telegram getMe ok: " . (isset($me['result']['username']) ? $me['result']['username'] : '') . "\n";
+        } else {
+            echo "telegram getMe failed: " . (is_array($me) ? json_encode($me) : $me) . "\n";
         }
         return;
     }
