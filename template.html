@@ -75,12 +75,20 @@ a{color:var(--accent)}
 .hour .hwnd{font-size:11px;color:var(--muted);min-height:14px}
 .hour .hwnd .pwarrow{font-size:15px;line-height:1}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
-.d10row{display:grid;grid-template-columns:100px 170px auto auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
-.d10day{color:var(--muted)}
-.d10cond{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.d10t{white-space:nowrap}
-.d10mm{color:var(--muted)}
-.d10cl{color:var(--muted)}
+.d10wrap{overflow-x:auto;padding:2px 0}
+.d10strip{display:flex;min-width:560px}
+.d10col{width:56px;flex:none;text-align:center;position:relative}
+.d10tube{height:135px;position:relative}
+.d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
+.d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
+.d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
+.d10tday{color:#c0392b}
+.d10tnight{color:#2c6f9b}
+.d10mm{font-size:10.5px;color:#666;padding:6px 0 2px;white-space:nowrap}
+.d10cond{font-size:10px;color:#555;min-height:26px;display:flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
+.d10cond .ic{font-size:15px}
+.d10day{font-size:10.5px;color:#666;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;white-space:nowrap}
+.d10day b{color:#222}
 .dhead{font-size:14px;font-weight:600;margin:12px 0 6px}
 .dparts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .dpart{background:transparent;border:2px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
@@ -89,15 +97,6 @@ a{color:var(--accent)}
 .dpart .pw,.dpart .ppr,.dpart .phu,.dpart .pcl{margin-top:2px}
 .pwarrow{display:inline-block;font-size:12px;transform-origin:center}
 .dsun{font-size:12px;color:var(--muted);margin-top:6px}
-@media(max-width:600px){
-  .d10row{grid-template-columns:76px 118px auto auto;gap:6px;font-size:12px;padding:8px 0}
-  .d10t{grid-column:3;justify-self:end}
-  .d10mm{grid-column:4;justify-self:end}
-  .d10cl,.d10hu{grid-column:2/5;margin-top:2px;white-space:nowrap}
-  .d10cl{grid-row:2}
-  .d10hu{grid-row:3}
-  .d10cl .lbl,.d10hu .lbl{color:var(--muted)}
-}
 </style>
 </head>
 <body>
@@ -325,7 +324,7 @@ function buildWeatherHours(){
 }
 function buildWeather10(){
   const dt=D.daily_time||[];
-  document.getElementById('weather-10').innerHTML=dt.map((day,di)=>{
+  const arr=dt.map((day,di)=>{
     const idx=D.time.findIndex(t=>t.slice(0,10)===day&&t.slice(11,13)==='15');
     const [wtext,we]=idx<0?['','']:wcode(D.weighted.weather_code?.[idx]);
     const tmin=D.daily.temperature_2m_min?.[di];
@@ -333,15 +332,31 @@ function buildWeather10(){
     const pr=D.daily.precipitation_sum?.[di];
     const pp=D.daily.precipitation_probability_max?.[di];
     const cl=D.daily.cloud_cover_mean?.[di];
-    const hu=D.daily.relative_humidity_2m_mean?.[di];
     const d=new Date(day);
-    return '<div class="d10row"><div class="d10day">'+DOW_S[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()].slice(0,3)+'</div>'+
-      '<div class="d10cond">'+we+' '+wtext+'</div>'+
-      '<div class="d10t">'+temp(tmax)+' / '+temp(tmin)+'</div>'+
-      '<div class="d10mm">Осадки '+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
-      '<div class="d10cl">Облачность '+(cl==null?'—':num(cl)+'%')+'</div>'+
-      '<div class="d10hu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div></div>';
-  }).join('');
+    return {tmin,tmax,pr,pp,cl,wtext,we,d};
+  });
+  const lo=Math.min(...arr.map(x=>x.tmin==null?Infinity:x.tmin));
+  const hi=Math.max(...arr.map(x=>x.tmax==null?-Infinity:x.tmax));
+  const span=(isFinite(lo)&&isFinite(hi)&&hi>lo)?hi-lo:0;
+  const maxPr=Math.max(0,...arr.map(x=>x.pr==null?0:x.pr));
+  const TOP=16,BTM=135-16,SCALE=(isFinite(span)&&span>0)?(BTM-TOP)/span:0;
+  const yT=t=>t==null?BTM:(isFinite(span)&&span>0)?BTM-SCALE*(t-lo):(TOP+BTM)/2;
+  document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
+    const y1=yT(x.tmax),y2=yT(x.tmin);
+    const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
+    const pH=maxPr>0&&x.pr!=null?Math.max(0,Math.round(x.pr/maxPr*100)):0;
+    return '<div class="d10col"><div class="d10tube">'+
+      '<div class="d10prec" style="height:'+pH+'%"></div>'+
+      '<div class="d10tbar" style="top:'+y1+'px;height:'+h+'px"></div>'+
+            '<div class="d10tday" style="top:'+(y1-15)+'px">'+temp(x.tmax)+'</div>'
++
+      '<div class="d10tnight" style="top:'+(y2+2)+'px">'+temp(x.tmin)+'</div>'+
+      '</div>'+
+      '<div class="d10mm">'+(x.pr==null?'—':fmt(x.pr))+'мм/'+(x.pp==null?'—':num(x.pp))+'%</div>'+
+      '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('обл.'+num(x.cl)))+'</div>'+
+      '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
+      '</div>';
+  }).join('')+'</div></div>';
 }
 const PARTS=[['ночь','03'],['утро','09'],['день','15'],['вечер','21']];
 function partVal(day,hr,field){
