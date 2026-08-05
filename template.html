@@ -74,7 +74,7 @@ a{color:var(--accent)}
 .hour .htemp{font-weight:600;font-size:14px}
 .hour .hwnd{font-size:11px;color:var(--muted);min-height:14px}
 .hour .hwnd .pwarrow{font-size:15px;line-height:1}
-.hour .hpp{color:#1976d2;font-size:11px;min-height:14px}
+.hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
 .d10row{display:grid;grid-template-columns:100px 170px auto auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .d10day{color:var(--muted)}
 .d10cond{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -320,7 +320,7 @@ function buildWeatherHours(){
       return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,16)+'</div>'+
         '<div class="he">'+we+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
         '<div class="hwnd">'+(ws==null?'':arrow+' '+num(ws)+' м/с')+'</div>'+
-        '<div class="hpp">'+(pp>0||pr>0?(num(pp)+'% / '+fmt(pr)+'мм'):'&nbsp;')+'</div></div>';
+        '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmt(pr)+'мм</div>':'&nbsp;')+'</div></div>';
     }).join('');
 }
 function buildWeather10(){
