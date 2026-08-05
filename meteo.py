@@ -43,6 +43,38 @@ VERIFICATION_VARIABLES = [
 
 HPA_TO_MMHG = 0.750061683
 
+YR_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
+YR_CODE = "yr_no"
+YR_NAME = "Yr.no"
+
+# MET Norway symbol_code (без суффикса _day/_night/_polartwilight) -> WMO
+YR_BASE_WMO = {
+    "clearsky": 0, "fair": 1, "partlycloudy": 2, "cloudy": 3, "fog": 45,
+    "lightrainshowers": 80, "rainshowers": 80, "heavyrainshowers": 82,
+    "lightrain": 61, "rain": 61, "heavyrain": 65,
+    "lightsnowshowers": 85, "snowshowers": 85, "heavysnowshowers": 86,
+    "lightsnow": 71, "snow": 71, "heavysnow": 73,
+    "lightsleetshowers": 66, "sleetshowers": 67, "heavysleetshowers": 67,
+    "lightsleet": 66, "sleet": 67, "heavysleet": 67,
+    "thunder": 95, "lightthunder": 95, "heavythunder": 95,
+    "thundershowers": 95, "lightthundershowers": 95, "heavythundershowers": 95,
+    "rainandthunder": 95, "lightrainandthunder": 95, "heavyrainandthunder": 95,
+    "sleetandthunder": 95, "lightsleetandthunder": 95, "heavysleetandthunder": 95,
+    "snowandthunder": 95, "lightsnowandthunder": 95, "heavysnowandthunder": 95,
+    "rainshowersandthunder": 95, "lightrainshowersandthunder": 95,
+    "heavyrainshowersandthunder": 95,
+    "sleetshowersandthunder": 95, "lightsleetshowersandthunder": 95,
+    "heavysleetshowersandthunder": 95,
+    "snowshowersandthunder": 95, "lightsnowshowersandthunder": 95,
+    "heavysnowshowersandthunder": 95,
+}
+
+YR_VARIABLES = [
+    "temperature_2m", "wind_speed_10m", "wind_direction_10m",
+    "relative_humidity_2m", "cloud_cover", "pressure_msl",
+    "weather_code", "precipitation",
+]
+
 
 import requests
 import time
@@ -139,6 +171,62 @@ def normalize_model_response(resp, variables):
         else:
             data[var] = list(arr)
     return {"time": list(times), "data": data}
+
+
+def yr_symbol_wmo(code):
+    if not code:
+        return None
+    base = code
+    for suffix in ("_day", "_night", "_polartwilight"):
+        if base.endswith(suffix):
+            base = base[: -len(suffix)]
+            break
+    return YR_BASE_WMO.get(base)
+
+
+def fetch_yr(lat=LAT, lon=LON):
+    resp = requests.get(
+        YR_URL,
+        params={"lat": lat, "lon": lon},
+        headers={"User-Agent": "MeteoMap/1.0 (https://samlab.github.io/MeteoMap)"},
+        timeout=20,
+    )
+    resp.raise_for_status()
+    rows = []
+    for p in resp.json()["properties"]["timeseries"]:
+        t = datetime.fromisoformat(p["time"].replace("Z", "+00:00"))
+        inst = p["data"]["instant"]["details"]
+        n1 = p["data"].get("next_1_hours", {}) or {}
+        n1s = n1.get("summary", {}) or {}
+        n1d = n1.get("details", {}) or {}
+        n6s = (p["data"].get("next_6_hours", {}) or {}).get("summary", {}) or {}
+        code = n1s.get("symbol_code") or n6s.get("symbol_code")
+        hpa = inst.get("air_pressure_at_sea_level")
+        rows.append({
+            "utc": t,
+            "temperature_2m": inst.get("air_temperature"),
+            "wind_speed_10m": inst.get("wind_speed"),
+            "wind_direction_10m": inst.get("wind_from_direction"),
+            "relative_humidity_2m": inst.get("relative_humidity"),
+            "cloud_cover": inst.get("cloud_area_fraction"),
+            "pressure_msl": round(hpa * HPA_TO_MMHG, 1) if hpa is not None else None,
+            "weather_code": yr_symbol_wmo(code),
+            "precipitation": n1d.get("precipitation_amount"),
+        })
+    return rows
+
+
+def align_yr_to_grid(rows, grid, tz):
+    out = {v: [None] * len(grid) for v in HOURLY_VARIABLES}
+    grid_idx = {t: i for i, t in enumerate(grid)}
+    for row in rows:
+        key = row["utc"].astimezone(tz).strftime("%Y-%m-%dT%H:00")
+        idx = grid_idx.get(key)
+        if idx is None:
+            continue
+        for v in YR_VARIABLES:
+            out[v][idx] = row[v]
+    return {"time": list(grid), "data": out}
 
 
 import math
@@ -470,6 +558,18 @@ def main():
         v: make_weights(verification["7d"], v)
         for v in VERIFICATION_VARIABLES
     }
+    try:
+        yr_rows = fetch_yr()
+    except Exception as exc:
+        print(f"[warn] {YR_CODE}: {exc}")
+        yr_rows = []
+    if yr_rows and hourly_by_model:
+        grid = next(iter(hourly_by_model.values()))["time"]
+        hourly_by_model[YR_CODE] = align_yr_to_grid(
+            yr_rows, grid, timezone(timedelta(hours=3))
+        )
+        model_codes.append(YR_CODE)
+        model_names[YR_CODE] = YR_NAME
     consensus = assemble_consensus(
         hourly_by_model, HOURLY_VARIABLES, weights_by_var
     )
