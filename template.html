@@ -72,6 +72,7 @@ a{color:var(--accent)}
 .hour .ht{color:var(--muted);font-size:11px}
 .hour .he{font-size:18px;line-height:1.3}
 .hour .htemp{font-weight:600;font-size:14px}
+.hour .hwnd{font-size:11px;color:var(--muted);min-height:14px}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px}
 .d10row{display:grid;grid-template-columns:100px 170px auto auto auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
 .d10day{color:var(--muted)}
@@ -311,9 +312,14 @@ function buildWeatherHours(){
       const nd=(j>0&&D.time[j].slice(0,10)!==D.time[j-1].slice(0,10));
       const [wtext,we]=wcode(w.weather_code?.[j]);
       const pp=w.precipitation_probability?.[j];
+      const pr=w.precipitation?.[j];
+      const ws=w.wind_speed_10m?.[j];
+      const wd=w.wind_direction_10m?.[j];
+      const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
       return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,16)+'</div>'+
         '<div class="he">'+we+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
-        '<div class="hpp">'+(pp>0?num(pp)+'%':'&nbsp;')+'</div></div>';
+        '<div class="hwnd">'+(ws==null?'':arrow+' '+num(ws)+' м/с')+'</div>'+
+        '<div class="hpp">'+(pp>0||pr>0?(num(pp)+'% / '+fmt(pr)+'мм'):'&nbsp;')+'</div></div>';
     }).join('');
 }
 function buildWeather10(){
