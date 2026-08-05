@@ -67,6 +67,7 @@ a{color:var(--accent)}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
 .hours{display:flex;overflow-x:auto;padding:4px 0}
+.hdayinfo{font-size:12px;color:var(--muted);margin-bottom:6px}
 .hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line)}
 .hour.nd{border-left:3px solid #9aa3b8}
 .hour .ht{color:var(--muted);font-size:11px}
@@ -306,7 +307,19 @@ function buildWeatherNow(){
 function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
+  const today=D.time[start]?D.time[start].slice(0,10):'';
+  let tiMax=-1,tiMin=-1;
+  for(let j=start;j<D.time.length&&D.time[j].slice(0,10)===today;j++){
+    const t=w.temperature_2m?.[j];
+    if(t==null)continue;
+    if(tiMax<0||t>w.temperature_2m[tiMax])tiMax=j;
+    if(tiMin<0||t<w.temperature_2m[tiMin])tiMin=j;
+  }
+  const info=[];
+  if(tiMax>=0)info.push('Макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
+  if(tiMin>=0)info.push('Мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
   document.getElementById('weather-hours').innerHTML=
+    (info.length?'<div class="hdayinfo">'+info.join(' · ')+'</div>':'')+
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
       const nd=(j>0&&D.time[j].slice(0,10)!==D.time[j-1].slice(0,10));
