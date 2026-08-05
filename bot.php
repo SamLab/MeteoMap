@@ -157,3 +157,59 @@ function wet_str($data, $i): string {
     if ($pp !== null && $pp !== '') $s .= ' с ' . num($pp) . '%';
     return $s;
 }
+
+function build_now($data, $idx): string {
+    $w = $data['weighted'];
+    $wc = $w['weather_code'][$idx] ?? null;
+    [, $icon] = wcode($wc);
+    $day = day_short($data['time'][$idx] ?? '');
+    $t = temp($w['temperature_2m'][$idx] ?? null);
+    $feels = temp($w['apparent_temperature'][$idx] ?? null);
+    $os = fmt($w['precipitation'][$idx] ?? null) . 'мм';
+    $wind = num($w['wind_speed_10m'][$idx] ?? null) . ' м/с ' . rumb_short($w['wind_direction_10m'][$idx] ?? null);
+    $pres = num($w['pressure_msl'][$idx] ?? null) . ' мм рт. ст.';
+    $hum = num($w['relative_humidity_2m'][$idx] ?? null) . '%';
+    return "Сейчас: {$icon} {$day} — {$t}, ощущается как {$feels}\n"
+        . "Осадки: {$os} · Ветер: {$wind} · Давление: {$pres} · Влажность: {$hum}";
+}
+
+function build_hours_line($data, $start): string {
+    $parts = [];
+    $rh = rain_hour_today($data, $start);
+    $parts[] = $rh >= 0 ? 'дождь в ' . substr((string)$data['time'][$rh], 11, 5) : 'без дождя';
+    [$tiMax, $tiMin] = today_minmax($data, $start);
+    $mn = [];
+    if ($tiMax >= 0) $mn[] = 'макс. ' . temp($data['weighted']['temperature_2m'][$tiMax]) . ' в ' . substr((string)$data['time'][$tiMax], 11, 5);
+    if ($tiMin >= 0) $mn[] = 'мин. ' . temp($data['weighted']['temperature_2m'][$tiMin]) . ' в ' . substr((string)$data['time'][$tiMin], 11, 5);
+    if (count($mn)) $parts[] = implode(' / ', $mn);
+    return 'По часам — ' . implode(' / ', $parts);
+}
+
+function build_16_line($data, $from): string {
+    $codes = [51,53,55,56,57,61,63,65,66,67,80,81,82];
+    $parts = [];
+    $ri = find_rain_by_consensus($data, $from);
+    if ($ri >= 0) {
+        $n = source_count($data, $ri, $codes);
+        $parts[] = 'дождь ' . tstr($data['time'][$ri]) . wet_str($data, $ri)
+            . ' по ' . ($n === 1 ? '1 модели' : $n . ' моделям');
+    }
+    $ti = find_nearest_source($data, $from, [95, 96, 99]);
+    if ($ti >= 0) {
+        $parts[] = 'гроза ' . tstr($data['time'][$ti]) . wet_str($data, $ti)
+            . ' по ' . implode(' и ', source_names($data, $ti, [95, 96, 99]));
+    }
+    $hi = find_nearest_source($data, $from, [96, 99]);
+    if ($hi >= 0) {
+        $parts[] = 'град ' . tstr($data['time'][$hi]) . wet_str($data, $hi)
+            . ' по ' . implode(' и ', source_names($data, $hi, [96, 99]));
+    }
+    return 'На 16 дней — ' . implode(' / ', $parts);
+}
+
+function build_summary($data, $now = null): string {
+    $idx = cur_idx($data, $now);
+    return build_now($data, $idx) . "\n"
+        . build_hours_line($data, $idx) . "\n"
+        . build_16_line($data, $idx);
+}
