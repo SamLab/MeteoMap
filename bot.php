@@ -61,6 +61,45 @@ function tstr($iso) {
     return $GLOBALS['DOW_SHORT'][(int)date('w', $ts)] . ' ' . date('j', $ts) . ' в ' . date('H:i', $ts);
 }
 
+function http_request($url, $json = null) {
+    if (function_exists('curl_init')) {
+        $attempts = array(true, false);
+        $last = 'curl unavailable';
+        foreach ($attempts as $verify) {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verify);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verify ? 2 : 0);
+            if ($json !== null) {
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+                curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+            }
+            $body = curl_exec($ch);
+            $err = curl_error($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($body !== false) return $body;
+            $last = "curl error (verify=" . ($verify ? 'on' : 'off') . "): {$err} (http {$code})";
+        }
+        return $last;
+    }
+    if (ini_get('allow_url_fopen')) {
+        $opts = array('timeout' => 20, 'ignore_errors' => true);
+        if ($json !== null) {
+            $opts['method'] = 'POST';
+            $opts['header'] = "Content-Type: application/json\r\n";
+            $opts['content'] = $json;
+        }
+        $ctx = stream_context_create(array('http' => $opts));
+        $body = @file_get_contents($url, false, $ctx);
+        if ($body !== false) return $body;
+        return 'file_get_contents failed';
+    }
+    return 'no curl and allow_url_fopen disabled';
+}
+
 function parse_payload($html) {
     if (!preg_match('/<script id="data" type="application\/json">(.*?)<\/script>/s', (string)$html, $m)) {
         return null;
@@ -70,9 +109,8 @@ function parse_payload($html) {
 }
 
 function fetch_payload($url) {
-    $ctx = stream_context_create(array('http' => array('timeout' => 20, 'ignore_errors' => true)));
-    $body = @file_get_contents((string)$url, false, $ctx);
-    if ($body === false) return null;
+    $body = http_request($url);
+    if (!is_string($body)) return null;
     return parse_payload($body);
 }
 
@@ -226,17 +264,9 @@ function build_summary($data, $now = null) {
 
 function telegram_api($token, $method, $params) {
     $url = "https://api.telegram.org/bot{$token}/{$method}";
-    $ctx = stream_context_create(array('http' => array(
-        'method' => 'POST',
-        'header' => "Content-Type: application/json\r\n",
-        'content' => json_encode($params),
-        'ignore_errors' => true,
-        'timeout' => 15,
-    )));
-    $body = @file_get_contents($url, false, $ctx);
-    if ($body === false) return null;
+    $body = http_request($url, json_encode($params));
     $r = json_decode($body, true);
-    return is_array($r) ? $r : null;
+    return is_array($r) ? $r : $body;
 }
 
 function send_message($token, $chatId, $text) {
@@ -272,9 +302,24 @@ function main() {
             $path = parse_url(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '', PHP_URL_PATH);
             $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
             $webhookUrl = $scheme . '://' . $host . $path;
-            echo set_webhook($token, $webhookUrl) ? "webhook set: {$webhookUrl}\n" : "webhook failed\n";
+            $res = telegram_api($token, 'setWebhook', array('url' => $webhookUrl));
+            if (is_array($res) && !empty($res['ok'])) {
+                echo "webhook set: {$webhookUrl}\n";
+            } else {
+                echo "webhook failed: " . (is_array($res) ? json_encode($res) : $res) . "\n";
+            }
         } else {
             echo "bad setup token\n";
+        }
+        return;
+    }
+    if (isset($_GET['debug'])) {
+        $d = fetch_payload(SITE_URL);
+        if (!$d) {
+            echo "fetch failed\n";
+        } else {
+            echo "fetched ok, hours=" . count($d['time']) . "\n";
+            echo build_summary($d) . "\n";
         }
         return;
     }
