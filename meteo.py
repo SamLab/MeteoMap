@@ -45,6 +45,7 @@ HPA_TO_MMHG = 0.750061683
 
 
 import requests
+import time
 
 ENDPOINTS = {
     "forecast": "https://api.open-meteo.com/v1/forecast",
@@ -52,6 +53,33 @@ ENDPOINTS = {
     "historical": "https://historical-forecast-api.open-meteo.com/v1/forecast",
     "archive": "https://archive-api.open-meteo.com/v1/archive",
 }
+
+
+def request_with_retry(url, params, timeout, get=None, max_retries=2,
+                       base_delay=5.0):
+    get = get or requests.get
+    for attempt in range(max_retries + 1):
+        try:
+            resp = get(url, params=params, timeout=timeout)
+            code = getattr(resp, "status_code", None)
+            retryable = code == 429 or (code is not None and code >= 500)
+            if retryable and attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                print(f"[retry] HTTP {code} retry in {delay:.0f}s "
+                      f"({attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError) as exc:
+            if attempt < max_retries:
+                delay = base_delay * (2 ** attempt)
+                print(f"[retry] {exc} retry in {delay:.0f}s "
+                      f"({attempt + 1}/{max_retries})")
+                time.sleep(delay)
+                continue
+            raise
 
 
 def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
@@ -65,9 +93,7 @@ def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
         "forecast_days": days,
         "models": code,
     }
-    resp = requests.get(ENDPOINTS[endpoint], params=params, timeout=15)
-    resp.raise_for_status()
-    return resp.json()
+    return request_with_retry(ENDPOINTS[endpoint], params, timeout=15)
 
 
 def fetch_historical_model(code, start_date, end_date, variables,
@@ -81,9 +107,7 @@ def fetch_historical_model(code, start_date, end_date, variables,
         "timezone": "UTC",
         "models": code,
     }
-    resp = requests.get(ENDPOINTS["historical"], params=params, timeout=20)
-    resp.raise_for_status()
-    return resp.json()
+    return request_with_retry(ENDPOINTS["historical"], params, timeout=20)
 
 
 def fetch_archive(start_date, end_date, variables, lat=LAT, lon=LON):
@@ -95,9 +119,7 @@ def fetch_archive(start_date, end_date, variables, lat=LAT, lon=LON):
         "hourly": ",".join(variables),
         "timezone": "UTC",
     }
-    resp = requests.get(ENDPOINTS["archive"], params=params, timeout=20)
-    resp.raise_for_status()
-    return resp.json()
+    return request_with_retry(ENDPOINTS["archive"], params, timeout=20)
 
 
 def normalize_model_response(resp, variables):
