@@ -334,9 +334,9 @@ function buildWeatherHours(){
   if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
   else parts.push('без дождя');
   const mn=[];
-  if(tiMax>=0)mn.push('макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
-  if(tiMin>=0)mn.push('мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
-  if(mn.length)parts.push(mn.join(', '));
+  if(tiMax>=0)mn.push('до '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
+  if(tiMin>=0)mn.push(temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
+  if(mn.length)parts.push(mn.join(' и '));
   const th=document.getElementById('hourstitle');
   if(th&&parts.length)th.textContent='Сегодня '+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=
