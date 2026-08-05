@@ -300,6 +300,7 @@ function process_update($update, $data = null) {
 }
 
 function main() {
+    @set_time_limit(60);
     $token = BOT_TOKEN;
     if (isset($_GET['setup'])) {
         if ($_GET['setup'] === BOT_TOKEN) {
@@ -319,35 +320,31 @@ function main() {
         return;
     }
     if (isset($_GET['debug'])) {
-        echo "php: " . PHP_VERSION . "\n";
-        echo "curl: " . (function_exists('curl_init') ? 'yes' : 'no') . "\n";
-        echo "openssl: " . (extension_loaded('openssl') ? 'yes' : 'no') . "\n";
-        echo "allow_url_fopen: " . ini_get('allow_url_fopen') . "\n";
+        while (ob_get_level()) ob_end_flush();
+        echo "php: " . PHP_VERSION . "\n"; flush();
+        echo "curl: " . (function_exists('curl_init') ? 'yes' : 'no') . ", openssl: " . (extension_loaded('openssl') ? 'yes' : 'no') . ", allow_url_fopen: " . ini_get('allow_url_fopen') . ", memory_limit: " . ini_get('memory_limit') . "\n"; flush();
+        $t0 = microtime(true);
         $body = http_request(SITE_URL);
-        $d = parse_payload($body);
-        if ($d) {
-            echo "site fetch ok, hours=" . count($d['time']) . "\n";
-            echo build_summary($d) . "\n";
-        } else {
-            echo "site parse failed; memory_limit=" . ini_get('memory_limit') . ", body=" . strlen($body) . " bytes\n";
-            $needle = '<script id="data" type="application/json">';
-            $p = strpos($body, $needle);
-            echo "needle found: " . ($p === false ? 'no' : 'yes') . "\n";
-            if ($p !== false) {
-                $start = $p + strlen($needle);
-                $end = strpos($body, '</script>', $start);
-                $json = substr($body, $start, ($end === false ? 0 : $end - $start));
-                echo "json len: " . strlen($json) . "\n";
-                $dec = json_decode($json, true);
-                echo "decode array: " . (is_array($dec) ? 'yes' : 'no') . "\n";
+        echo "site fetch: " . round(microtime(true) - $t0, 1) . "s, len=" . strlen($body) . "\n"; flush();
+        $needle = '<script id="data" type="application/json">';
+        $p = strpos($body, $needle);
+        echo "needle found: " . ($p === false ? 'no' : 'yes') . "\n"; flush();
+        if ($p !== false) {
+            $start = $p + strlen($needle);
+            $end = strpos($body, '</script>', $start);
+            $json = substr($body, $start, ($end === false ? 0 : $end - $start));
+            echo "json len: " . strlen($json) . "\n"; flush();
+            $t1 = microtime(true);
+            $d = json_decode($json, true);
+            echo "json_decode: " . round(microtime(true) - $t1, 1) . "s, array=" . (is_array($d) ? 'yes' : 'no') . "\n"; flush();
+            if (is_array($d)) {
+                echo build_summary($d) . "\n"; flush();
             }
         }
+        echo "--- telegram getMe ---\n"; flush();
+        $t2 = microtime(true);
         $me = telegram_api($token, 'getMe', array());
-        if (is_array($me) && !empty($me['ok'])) {
-            echo "telegram getMe ok: " . (isset($me['result']['username']) ? $me['result']['username'] : '') . "\n";
-        } else {
-            echo "telegram getMe failed: " . (is_array($me) ? json_encode($me) : $me) . "\n";
-        }
+        echo "getMe: " . round(microtime(true) - $t2, 1) . "s, " . (is_array($me) && !empty($me['ok']) ? 'ok' : (is_array($me) ? json_encode($me) : $me)) . "\n"; flush();
         return;
     }
     $raw = file_get_contents('php://input');
