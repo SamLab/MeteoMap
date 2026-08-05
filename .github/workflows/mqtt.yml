@@ -1,0 +1,27 @@
+name: Publish MQTT weather feed
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install paho-mqtt
+        run: pip install paho-mqtt
+
+      - name: Publish weather feed
+        env:
+          MQTT_HOST: yar.gorod76.ru
+          MQTT_PORT: '1883'
+          MQTT_TOPIC_PREFIX: city/out/pogoda
+          SITE_URL: https://samlab.github.io/MeteoMap/index.html
+        run: python mqtt_publish.py
