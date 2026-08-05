@@ -151,7 +151,7 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — в заголовке карточки текущее время и день (например, «Сейчас 22:41, Ср 5»); ниже — температура, ощущается, состояние погоды, ветер, давление, влажность, восход/закат и CAPE — пик за сегодня по консенсусу (единому средневзвешенному прогнозу) с временем.</li>
       <li><b>Сегодня</b> — следующие 48 часов по часам: время, иконка, температура, вероятность осадков. В заголовке — сводка за весь день: дождь, максимум и минимум температуры с временем.</li>
-      <li><b>Предупреждения</b> — дождь, гроза и град. В каждой колонке первая строка — ближайший час, где явление есть хотя бы у одной модели (её осадки и название), вторая — час, где явление есть в консенсусе (с числом моделей). В колонке грозы красная строка — «риск грозы», когда CAPE у какой-либо модели превышает 1000 Дж/кг в ближайшие дни. Поэтому значение CAPE здесь может отличаться от карточки «Сейчас»: там пик за сегодня по консенсусу, здесь — максимум по моделям на весь прогноз.</li>
+      <li><b>Предупреждения</b> — дождь, гроза и град. В каждой колонке первая строка — ближайший час, где явление есть хотя бы у одной модели (её осадки и название), вторая — час, где явление есть в консенсусе (с числом моделей). В колонке грозы красная строка — «риск грозы», когда CAPE у какой-либо модели превышает 1000 Дж/кг, а её CIN не блокирует (CIN ≤ −50 Дж/кг — сильное торможение: гроза не начнётся, пока CIN не рассеется). Поэтому значение CAPE здесь может отличаться от карточки «Сейчас»: там пик за сегодня по консенсусу, здесь — максимум по моделям на весь прогноз.</li>
       <li><b>На 16 дней</b> — день, состояние погоды, дневная и ночная температуры, осадки и вероятность, облачность.</li>
       <li><b>Подробно на 16 дней</b> — по частям суток (ночь/утро/день/вечер): иконка погоды, температура, ветер со стрелкой направления, осадки и вероятность, влажность, облачность; внизу — восход/закат и долгота дня.</li>
     </ul>
@@ -470,8 +470,11 @@ function buildWarnings(){
     const m=D.models[best.c];
     return wetVal(best.pr,m?m.precipitation_probability?.[i]:null);
   };
-  const maxCape=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m)m=v;}return m;};
-  const findCape=()=>{for(let i=curIdx;i<ts.length;i++){if(maxCape(i)>1000)return i;}return -1;};
+  const CIN_BLOCK=-50;
+  const cinBlock=(c,i)=>{const v=D.models[c]?D.models[c].convective_inhibition?.[i]:undefined;return v!==null&&v!==undefined&&v<=CIN_BLOCK;};
+  const modelRisk=(c,i)=>{const v=D.models[c]?D.models[c].cape?.[i]:undefined;return v!==null&&v!==undefined&&v>1000&&!cinBlock(c,i);};
+  const findRisk=()=>{for(let i=curIdx;i<ts.length;i++){for(const c of codes){if(modelRisk(c,i))return i;}}return -1;};
+  const maxCapeUnblocked=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m&&!cinBlock(c,i))m=v;}return m;};
   const col=(icon,list,extra=[])=>{
     const s=findSrc(list),c=findCon(list);
     const rows=[];
@@ -481,8 +484,8 @@ function buildWarnings(){
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
   };
-  const ci=findCape();
-  const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' риск грозы · CAPE '+num(maxCape(ci))+' Дж/кг</div>'];
+  const ci=findRisk();
+  const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' риск грозы · CAPE '+num(maxCapeUnblocked(ci))+' Дж/кг</div>'];
   el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S,capeRow)+col('🧊',H)+'</div>';
 }
 

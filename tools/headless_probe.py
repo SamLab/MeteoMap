@@ -5,9 +5,11 @@ import tempfile
 
 def main():
     src = sys.argv[1]      # path to index.html (regenerated)
-    probe_js = sys.argv[2] # JS, выполняется после загрузки страницы
+    probe_js = sys.argv[2] # JS (или путь к .js-файлу с кодом)
     out = sys.argv[3]      # path to output .txt (UTF-8)
     html = open(src, encoding="utf-8").read()
+    if os.path.isfile(probe_js):
+        probe_js = open(probe_js, encoding="utf-8").read()
     wrapper = (
         '<div id="probeout"></div>\n<script>\n' + probe_js + "\n</script>"
     )
@@ -24,7 +26,9 @@ def main():
     res = subprocess.run(cmd, capture_output=True, shell=True)
     raw = res.stdout.decode("utf-8", errors="replace")
     i = raw.find('<div id="probeout">')
-    j = raw.find("</div>", i)
+    j = raw.find('<!--PROBE_END-->', i)
+    if j < 0:
+        j = raw.find("</div>", i)
     text = raw[i + len('<div id="probeout">'):j]
     open(out, "w", encoding="utf-8").write(text)
     print(text)
