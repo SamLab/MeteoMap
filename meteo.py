@@ -16,7 +16,7 @@ FORECAST_MODELS = [
     ("kma_gdps", "KMA GDPS", "forecast"),
     ("dwd_icon_global", "DWD ICON", "forecast"),
     ("gem_global", "GEM Global", "forecast"),
-    ("meteofrance_arpege_world025", "Météo-France ARPEGE", "forecast"),
+    ("meteofrance_arpege_world025", "Météo-France", "forecast"),
     ("ukmo_global_deterministic_10km", "UKMO Global", "forecast"),
     ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
     ("google_weathernext2_ensemble", "Google WeatherNext 2", "ensemble"),
@@ -45,7 +45,7 @@ HPA_TO_MMHG = 0.750061683
 
 YR_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 YR_CODE = "yr_no"
-YR_NAME = "Yr.no"
+YR_NAME = "MET Norway"
 
 # MET Norway symbol_code (без суффикса _day/_night/_polartwilight) -> WMO
 YR_BASE_WMO = {
