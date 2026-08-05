@@ -76,6 +76,10 @@ a{color:var(--accent)}
 .hour .hwnd{font-size:11px;color:var(--muted);min-height:14px}
 .hour .hwnd .pwarrow{font-size:15px;line-height:1}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
+.warn{display:flex;gap:16px;flex-wrap:wrap;padding:4px 2px}
+.wcol{display:flex;gap:10px;min-width:220px;flex:1 1 230px}
+.wicon{font-size:26px;line-height:1;align-self:center}
+.wrows{font-size:13px;line-height:1.5;flex:1;display:flex;flex-direction:column;justify-content:center}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:max-content;min-width:100%}
 .d10col{width:70px;flex:none;text-align:center;position:relative}
@@ -114,9 +118,10 @@ a{color:var(--accent)}
   <button data-tab="help">Справка</button>
 </div>
 <div id="tab-weather" class="panel active">
-  <div class="card"><h3 class="tstab">Сейчас</h3><div id="weather-now"></div></div>
+  <div class="card"><h3 class="tstab" id="nowtitle">Сейчас</h3><div id="weather-now"></div></div>
   <div class="card"><h3 class="tstab" id="hourstitle">По часам</h3><div class="hours" id="weather-hours"></div></div>
-  <div class="card"><h3 class="tstab" id="t16title">На 16 дней</h3><div id="weather-10"></div></div>
+  <div class="card"><h3 class="tstab">Предупреждения</h3><div id="warnings"></div></div>
+  <div class="card"><h3 class="tstab">На 16 дней</h3><div id="weather-10"></div></div>
   <div class="card"><h3 class="tstab">Подробно на 16 дней</h3><div id="weather-detail"></div></div>
 </div>
 <div id="tab-forecast" class="panel">
@@ -143,8 +148,9 @@ a{color:var(--accent)}
     <h2>Погода</h2>
     <p>Открывается по умолчанию: обзор погоды для непрофессионалов. Все числа — консенсус (единый прогноз всех моделей с учётом их точности).</p>
     <ul>
-      <li><b>Сейчас</b> — температура, ощущается, состояние погоды, ветер, давление, влажность, восход/закат, долгота дня.</li>
-      <li><b>По часам</b> — следующие 48 часов: время, иконка, температура, вероятность осадков.</li>
+      <li><b>Сейчас</b> — в заголовке карточки текущее время и день (например, «Сейчас 22:41, Ср 5»); ниже — температура, ощущается, состояние погоды, ветер, давление, влажность, восход/закат, долгота дня.</li>
+      <li><b>Сегодня</b> — следующие 48 часов по часам: время, иконка, температура, вероятность осадков. В заголовке — сводка за весь день: дождь, максимум и минимум температуры с временем.</li>
+      <li><b>Предупреждения</b> — дождь, гроза и град. В каждой колонке первая строка — ближайший час, где явление есть хотя бы у одной модели (её осадки и название), вторая — час, где явление есть в консенсусе (с числом моделей).</li>
       <li><b>На 16 дней</b> — день, состояние погоды, дневная и ночная температуры, осадки и вероятность, облачность.</li>
       <li><b>Подробно на 16 дней</b> — по частям суток (ночь/утро/день/вечер): иконка погоды, температура, ветер со стрелкой направления, осадки и вероятность, влажность, облачность; внизу — восход/закат и долгота дня.</li>
     </ul>
@@ -279,6 +285,8 @@ function buildConditions(){
   document.getElementById('conditions').innerHTML=list.map(([l,v])=>`<div class="cond"><div class="val">${v}</div><div class="lab">${l}</div></div>`).join('');
 }
 function buildWeatherNow(){
+  const nt=document.getElementById('nowtitle');
+  if(nt)nt.textContent='Сейчас '+(nowLocal.match(/\d{2}:\d{2}/)||['?'])[0]+', '+DAY_NAMES_SHORT[new Date(nowLocal).getDay()]+' '+new Date(nowLocal).getDate();
   const w=D.weighted;
   const [wtext,we]=wcode(w.weather_code?.[curIdx]);
   const sr=(D.daily.sunrise?.[0]||'').slice(11,16)||'—';
@@ -308,8 +316,10 @@ function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
   const today=D.time[start]?D.time[start].slice(0,10):'';
+  const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today;
   let tiMax=-1,tiMin=-1;
-  for(let j=start;j<D.time.length&&D.time[j].slice(0,10)===today;j++){
+  for(let j=0;j<D.time.length;j++){
+    if(!isToday(j))continue;
     const t=w.temperature_2m?.[j];
     if(t==null)continue;
     if(tiMax<0||t>w.temperature_2m[tiMax])tiMax=j;
@@ -318,17 +328,18 @@ function buildWeatherHours(){
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   let rainHour=-1;
-  for(let j=start;j<D.time.length&&D.time[j].slice(0,10)===today;j++){
+  for(let j=0;j<D.time.length;j++){
+    if(!isToday(j))continue;
     if(rainCodes.includes(w.weather_code?.[j])){rainHour=j;break;}
   }
   if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
   else parts.push('без дождя');
   const mn=[];
-  if(tiMax>=0)mn.push('макс. '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
-  if(tiMin>=0)mn.push('мин. '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
-  if(mn.length)parts.push(mn.join(' / '));
+  if(tiMax>=0)mn.push('максимум '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
+  if(tiMin>=0)mn.push('минимум '+temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
+  if(mn.length)parts.push(mn.join(', '));
   const th=document.getElementById('hourstitle');
-  if(th&&parts.length)th.textContent='По часам — '+parts.join(' / ');
+  if(th&&parts.length)th.textContent='Сегодня '+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
@@ -428,35 +439,43 @@ function sourceCountAt(i,list){
   }
   return n;
 }
-function buildT16Title(){
-  const el=document.getElementById('t16title');
+function buildWarnings(){
+  const el=document.getElementById('warnings');
   if(!el)return;
   const ts=D.time||[],wc=D.weighted.weather_code||[];
-  const find=list=>{for(let i=curIdx;i<ts.length;i++){if(list.includes(wc[i]))return i;}return -1;};
-  const findSrc=()=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,[95,96,99])>0)return i;}return -1;};
+  const R=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  const S=[95,96,99];
+  const H=[96,99];
+  const findSrc=list=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,list)>0)return i;}return -1;};
+  const findCon=list=>{for(let i=curIdx;i<ts.length;i++){if(list.includes(wc[i]))return i;}return -1;};
   const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16)+'</span>';};
-  const wet=i=>{
-    const pr=D.weighted.precipitation?.[i],pp=D.weighted.precipitation_probability?.[i];
-    return (pr==null?'':' на '+fmt(pr)+'мм')+(pp==null?'':' с '+num(pp)+'%');
-  };
+  const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmt(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
+  const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
   const sourceList=(i,list)=>codes.filter(c=>{
     const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
     return list.includes(v);
   }).map(c=>names[c]);
-  const stormModels=i=>sourceList(i,[95,96,99]).join(' и ');
-  const hailModels=i=>sourceList(i,[96,99]).join(' и ');
-  const findHail=()=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,[96,99])>0)return i;}return -1;};
-  const ri=find([51,53,55,56,57,61,63,65,66,67,80,81,82]);
-  const ti=findSrc();
-  const hi=findHail();
-  const parts=[];
-  if(ri>=0){
-    const n=sourceList(ri,[51,53,55,56,57,61,63,65,66,67,80,81,82]).length;
-    parts.push('дождь '+tstr(ri)+wet(ri)+' по '+(n===1?'1 модели':n+' моделям'));
-  }
-  if(ti>=0)parts.push('гроза '+tstr(ti)+wet(ti)+' по '+stormModels(ti));
-  if(hi>=0)parts.push('град '+tstr(hi)+wet(hi)+' по '+hailModels(hi));
-  if(parts.length)el.innerHTML='На 16 дней — '+parts.join(' / ');
+  const srcWet=(i,list)=>{
+    let best=null;
+    for(const c of codes){
+      const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
+      if(!list.includes(v))continue;
+      const pr=D.models[c]?D.models[c].precipitation?.[i]:undefined;
+      if(best===null||(pr!==null&&pr!==undefined&&(best.pr===null||pr>best.pr)))best={c,pr};
+    }
+    if(best===null)return wetVal(null,null);
+    const m=D.models[best.c];
+    return wetVal(best.pr,m?m.precipitation_probability?.[i]:null);
+  };
+  const col=(icon,list)=>{
+    const s=findSrc(list),c=findCon(list);
+    const rows=[];
+    if(s>=0)rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list)+' · '+sourceList(s,list).join(' и ')+'</div>');
+    if(c>=0){const n=sourceCountAt(c,list);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+    if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
+    return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
+  };
+  el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S)+col('🧊',H)+'</div>';
 }
 
 // main chart
@@ -641,7 +660,7 @@ buildWeatherNow();
 buildWeatherHours();
 buildWeather10();
 buildWeatherDetail();
-buildT16Title();
+buildWarnings();
 buildVarSel('varsel',setVar);
 buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();},CHART_VARS.concat(['weather_code']));
 makeMainChart();
