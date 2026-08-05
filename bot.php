@@ -1,6 +1,7 @@
 ﻿<?php
 
 date_default_timezone_set('Europe/Moscow');
+@ini_set('memory_limit', '128M');
 
 define('SITE_URL', 'https://samlab.github.io/MeteoMap/index.html');
 define('BOT_TOKEN', '');
@@ -101,10 +102,14 @@ function http_request($url, $json = null) {
 }
 
 function parse_payload($html) {
-    if (!preg_match('/<script id="data" type="application\/json">(.*?)<\/script>/s', (string)$html, $m)) {
-        return null;
-    }
-    $data = json_decode($m[1], true);
+    $needle = '<script id="data" type="application/json">';
+    $start = strpos($html, $needle);
+    if ($start === false) return null;
+    $start += strlen($needle);
+    $end = strpos($html, '</script>', $start);
+    if ($end === false) return null;
+    $json = substr($html, $start, $end - $start);
+    $data = json_decode($json, true);
     return is_array($data) ? $data : null;
 }
 
@@ -324,7 +329,18 @@ function main() {
             echo "site fetch ok, hours=" . count($d['time']) . "\n";
             echo build_summary($d) . "\n";
         } else {
-            echo "site fetch failed: " . $body . "\n";
+            echo "site parse failed; memory_limit=" . ini_get('memory_limit') . ", body=" . strlen($body) . " bytes\n";
+            $needle = '<script id="data" type="application/json">';
+            $p = strpos($body, $needle);
+            echo "needle found: " . ($p === false ? 'no' : 'yes') . "\n";
+            if ($p !== false) {
+                $start = $p + strlen($needle);
+                $end = strpos($body, '</script>', $start);
+                $json = substr($body, $start, ($end === false ? 0 : $end - $start));
+                echo "json len: " . strlen($json) . "\n";
+                $dec = json_decode($json, true);
+                echo "decode array: " . (is_array($dec) ? 'yes' : 'no') . "\n";
+            }
         }
         $me = telegram_api($token, 'getMe', array());
         if (is_array($me) && !empty($me['ok'])) {
