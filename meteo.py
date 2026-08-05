@@ -3,7 +3,7 @@
 LAT = 57.63
 LON = 39.87
 TIMEZONE = "Europe/Moscow"
-FORECAST_DAYS = 10
+FORECAST_DAYS = 16
 
 # (model_code, display_name, endpoint) — endpoint: "forecast" or "ensemble"
 FORECAST_MODELS = [

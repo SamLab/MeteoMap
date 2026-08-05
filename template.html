@@ -76,8 +76,8 @@ a{color:var(--accent)}
 .hour .hwnd .pwarrow{font-size:15px;line-height:1}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
 .d10wrap{overflow-x:auto;padding:2px 0}
-.d10strip{display:flex;min-width:560px}
-.d10col{width:56px;flex:none;text-align:center;position:relative}
+.d10strip{display:flex;width:max-content;min-width:100%}
+.d10col{width:84px;flex:none;text-align:center;position:relative}
 .d10tube{height:135px;position:relative}
 .d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
 .d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
@@ -338,13 +338,12 @@ function buildWeather10(){
   const lo=Math.min(...arr.map(x=>x.tmin==null?Infinity:x.tmin));
   const hi=Math.max(...arr.map(x=>x.tmax==null?-Infinity:x.tmax));
   const span=(isFinite(lo)&&isFinite(hi)&&hi>lo)?hi-lo:0;
-  const maxPr=Math.max(0,...arr.map(x=>x.pr==null?0:x.pr));
   const TOP=16,BTM=135-16,SCALE=(isFinite(span)&&span>0)?(BTM-TOP)/span:0;
   const yT=t=>t==null?BTM:(isFinite(span)&&span>0)?BTM-SCALE*(t-lo):(TOP+BTM)/2;
   document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
     const y1=yT(x.tmax),y2=yT(x.tmin);
     const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
-    const pH=maxPr>0&&x.pr!=null?Math.max(0,Math.round(x.pr/maxPr*100)):0;
+    const pH=x.pr!=null?Math.max(0,Math.round(x.pr/50*100)):0;
     return '<div class="d10col"><div class="d10tube">'+
       '<div class="d10prec" style="height:'+pH+'%"></div>'+
       '<div class="d10tbar" style="top:'+y1+'px;height:'+h+'px"></div>'+
