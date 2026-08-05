@@ -187,3 +187,24 @@ def test_build_all_uses_cur_idx():
 def test_topic_for():
     assert m.topic_for("city/out/pogoda", "now") == "city/out/pogoda/now"
     assert m.topic_for("city/out/pogoda", "3") == "city/out/pogoda/3"
+
+
+def test_publish_docs_with_fake_client():
+    class _Info:
+        def is_published(self):
+            return True
+
+    class FakeClient:
+        def __init__(self):
+            self.published = []
+
+        def publish(self, topic, payload, retain=False):
+            self.published.append((topic, json.loads(payload), retain))
+            return _Info()
+
+    client = FakeClient()
+    docs = {"now": {"temperature": 23.4}, "rain": {"rain": None}}
+    n = m.publish_docs("h", 1883, "city/out/pogoda", docs, client=client)
+    assert n == 2
+    assert client.published[0] == ("city/out/pogoda/now", {"temperature": 23.4}, True)
+    assert client.published[1] == ("city/out/pogoda/rain", {"rain": None}, True)

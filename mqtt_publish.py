@@ -196,3 +196,63 @@ def build_all(data, now_hour=None, updated_at=None):
 
 def topic_for(prefix, name):
     return "{}/{}".format(prefix, name)
+
+
+def publish_docs(host, port, prefix, docs, client=None):
+    import time
+    own = False
+    if client is None:
+        try:
+            import paho.mqtt.client as mqtt
+        except ImportError:
+            raise SystemExit("paho-mqtt is not installed (pip install paho-mqtt)")
+        if hasattr(mqtt, "CallbackAPIVersion"):
+            client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+        else:
+            client = mqtt.Client()
+        client.connect(host, port, keepalive=30)
+        client.loop_start()
+        own = True
+    infos = []
+    try:
+        for name, payload in docs.items():
+            infos.append(client.publish(
+                topic_for(prefix, name),
+                json.dumps(payload, ensure_ascii=False),
+                retain=True,
+            ))
+        deadline = time.time() + 10
+        while time.time() < deadline and not all(i.is_published() for i in infos):
+            time.sleep(0.1)
+        if not all(i.is_published() for i in infos):
+            raise RuntimeError("MQTT publish timeout")
+    finally:
+        if own:
+            client.loop_stop()
+            client.disconnect()
+    return len(infos)
+
+
+def fetch_html(url):
+    import urllib.request
+    with urllib.request.urlopen(url, timeout=30) as r:
+        return r.read().decode("utf-8")
+
+
+def main():
+    import os
+    host = os.environ.get("MQTT_HOST", MQTT_HOST)
+    port = int(os.environ.get("MQTT_PORT", MQTT_PORT))
+    prefix = os.environ.get("MQTT_TOPIC_PREFIX", MQTT_TOPIC_PREFIX)
+    url = os.environ.get("SITE_URL", SITE_URL)
+    html = fetch_html(url)
+    data = parse_payload(html)
+    if data is None:
+        raise SystemExit("Failed to parse payload from " + url)
+    docs = build_all(data)
+    n = publish_docs(host, port, prefix, docs)
+    print("published {} topics to {}:{} prefix={}".format(n, host, port, prefix))
+
+
+if __name__ == "__main__":
+    main()
