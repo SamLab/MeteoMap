@@ -77,7 +77,7 @@ a{color:var(--accent)}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:max-content;min-width:100%}
-.d10col{width:72px;flex:none;text-align:center;position:relative}
+.d10col{width:69px;flex:none;text-align:center;position:relative}
 .d10tube{height:135px;position:relative}
 .d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
 .d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
@@ -115,7 +115,7 @@ a{color:var(--accent)}
 <div id="tab-weather" class="panel active">
   <div class="card"><h3 class="tstab">Сейчас</h3><div id="weather-now"></div></div>
   <div class="card"><h3 class="tstab">По часам</h3><div class="hours" id="weather-hours"></div></div>
-  <div class="card"><h3 class="tstab">На 16 дней</h3><div id="weather-10"></div></div>
+  <div class="card"><h3 class="tstab" id="t16title">На 16 дней</h3><div id="weather-10"></div></div>
   <div class="card"><h3 class="tstab">Подробно на 16 дней</h3><div id="weather-detail"></div></div>
 </div>
 <div id="tab-forecast" class="panel">
@@ -215,7 +215,7 @@ const WCODE={
 71:['Небольшой снег','🌨️'],73:['Снег','❄️'],75:['Сильный снег','❄️'],77:['Снежные зерна','❄️'],
 80:['Небольшой ливень','🌧️'],81:['Ливень','🌧️'],82:['Сильный ливень','⛈️'],
 85:['Снегопад','🌨️'],86:['Снегопад','🌨️'],
-95:['Гроза','⛈️'],96:['Гроза с градом','⛈️'],99:['Гроза с градом','⛈️']};
+ 95:['Гроза','⚡'],96:['Гроза с градом','⚡'],99:['Гроза с градом','⚡']};
 const wcode=c=>WCODE[c]||['—',''];
 const COMPASS=['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
 const COMPASS_FULL=['северный','северо-восточный','восточный','юго-восточный','южный','юго-западный','западный','северо-западный'];
@@ -381,9 +381,9 @@ function buildWeatherDetail(){
       const pp=partVal(day,x[1],'precipitation_probability');
       const hu=partVal(day,x[1],'relative_humidity_2m');
       const cl=partVal(day,x[1],'cloud_cover');
-      const [,we]=wcode(partVal(day,x[1],'weather_code'));
+      const [wtx,we]=wcode(partVal(day,x[1],'weather_code'));
       const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
-      return '<div class="dpart"><div class="pt">'+(we?we+' ':'')+x[0]+'</div>'+
+      return '<div class="dpart"><div class="pt">'+(we?we+' ':'')+x[0]+(wtx?', '+wtx:'')+'</div>'+
         '<div class="ptemp">'+temp(t)+'</div>'+
         '<div class="pw">'+(ws==null?'—':num(ws)+' м/с')+arrow+'</div>'+
         '<div class="ppr">'+(pr==null?'—':fmt(pr)+' мм')+' / '+num(pp)+'%</div>'+
@@ -394,6 +394,21 @@ function buildWeatherDetail(){
       '<div class="dparts">'+cells+'</div>'+
       '<div class="dsun">Восход: '+sr+' · Закат: '+ss+' · Долгота дня: '+dl+'</div>';
   }).join('');
+}
+
+const DAY_NAMES_SHORT=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+function buildT16Title(){
+  const el=document.getElementById('t16title');
+  if(!el)return;
+  const wc=D.weighted.weather_code||[],ts=D.time||[];
+  const find=codes=>{for(let i=curIdx;i<wc.length;i++){if(codes.includes(wc[i]))return i;}return -1;};
+  const fmt=i=>{const d=new Date(ts[i]);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16);};
+  const ri=find([51,53,55,56,57,61,63,65,66,67,80,81,82]);
+  const ti=find([95,96,99]);
+  const parts=[];
+  if(ri>=0)parts.push('ближайший дождь '+fmt(ri));
+  if(ti>=0)parts.push('ближайшая гроза '+fmt(ti));
+  if(parts.length)el.textContent='На 16 дней ('+parts.join(' · ')+')';
 }
 
 // main chart
@@ -578,6 +593,7 @@ buildWeatherNow();
 buildWeatherHours();
 buildWeather10();
 buildWeatherDetail();
+buildT16Title();
 buildVarSel('varsel',setVar);
 buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();},CHART_VARS.concat(['weather_code']));
 makeMainChart();
