@@ -95,5 +95,17 @@ eq('hours rain', build_hours_line($f, 11), 'По часам — дождь в 14
 eq('16 line', build_16_line($f, 11), 'На 16 дней — дождь Ср 5 в 14:00 на 0.1мм с 17% по 2 моделям / гроза Чт 6 в 10:00 на 1.1мм с 11% по UKMO Global / град Чт 6 в 14:00 на 1.3мм с 46% по DWD ICON');
 eq('summary', build_summary($f, '2026-08-05T11:00'), "Сейчас: ☀️ Ср 5 — +20°, ощущается как +20°\nОсадки: 0мм · Ветер: 3 м/с ЮЗ · Давление: 756 мм рт. ст. · Влажность: 62%\nПо часам — дождь в 14:00 / макс. +24° в 15:00 / мин. +17° в 23:00\nНа 16 дней — дождь Ср 5 в 14:00 на 0.1мм с 17% по 2 моделям / гроза Чт 6 в 10:00 на 1.1мм с 11% по UKMO Global / град Чт 6 в 14:00 на 1.3мм с 46% по DWD ICON");
 
+$f = fixture();
+$upd = ['message' => ['chat' => ['id' => 123], 'text' => '/погода']];
+$r = process_update($upd, $f);
+eq('process update text', $r['text'], build_summary($f, '2026-08-05T11:00'));
+eq('process update chat', $r['chat_id'], 123);
+
+$rStart = process_update(['message' => ['chat' => ['id' => 1], 'text' => '/start']], $f);
+eq('process start', $rStart['text'], 'Привет! Отправьте /погода или /weather, чтобы получить сводку погоды по Ярославлю.');
+
+$rIgnore = process_update([], $f);
+eq('process ignore', $rIgnore, ['ignore' => true]);
+
 if ($fail) { fwrite(STDERR, "$fail failures\n"); exit(1); }
 echo "OK\n";

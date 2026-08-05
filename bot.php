@@ -213,3 +213,69 @@ function build_summary($data, $now = null): string {
         . build_hours_line($data, $idx) . "\n"
         . build_16_line($data, $idx);
 }
+
+function telegram_api($token, $method, $params): ?array {
+    $url = "https://api.telegram.org/bot{$token}/{$method}";
+    $ctx = stream_context_create(['http' => [
+        'method' => 'POST',
+        'header' => "Content-Type: application/json\r\n",
+        'content' => json_encode($params, JSON_UNESCAPED_UNICODE),
+        'ignore_errors' => true,
+        'timeout' => 15,
+    ]]);
+    $body = @file_get_contents($url, false, $ctx);
+    if ($body === false) return null;
+    $r = json_decode($body, true);
+    return is_array($r) ? $r : null;
+}
+
+function send_message($token, $chatId, $text): bool {
+    $r = telegram_api($token, 'sendMessage', ['chat_id' => $chatId, 'text' => $text]);
+    return is_array($r) && !empty($r['ok']);
+}
+
+function set_webhook($token, $url): bool {
+    $r = telegram_api($token, 'setWebhook', ['url' => $url]);
+    return is_array($r) && !empty($r['ok']);
+}
+
+function process_update($update, $data = null): array {
+    $msg = $update['message'] ?? null;
+    if (!$msg) return ['ignore' => true];
+    $chatId = $msg['chat']['id'] ?? null;
+    if ($chatId === null) return ['ignore' => true];
+    $text = trim((string)($msg['text'] ?? ''));
+    if ($text === '') return ['ignore' => true];
+    if (strpos($text, '/start') === 0) {
+        return ['chat_id' => $chatId, 'text' => 'Привет! Отправьте /погода или /weather, чтобы получить сводку погоды по Ярославлю.'];
+    }
+    if ($data === null) $data = fetch_payload(SITE_URL);
+    if (!$data) return ['chat_id' => $chatId, 'text' => 'Данные недоступны, попробуйте позже.'];
+    return ['chat_id' => $chatId, 'text' => build_summary($data)];
+}
+
+function main(): void {
+    $token = BOT_TOKEN;
+    if (isset($_GET['setup'])) {
+        if ($_GET['setup'] === BOT_TOKEN) {
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+            $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+            $webhookUrl = $scheme . '://' . $host . $path;
+            echo set_webhook($token, $webhookUrl) ? "webhook set: {$webhookUrl}\n" : "webhook failed\n";
+        } else {
+            echo "bad setup token\n";
+        }
+        return;
+    }
+    $raw = file_get_contents('php://input');
+    $update = json_decode((string)$raw, true) ?: [];
+    $res = process_update($update);
+    if (isset($res['chat_id'], $res['text'])) {
+        send_message($token, $res['chat_id'], $res['text']);
+    }
+}
+
+if (PHP_SAPI !== 'cli') {
+    main();
+}
