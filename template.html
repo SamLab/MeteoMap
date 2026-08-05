@@ -429,15 +429,19 @@ function buildT16Title(){
     const pr=D.weighted.precipitation?.[i],pp=D.weighted.precipitation_probability?.[i];
     return (pr==null?'':' в '+fmt(pr)+'мм')+(pp==null?'':' с '+num(pp)+'%');
   };
-  const stormModels=i=>codes.filter(c=>{
+  const sourceList=(i,list)=>codes.filter(c=>{
     const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
-    return v===95||v===96||v===99;
-  }).map(c=>names[c]).join(', ');
+    return list.includes(v);
+  }).map(c=>names[c]);
+  const stormModels=i=>sourceList(i,[95,96,99]).join(' и ');
   const ri=find([51,53,55,56,57,61,63,65,66,67,80,81,82]);
   const ti=findSrc();
   const parts=[];
-  if(ri>=0)parts.push('дождь '+tstr(ri)+wet(ri));
-  if(ti>=0)parts.push('гроза '+tstr(ti)+wet(ti)+' от '+stormModels(ti));
+  if(ri>=0){
+    const n=sourceList(ri,[51,53,55,56,57,61,63,65,66,67,80,81,82]).length;
+    parts.push('дождь '+tstr(ri)+wet(ri)+' по '+(n===1?'1 модели':n+' моделям'));
+  }
+  if(ti>=0)parts.push('гроза '+tstr(ti)+wet(ti)+' по '+stormModels(ti));
   if(parts.length)el.textContent='На 16 дней — '+parts.join(' · ');
 }
 
