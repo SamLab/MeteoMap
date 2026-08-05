@@ -427,7 +427,7 @@ function buildT16Title(){
   const tstr=i=>{const d=new Date(ts[i]);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16);};
   const wet=i=>{
     const pr=D.weighted.precipitation?.[i],pp=D.weighted.precipitation_probability?.[i];
-    return (pr==null?'':' в '+fmt(pr)+'мм')+(pp==null?'':' с '+num(pp)+'%');
+    return (pr==null?'':' на '+fmt(pr)+'мм')+(pp==null?'':' с '+num(pp)+'%');
   };
   const sourceList=(i,list)=>codes.filter(c=>{
     const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
