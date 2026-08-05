@@ -61,3 +61,28 @@ function tstr($iso): string {
     if ($ts === false) return '—';
     return DOW_SHORT[(int)date('w', $ts)] . ' ' . date('j', $ts) . ' в ' . date('H:i', $ts);
 }
+
+function parse_payload($html): ?array {
+    if (!preg_match('/<script id="data" type="application\/json">(.*?)<\/script>/s', (string)$html, $m)) {
+        return null;
+    }
+    $data = json_decode($m[1], true);
+    return is_array($data) ? $data : null;
+}
+
+function fetch_payload($url): ?array {
+    $ctx = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
+    $body = @file_get_contents((string)$url, false, $ctx);
+    if ($body === false) return null;
+    return parse_payload($body);
+}
+
+function cur_idx($data, $now = null): int {
+    if ($now === null) {
+        $now = (new DateTime('now', new DateTimeZone('Europe/Moscow')))->format('Y-m-d\TH:00');
+    }
+    foreach (($data['time'] ?? []) as $i => $t) {
+        if (strcmp((string)$t, (string)$now) >= 0) return $i;
+    }
+    return 0;
+}
