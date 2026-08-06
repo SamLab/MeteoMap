@@ -17,6 +17,11 @@ header .meta{color:var(--muted);font-size:12px}
 .tabs{display:flex;gap:8px;margin-bottom:8px;flex:none}
 .tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
 .tabs button.active{color:var(--text);background:var(--accent);border-color:var(--accent)}
+.citysel{cursor:pointer;border-bottom:1px dashed var(--accent)}
+.citymenu{display:none;position:absolute;z-index:50;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none;padding:4px 0;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.citymenu.open{display:block}
+.citymenu li{padding:6px 14px;cursor:pointer;font-size:14px}
+.citymenu li:hover{background:var(--sel)}
 .panel{display:none}
 .panel.active{display:flex;flex-direction:column;flex:1;min-height:0}
 #tab-forecast.active{overflow:hidden}
@@ -109,9 +114,10 @@ a{color:var(--accent)}
 <body>
 <div class="wrap">
 <header>
-  <h1>🌤 MeteoMap — <span id="city">__CITY__</span></h1>
+  <h1>🌤 MeteoMap — <span class="citysel" id="citysel" title="Сменить город">__CITY__ ▾</span></h1>
   <span class="meta">Обновлено: <span id="generated">__GENERATED_AT__</span> (каждые 15 минут)</span>
 </header>
+<ul id="citymenu" class="citymenu"></ul>
 <div class="tabs">
   <button class="active" data-tab="weather">Погода</button>
   <button data-tab="forecast">Прогноз</button>
@@ -179,10 +185,12 @@ a{color:var(--accent)}
     </ul>
   </div>
 </div>
+<script id="cities" type="application/json">__CITIES__</script>
 <script id="data" type="application/json">__DATA__</script>
 <script>
-const D=JSON.parse(document.getElementById('data').textContent);
-const codes=D.model_codes, names=D.model_names;
+const CITIES=JSON.parse(document.getElementById('cities').textContent);
+let D=JSON.parse(document.getElementById('data').textContent);
+let codes=D.model_codes, names=D.model_names;
 const VAR_NAMES={
  temperature_2m:'Температура (°C)',apparent_temperature:'Ощущается (°C)',dew_point_2m:'Точка росы (°C)',
  relative_humidity_2m:'Влажность (%)',precipitation:'Осадки (мм)',precipitation_probability:'Вероятность осадков (%)',
@@ -249,8 +257,7 @@ function buildVarSel(id,onSel,vars){
 // conditions
 const nowLocal=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());
 const curHour=nowLocal.replace(', ','T').slice(0,13)+':00';
-let curIdx=D.time.findIndex(t=>t>=curHour);
-if(curIdx<0)curIdx=0;
+let curIdx=0;
 function buildConditions(){
   const w=D.weighted;
   const list=[
@@ -677,17 +684,61 @@ function buildMaeTables(){
       scales:{x:{ticks:{color:'#5c6579'}},y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'}}}}});
 }
 
-buildConditions();
-buildWeatherNow();
-buildWeatherHours();
-buildWeather10();
-buildWeatherDetail();
-buildWarnings();
-buildVarSel('varsel',setVar);
-buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();},CHART_VARS.concat(['weather_code']));
-makeMainChart();
-buildCmpTable();
-buildMaeTables();
+function renderAll(){
+  codes=D.model_codes; names=D.model_names;
+  curIdx=D.time.findIndex(t=>t>=curHour);
+  if(curIdx<0)curIdx=0;
+  document.title='MeteoMap — '+D.location.name;
+  const g=document.getElementById('generated');
+  if(g){
+    const t=new Date(D.generated_at);
+    g.textContent=isNaN(t)?D.generated_at:new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(t);
+  }
+  buildConditions(); buildWeatherNow(); buildWeatherHours();
+  buildWeather10(); buildWeatherDetail(); buildWarnings();
+  document.getElementById('varsel').innerHTML='';
+  buildVarSel('varsel',setVar);
+  document.getElementById('varsel2').innerHTML='';
+  buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();},CHART_VARS.concat(['weather_code']));
+  if(mainChart)mainChart.destroy();
+  makeMainChart();
+  buildCmpTable();
+  const oldMae=Chart.getChart(document.getElementById('maeChart'));
+  if(oldMae)oldMae.destroy();
+  buildMaeTables();
+  const cs=document.getElementById('citysel');
+  if(cs)cs.childNodes[0].textContent=D.location.name;
+}
+async function loadCity(slug){
+  try{
+    const r=await fetch('data/'+slug+'.json',{cache:'no-cache'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    D=await r.json();
+    renderAll();
+  }catch(e){
+    alert('Не удалось загрузить данные города: '+e.message);
+  }
+}
+function setupCitySel(){
+  const sel=document.getElementById('citysel');
+  const menu=document.getElementById('citymenu');
+  if(!sel||!menu)return;
+  CITIES.forEach(c=>{
+    const li=document.createElement('li');
+    li.textContent=c.name;
+    li.addEventListener('click',()=>{
+      localStorage.setItem('city',c.slug);
+      menu.classList.remove('open');
+      loadCity(c.slug);
+    });
+    menu.appendChild(li);
+  });
+  sel.addEventListener('click',e=>{e.stopPropagation();menu.classList.toggle('open');});
+  document.addEventListener('click',()=>menu.classList.remove('open'));
+}
+
+setupCitySel();
+renderAll();
 </script>
 </body>
 </html>
