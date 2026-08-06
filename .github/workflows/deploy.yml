@@ -36,6 +36,7 @@ jobs:
           rm -rf /tmp/ghpages
           mkdir /tmp/ghpages
           cp index.html /tmp/ghpages/
+          cp -r data /tmp/ghpages/
           echo "" > /tmp/ghpages/.nojekyll
           cd /tmp/ghpages
           git init
