@@ -712,17 +712,29 @@ def moscow_now_iso():
     return datetime.now(timezone(timedelta(hours=3))).isoformat(timespec="seconds")
 
 
+_hist_cache = {}
+_arch_cache = {}
+
+
 def _city_hist(loc):
+    idx = LOCATIONS.index(loc)
+
     def f(code, start, end, variables):
-        resp = fetch_historical_model(code, start, end, variables)
-        return resp[LOCATIONS.index(loc)]
+        key = (code, start, end, tuple(variables))
+        if key not in _hist_cache:
+            _hist_cache[key] = fetch_historical_model(code, start, end, variables)
+        return _hist_cache[key][idx]
     return f
 
 
 def _city_arch(loc):
+    idx = LOCATIONS.index(loc)
+
     def f(start, end, variables):
-        resp = fetch_archive(start, end, variables)
-        return resp[LOCATIONS.index(loc)]
+        key = (start, end, tuple(variables))
+        if key not in _arch_cache:
+            _arch_cache[key] = fetch_archive(start, end, variables)
+        return _arch_cache[key][idx]
     return f
 
 
