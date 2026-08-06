@@ -1,7 +1,10 @@
-"""MeteoMap — сравнение погодных моделей и усреднённый прогноз для Ярославля."""
+"""MeteoMap — сравнение погодных моделей и усреднённый прогноз."""
 
-LAT = 57.63
-LON = 39.87
+LOCATIONS = [
+    {"name": "Ярославль", "slug": "yaroslavl", "lat": 57.63, "lon": 39.87},
+    {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
+    {"name": "Цеденево", "slug": "tsedenevo", "lat": 57.533, "lon": 39.905},
+]
 TIMEZONE = "Europe/Moscow"
 FORECAST_DAYS = 16
 
@@ -115,43 +118,58 @@ def request_with_retry(url, params, timeout, get=None, max_retries=2,
 
 
 def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
-                lat=LAT, lon=LON, timezone="UTC"):
+                lats=None, lons=None, timezone="UTC"):
+    if lats is None:
+        lats = ",".join(str(loc["lat"]) for loc in LOCATIONS)
+    if lons is None:
+        lons = ",".join(str(loc["lon"]) for loc in LOCATIONS)
     params = {
-        "latitude": lat,
-        "longitude": lon,
+        "latitude": lats,
+        "longitude": lons,
         "hourly": ",".join(variables),
         "daily": ",".join(DAILY_VARIABLES),
         "timezone": timezone,
         "forecast_days": days,
         "models": code,
     }
-    return request_with_retry(ENDPOINTS[endpoint], params, timeout=15)
+    resp = request_with_retry(ENDPOINTS[endpoint], params, timeout=15)
+    return resp if isinstance(resp, list) else [resp]
 
 
 def fetch_historical_model(code, start_date, end_date, variables,
-                           lat=LAT, lon=LON):
+                           lats=None, lons=None):
+    if lats is None:
+        lats = ",".join(str(loc["lat"]) for loc in LOCATIONS)
+    if lons is None:
+        lons = ",".join(str(loc["lon"]) for loc in LOCATIONS)
     params = {
-        "latitude": lat,
-        "longitude": lon,
+        "latitude": lats,
+        "longitude": lons,
         "start_date": start_date,
         "end_date": end_date,
         "hourly": ",".join(variables),
         "timezone": "UTC",
         "models": code,
     }
-    return request_with_retry(ENDPOINTS["historical"], params, timeout=20)
+    resp = request_with_retry(ENDPOINTS["historical"], params, timeout=20)
+    return resp if isinstance(resp, list) else [resp]
 
 
-def fetch_archive(start_date, end_date, variables, lat=LAT, lon=LON):
+def fetch_archive(start_date, end_date, variables, lats=None, lons=None):
+    if lats is None:
+        lats = ",".join(str(loc["lat"]) for loc in LOCATIONS)
+    if lons is None:
+        lons = ",".join(str(loc["lon"]) for loc in LOCATIONS)
     params = {
-        "latitude": lat,
-        "longitude": lon,
+        "latitude": lats,
+        "longitude": lons,
         "start_date": start_date,
         "end_date": end_date,
         "hourly": ",".join(variables),
         "timezone": "UTC",
     }
-    return request_with_retry(ENDPOINTS["archive"], params, timeout=20)
+    resp = request_with_retry(ENDPOINTS["archive"], params, timeout=20)
+    return resp if isinstance(resp, list) else [resp]
 
 
 def normalize_model_response(resp, variables):
@@ -184,7 +202,11 @@ def yr_symbol_wmo(code):
     return YR_BASE_WMO.get(base)
 
 
-def fetch_yr(lat=LAT, lon=LON):
+def fetch_yr(lat=None, lon=None):
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
     resp = requests.get(
         YR_URL,
         params={"lat": lat, "lon": lon},
@@ -465,7 +487,7 @@ def _models_with_data(model_codes, hourly_by_model):
 
 
 def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
-                  consensus, verification, generated_at):
+                  consensus, verification, generated_at, location):
     codes = _models_with_data(model_codes, hourly_by_model) or list(model_codes)
     dvars = list(DAILY_VARIABLES)
     TIME_DAILY = {"sunrise", "sunset"}
@@ -487,7 +509,7 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     )
     return {
         "generated_at": generated_at,
-        "location": {"name": "Ярославль", "lat": LAT, "lon": LON},
+        "location": location,
         "model_codes": codes,
         "model_names": {c: model_names[c] for c in codes},
         "variables": list(HOURLY_VARIABLES),
@@ -507,7 +529,11 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
 
 
 def render(template, payload):
-    html = template.replace(
+    cities = json.dumps(
+        [{"name": l["name"], "slug": l["slug"], "lat": l["lat"], "lon": l["lon"]}
+         for l in LOCATIONS], ensure_ascii=False)
+    html = template.replace("__CITIES__", cities)
+    html = html.replace(
         "__DATA__", json.dumps(payload, ensure_ascii=False)
     )
     html = html.replace("__GENERATED_AT__", payload["generated_at"])
@@ -529,62 +555,101 @@ def moscow_now_iso():
     return datetime.now(timezone(timedelta(hours=3))).isoformat(timespec="seconds")
 
 
+def _city_hist(loc):
+    def f(code, start, end, variables):
+        resp = fetch_historical_model(code, start, end, variables)
+        return resp[LOCATIONS.index(loc)]
+    return f
+
+
+def _city_arch(loc):
+    def f(start, end, variables):
+        resp = fetch_archive(start, end, variables)
+        return resp[LOCATIONS.index(loc)]
+    return f
+
+
 def main():
     generated_at = moscow_now_iso()
     model_codes = [c for c, _n, _e in FORECAST_MODELS]
     model_names = {c: n for c, n, _e in FORECAST_MODELS}
-    hourly_by_model = {}
-    daily_by_model = {}
+
+    # один батч-запрос на модель: ответ = список по городам
+    raw_by_model = {}
     for code, _name, endpoint in FORECAST_MODELS:
         try:
-            resp = fetch_model(
+            raw_by_model[code] = fetch_model(
                 code, endpoint, HOURLY_VARIABLES,
                 days=FORECAST_DAYS, timezone=TIMEZONE,
             )
         except Exception as exc:
             print(f"[warn] {code}: {exc}")
-            continue
-        hourly_by_model[code] = normalize_model_response(resp, HOURLY_VARIABLES)
-        daily_by_model[code] = dict(resp.get("daily") or {})
-    if not hourly_by_model:
+    if not raw_by_model:
         raise SystemExit("no model data available")
-    verification = {}
-    for days in (7, 30):
-        start, end = date_window(days)
-        verification[f"{days}d"] = verify_models(
-            model_codes, VERIFICATION_VARIABLES, start, end
+
+    payload_by_city = {}
+    for loc in LOCATIONS:
+        idx = LOCATIONS.index(loc)
+        hourly_by_model = {}
+        daily_by_model = {}
+        for code, responses in raw_by_model.items():
+            if idx >= len(responses):
+                print(f"[warn] {code}: no data for {loc['name']}")
+                continue
+            data = responses[idx]
+            hourly_by_model[code] = normalize_model_response(data, HOURLY_VARIABLES)
+            daily_by_model[code] = dict(data.get("daily") or {})
+        if not hourly_by_model:
+            print(f"[warn] no model data for {loc['name']}")
+            continue
+
+        verification = {}
+        for days in (7, 30):
+            start, end = date_window(days)
+            verification[f"{days}d"] = verify_models(
+                model_codes, VERIFICATION_VARIABLES, start, end,
+                fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
+            )
+        weights_by_var = {
+            v: make_weights(verification["7d"], v)
+            for v in VERIFICATION_VARIABLES
+        }
+        try:
+            yr_rows = fetch_yr(lat=loc["lat"], lon=loc["lon"])
+        except Exception as exc:
+            print(f"[warn] {YR_CODE} {loc['name']}: {exc}")
+            yr_rows = []
+        city_codes = list(model_codes)
+        city_names = dict(model_names)
+        if yr_rows and hourly_by_model:
+            grid = next(iter(hourly_by_model.values()))["time"]
+            hourly_by_model[YR_CODE] = align_yr_to_grid(
+                yr_rows, grid, timezone(timedelta(hours=3))
+            )
+            city_codes.append(YR_CODE)
+            city_names[YR_CODE] = YR_NAME
+        consensus = assemble_consensus(
+            hourly_by_model, HOURLY_VARIABLES, weights_by_var
         )
-    weights_by_var = {
-        v: make_weights(verification["7d"], v)
-        for v in VERIFICATION_VARIABLES
-    }
-    try:
-        yr_rows = fetch_yr()
-    except Exception as exc:
-        print(f"[warn] {YR_CODE}: {exc}")
-        yr_rows = []
-    if yr_rows and hourly_by_model:
-        grid = next(iter(hourly_by_model.values()))["time"]
-        hourly_by_model[YR_CODE] = align_yr_to_grid(
-            yr_rows, grid, timezone(timedelta(hours=3))
+        payload_by_city[loc["slug"]] = build_payload(
+            city_codes, city_names, hourly_by_model, daily_by_model,
+            consensus, verification, generated_at, loc,
         )
-        model_codes.append(YR_CODE)
-        model_names[YR_CODE] = YR_NAME
-    consensus = assemble_consensus(
-        hourly_by_model, HOURLY_VARIABLES, weights_by_var
-    )
-    payload = build_payload(
-        model_codes, model_names, hourly_by_model, daily_by_model,
-        consensus, verification, generated_at,
-    )
+
+    if not payload_by_city:
+        raise SystemExit("no city data available")
+
     here = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(here, "template.html"), encoding="utf-8") as f:
         template = f.read()
-    write_index(render(template, payload))
-    print(
-        f"[ok] index.html written; models={len(hourly_by_model)} "
-        f"hours={len(consensus['time'])}"
-    )
+    os.makedirs(os.path.join(here, "data"), exist_ok=True)
+    for slug, payload in payload_by_city.items():
+        with open(os.path.join(here, "data", f"{slug}.json"), "w",
+                  encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False))
+    # index.html рендерится с городом по умолчанию (первым)
+    write_index(render(template, payload_by_city[LOCATIONS[0]["slug"]]))
+    print(f"[ok] index.html + {len(payload_by_city)} city json written")
 
 
 if __name__ == "__main__":

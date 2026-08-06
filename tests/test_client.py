@@ -27,15 +27,15 @@ def test_fetch_model_parameters(monkeypatch):
         "dwd_icon_global", "forecast", ["temperature_2m"],
         days=3, timezone="Europe/Moscow",
     )
-    assert out == {"hourly": {"time": []}}
+    assert out == [{"hourly": {"time": []}}]
     assert captured["url"] == meteo.ENDPOINTS["forecast"]
     p = captured["params"]
     assert p["models"] == "dwd_icon_global"
     assert p["hourly"] == "temperature_2m"
     assert p["forecast_days"] == 3
     assert p["timezone"] == "Europe/Moscow"
-    assert p["latitude"] == meteo.LAT
-    assert p["longitude"] == meteo.LON
+    assert p["latitude"] == ",".join(str(loc["lat"]) for loc in meteo.LOCATIONS)
+    assert p["longitude"] == ",".join(str(loc["lon"]) for loc in meteo.LOCATIONS)
 
 
 def test_fetch_model_uses_ensemble_endpoint(monkeypatch):
