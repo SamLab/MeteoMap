@@ -8,11 +8,20 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
 
@@ -32,20 +41,19 @@ jobs:
           WEATHERAPI_KEY: ${{ secrets.WEATHERAPI_KEY }}
         run: python meteo.py
 
-      - name: Deploy to gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare pages artifact
         run: |
-          rm -rf /tmp/ghpages
-          mkdir /tmp/ghpages
-          cp index.html /tmp/ghpages/
-          cp -r data /tmp/ghpages/
-          echo "" > /tmp/ghpages/.nojekyll
-          cd /tmp/ghpages
-          git init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git add -A
-          git commit -m "deploy: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push -f origin HEAD:gh-pages
+          mkdir -p _site
+          cp index.html _site/
+          cp -r data _site/
+          echo "" > _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
