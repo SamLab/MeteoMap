@@ -31,6 +31,7 @@ def _payload():
     return meteo.build_payload(
         ["a", "b"], {"a": "Model A", "b": "Model B"},
         hourly, daily, consensus, verification, "2026-08-03T12:00:00+03:00",
+        meteo.LOCATIONS[0],
     )
 
 
@@ -114,7 +115,7 @@ def test_daily_time_passthrough():
     daily = {"a": {"time": ["2026-08-03", "2026-08-04"], "temperature_2m_max": [5.0, 6.0]}}
     p = meteo.build_payload(
         ["a"], {"a": "A"}, hourly, daily, consensus, {},
-        "2026-08-03T12:00:00+03:00",
+        "2026-08-03T12:00:00+03:00", meteo.LOCATIONS[0],
     )
     assert p["daily_time"] == ["2026-08-03", "2026-08-04"]
     assert p["daily"]["temperature_2m_max"] == [5.0, 6.0]
@@ -134,7 +135,7 @@ def test_payload_hides_models_without_data():
     }
     p = meteo.build_payload(
         ["a", "b", "c"], {"a": "A", "b": "B", "c": "C"},
-        hourly, {}, consensus, {}, "2026-08-03T12:00:00+03:00",
+        hourly, {}, consensus, {}, "2026-08-03T12:00:00+03:00", meteo.LOCATIONS[0],
     )
     assert p["model_codes"] == ["a", "c"]
     assert p["model_names"] == {"a": "A", "c": "C"}
@@ -153,5 +154,6 @@ def test_payload_keeps_original_codes_when_all_empty():
     }
     p = meteo.build_payload(
         ["a"], {"a": "A"}, hourly, {}, consensus, {}, "2026-08-03T12:00:00+03:00",
+        meteo.LOCATIONS[0],
     )
     assert p["model_codes"] == ["a"]
