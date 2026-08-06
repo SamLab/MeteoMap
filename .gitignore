@@ -16,3 +16,6 @@ venv/
 
 # Generated page
 index.html
+
+# Generated per-city data
+data/
