@@ -768,7 +768,10 @@ def main():
                 fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
             )
         # внешние источники: историю MAE не считаем → нейтральный (средний) вес
+        external_enabled = os.environ.get("ENABLE_EXTERNAL") == "1"
         for code, _name, _fn in EXTERNAL_MODELS:
+            if not external_enabled:
+                continue
             verification["7d"][code] = {v: None for v in VERIFICATION_VARIABLES}
             verification["30d"][code] = {v: None for v in VERIFICATION_VARIABLES}
         weights_by_var = {
@@ -793,6 +796,8 @@ def main():
             city_codes.append(YR_CODE)
             city_names[YR_CODE] = YR_NAME
         for code, name, fetch_fn in EXTERNAL_MODELS:
+            if not external_enabled:
+                break
             try:
                 rows = fetch_fn(lat=loc["lat"], lon=loc["lon"])
             except Exception as exc:
