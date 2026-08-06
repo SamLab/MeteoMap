@@ -78,6 +78,46 @@ YR_VARIABLES = [
     "weather_code", "precipitation",
 ]
 
+# Внешние источники с API-ключами (коды WeatherAPI.com / OpenWeather)
+OWM_URL = "https://api.openweathermap.org/data/2.5/forecast"
+OWM_CODE = "owm"
+OWM_NAME = "OpenWeather"
+WEATHERAPI_URL = "https://api.weatherapi.com/v1/forecast.json"
+WEATHERAPI_CODE = "weatherapi"
+WEATHERAPI_NAME = "WeatherAPI.com"
+
+# OpenWeather condition id -> WMO
+OWM_WMO = {
+    200: 95, 201: 95, 202: 95, 210: 95, 211: 95, 212: 95, 221: 95,
+    230: 95, 231: 95, 232: 95,
+    300: 51, 301: 51, 302: 55, 310: 51, 311: 53, 312: 55,
+    313: 53, 314: 55, 321: 53,
+    500: 61, 501: 63, 502: 65, 503: 65, 504: 65, 511: 66,
+    520: 80, 521: 81, 522: 82, 531: 82,
+    600: 71, 601: 73, 602: 75, 611: 66, 612: 67, 613: 67,
+    615: 66, 616: 67, 620: 85, 621: 86, 622: 86,
+    701: 45, 711: 45, 721: 45, 731: 45, 741: 45, 751: 45,
+    761: 45, 762: 45, 771: 45, 781: 95,
+    800: 0, 801: 1, 802: 2, 803: 3, 804: 3,
+}
+
+# WeatherAPI.com condition code -> WMO
+WEATHERAPI_WMO = {
+    1000: 0, 1003: 1, 1006: 2, 1009: 3, 1030: 45,
+    1063: 61, 1066: 71, 1069: 66, 1072: 51, 1087: 95,
+    1114: 75, 1117: 75, 1135: 45, 1147: 48,
+    1150: 51, 1153: 51, 1168: 56, 1171: 57,
+    1180: 61, 1183: 61, 1186: 63, 1189: 63, 1192: 65, 1195: 65,
+    1198: 66, 1201: 67, 1204: 66, 1207: 67,
+    1210: 71, 1213: 71, 1216: 73, 1219: 73, 1222: 75, 1225: 75,
+    1237: 77,
+    1240: 80, 1243: 81, 1246: 82,
+    1249: 66, 1252: 67,
+    1255: 85, 1258: 86,
+    1261: 77, 1264: 77,
+    1273: 95, 1276: 95, 1279: 95, 1282: 95,
+}
+
 
 import requests
 import time
@@ -238,7 +278,8 @@ def fetch_yr(lat=None, lon=None):
     return rows
 
 
-def align_yr_to_grid(rows, grid, tz):
+def align_to_grid(rows, grid, tz):
+    """Раскладывает строки источников (с ключом utc) по часовой сетке."""
     out = {v: [None] * len(grid) for v in HOURLY_VARIABLES}
     grid_idx = {t: i for i, t in enumerate(grid)}
     for row in rows:
@@ -246,9 +287,120 @@ def align_yr_to_grid(rows, grid, tz):
         idx = grid_idx.get(key)
         if idx is None:
             continue
-        for v in YR_VARIABLES:
-            out[v][idx] = row[v]
+        for v in HOURLY_VARIABLES:
+            if v in row:
+                out[v][idx] = row[v]
     return {"time": list(grid), "data": out}
+
+
+def align_yr_to_grid(rows, grid, tz):
+    return align_to_grid(rows, grid, tz)
+
+
+def fetch_owm(lat=None, lon=None, api_key=None):
+    """OpenWeatherMap 5-day/3-hour forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("OPENWEATHER_KEY")
+    if not key:
+        print("[warn] OPENWEATHER_KEY not set, skipping OWM")
+        return []
+    params = {"lat": lat, "lon": lon, "appid": key,
+              "units": "metric", "lang": "ru"}
+    resp = request_with_retry(OWM_URL, params, timeout=20)
+    rows = []
+    for item in resp.get("list", []):
+        dt = datetime.fromtimestamp(item["dt"], tz=timezone.utc)
+        main = item.get("main") or {}
+        wind = item.get("wind") or {}
+        clouds = item.get("clouds") or {}
+        w = (item.get("weather") or [{}])[0]
+        rain = (item.get("rain") or {}).get("3h")
+        snow = (item.get("snow") or {}).get("3h")
+        pop = item.get("pop")
+        hpa = main.get("pressure")
+        prec = 0.0
+        if rain is not None:
+            prec += rain
+        if snow is not None:
+            prec += snow
+        rows.append({
+            "utc": dt,
+            "temperature_2m": main.get("temp"),
+            "apparent_temperature": main.get("feels_like"),
+            "relative_humidity_2m": main.get("humidity"),
+            "precipitation": prec,
+            "precipitation_probability": round(pop * 100) if pop is not None else None,
+            "weather_code": OWM_WMO.get(w.get("id")),
+            "pressure_msl": round(hpa * HPA_TO_MMHG, 1) if hpa is not None else None,
+            "cloud_cover": clouds.get("all"),
+            "wind_speed_10m": wind.get("speed"),
+            "wind_direction_10m": wind.get("deg"),
+            "wind_gusts_10m": wind.get("gust"),
+        })
+    return rows
+
+
+def fetch_weatherapi(lat=None, lon=None, api_key=None):
+    """WeatherAPI.com 3-day hourly forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("WEATHERAPI_KEY")
+    if not key:
+        print("[warn] WEATHERAPI_KEY not set, skipping WeatherAPI")
+        return []
+    params = {"key": key, "q": f"{lat},{lon}", "days": 3, "lang": "ru"}
+    resp = request_with_retry(WEATHERAPI_URL, params, timeout=20)
+    rows = []
+    tz_msk = timezone(timedelta(hours=3))
+    for day in resp.get("forecast", {}).get("forecastday", []):
+        for hour in day.get("hour", []):
+            t = datetime.strptime(hour["time"][:16], "%Y-%m-%d %H:%M")
+            dt = t.replace(tzinfo=tz_msk).astimezone(timezone.utc)
+            cond = hour.get("condition") or {}
+            wind_kph = hour.get("wind_kph")
+            gust_kph = hour.get("gust_kph")
+            vis_km = hour.get("vis_km")
+            pressure_mb = hour.get("pressure_mb")
+            cr = hour.get("chance_of_rain")
+            cs = hour.get("chance_of_snow")
+            prob = None
+            if cr is not None and cs is not None:
+                prob = max(cr, cs)
+            elif cr is not None:
+                prob = cr
+            elif cs is not None:
+                prob = cs
+            rows.append({
+                "utc": dt,
+                "temperature_2m": hour.get("temp_c"),
+                "apparent_temperature": hour.get("feelslike_c"),
+                "dew_point_2m": hour.get("dewpoint_c"),
+                "relative_humidity_2m": hour.get("humidity"),
+                "precipitation": hour.get("precip_mm"),
+                "precipitation_probability": prob,
+                "weather_code": WEATHERAPI_WMO.get(cond.get("code")),
+                "pressure_msl": round(pressure_mb * HPA_TO_MMHG, 1)
+                if pressure_mb is not None else None,
+                "cloud_cover": hour.get("cloud"),
+                "wind_speed_10m": round(wind_kph / 3.6, 2)
+                if wind_kph is not None else None,
+                "wind_direction_10m": hour.get("wind_degree"),
+                "wind_gusts_10m": round(gust_kph / 3.6, 2)
+                if gust_kph is not None else None,
+                "visibility": round(vis_km * 1000) if vis_km is not None else None,
+            })
+    return rows
+
+
+EXTERNAL_MODELS = [
+    (OWM_CODE, OWM_NAME, fetch_owm),
+    (WEATHERAPI_CODE, WEATHERAPI_NAME, fetch_weatherapi),
+]
 
 
 import math
@@ -538,10 +690,15 @@ def render(template, payload):
     )
     html = html.replace("__GENERATED_AT__", payload["generated_at"])
     html = html.replace("__CITY__", payload["location"]["name"])
-    html = html.replace(
-        "__ATTRIBUTION__",
-        '<a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a>',
-    )
+    codes = set(payload.get("model_codes") or [])
+    attribs = ['<a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a>']
+    if YR_CODE in codes:
+        attribs.append('<a href="https://www.met.no/">MET Norway</a>')
+    if OWM_CODE in codes:
+        attribs.append('<a href="https://openweathermap.org/">OpenWeather</a>')
+    if WEATHERAPI_CODE in codes:
+        attribs.append('<a href="https://www.weatherapi.com/">WeatherAPI.com</a>')
+    html = html.replace("__ATTRIBUTION__", " · ".join(attribs))
     return html
 
 
@@ -610,6 +767,10 @@ def main():
                 model_codes, VERIFICATION_VARIABLES, start, end,
                 fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
             )
+        # внешние источники: историю MAE не считаем → нейтральный (средний) вес
+        for code, _name, _fn in EXTERNAL_MODELS:
+            verification["7d"][code] = {v: None for v in VERIFICATION_VARIABLES}
+            verification["30d"][code] = {v: None for v in VERIFICATION_VARIABLES}
         weights_by_var = {
             v: make_weights(verification["7d"], v)
             for v in VERIFICATION_VARIABLES
@@ -621,13 +782,28 @@ def main():
             yr_rows = []
         city_codes = list(model_codes)
         city_names = dict(model_names)
-        if yr_rows and hourly_by_model:
-            grid = next(iter(hourly_by_model.values()))["time"]
+        if not hourly_by_model:
+            print(f"[warn] no hourly data for {loc['name']}")
+            continue
+        grid = next(iter(hourly_by_model.values()))["time"]
+        if yr_rows:
             hourly_by_model[YR_CODE] = align_yr_to_grid(
                 yr_rows, grid, timezone(timedelta(hours=3))
             )
             city_codes.append(YR_CODE)
             city_names[YR_CODE] = YR_NAME
+        for code, name, fetch_fn in EXTERNAL_MODELS:
+            try:
+                rows = fetch_fn(lat=loc["lat"], lon=loc["lon"])
+            except Exception as exc:
+                print(f"[warn] {code} {loc['name']}: {exc}")
+                rows = []
+            if rows:
+                hourly_by_model[code] = align_to_grid(
+                    rows, grid, timezone(timedelta(hours=3))
+                )
+                city_codes.append(code)
+                city_names[code] = name
         consensus = assemble_consensus(
             hourly_by_model, HOURLY_VARIABLES, weights_by_var
         )

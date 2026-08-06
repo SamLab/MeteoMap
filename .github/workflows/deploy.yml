@@ -27,6 +27,9 @@ jobs:
         run: python -m pytest tests/ -m "not integration" -q
 
       - name: Generate site
+        env:
+          OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
+          WEATHERAPI_KEY: ${{ secrets.WEATHERAPI_KEY }}
         run: python meteo.py
 
       - name: Deploy to gh-pages
