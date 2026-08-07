@@ -493,7 +493,7 @@ function buildWarnings(){
     return wetVal(best.pr,m?m.precipitation_probability?.[i]:null);
   };
   const CIN_BLOCK=-50;
-  const cinBlock=(c,i)=>{const v=D.models[c]?D.models[c].convective_inhibition?.[i]:undefined;return v!==null&&v!==undefined&&v<=CIN_BLOCK;};
+  const cinBlock=(c,i)=>{let v=D.models[c]?D.models[c].convective_inhibition?.[i]:undefined;if(v===null||v===undefined)v=D.weighted.convective_inhibition?.[i];return v!==null&&v!==undefined&&v<=CIN_BLOCK;};
   const modelRisk=(c,i)=>{const v=D.models[c]?D.models[c].cape?.[i]:undefined;return v!==null&&v!==undefined&&v>1000&&!cinBlock(c,i);};
   const findRisk=()=>{for(let i=from;i<ts.length;i++){for(const c of codes){if(modelRisk(c,i))return i;}}return -1;};
   const maxCapeUnblocked=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m&&!cinBlock(c,i))m=v;}return m;};
