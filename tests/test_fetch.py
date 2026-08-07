@@ -55,3 +55,32 @@ def test_fetch_external_providers_tolerates_failure():
     ]
     res = meteo.fetch_external_providers(providers, locs, max_workers=2)
     assert res["p"]["yaroslavl"] == []
+
+
+from datetime import datetime, timezone, timedelta
+
+
+def test_build_city_payload_with_external(monkeypatch):
+    loc = meteo.LOCATIONS[0]
+    raw = {
+        "ecmwf_ifs025": [{
+            "hourly": {"time": ["2026-08-07T00:00"], "temperature_2m": [10.0]},
+            "daily": {},
+        }],
+    }
+    utc_dt = datetime(2026, 8, 6, 21, 0, tzinfo=timezone.utc)  # = 2026-08-07T00:00 MSK
+    external_rows = {
+        meteo.YR_CODE: {loc["slug"]: [{"utc": utc_dt, "temperature_2m": 11.0}]},
+        "owm": {loc["slug"]: [{"utc": utc_dt, "temperature_2m": 9.0}]},
+    }
+    monkeypatch.setattr(
+        meteo, "verify_models",
+        lambda *a, **k: {
+            "ecmwf_ifs025": {v: 1.0 for v in meteo.VERIFICATION_VARIABLES},
+        },
+    )
+    p = meteo.build_city_payload(loc, raw, external_rows, "2026-08-07T00:00:00+03:00", True)
+    assert "ecmwf_ifs025" in p["model_codes"]
+    assert meteo.YR_CODE in p["model_codes"]
+    assert "owm" in p["model_codes"]
+    assert p["location"] == loc

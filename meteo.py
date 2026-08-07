@@ -788,96 +788,91 @@ def _city_arch(loc):
     return f
 
 
-def main():
-    generated_at = moscow_now_iso()
+def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_enabled):
     model_codes = [c for c, _n, _e in FORECAST_MODELS]
     model_names = {c: n for c, n, _e in FORECAST_MODELS}
+    idx = LOCATIONS.index(loc)
+    hourly_by_model = {}
+    daily_by_model = {}
+    for code, responses in raw_by_model.items():
+        if idx >= len(responses):
+            print(f"[warn] {code}: no data for {loc['name']}")
+            continue
+        data = responses[idx]
+        hourly_by_model[code] = normalize_model_response(data, HOURLY_VARIABLES)
+        daily_by_model[code] = dict(data.get("daily") or {})
+    if not hourly_by_model:
+        print(f"[warn] no model data for {loc['name']}")
+        return None
 
-    # один батч-запрос на модель: ответ = список по городам
-    raw_by_model = {}
-    for code, _name, endpoint in FORECAST_MODELS:
-        try:
-            raw_by_model[code] = fetch_model(
-                code, endpoint, HOURLY_VARIABLES,
-                days=FORECAST_DAYS, timezone=TIMEZONE,
+    verification = {}
+    for days in (7, 30):
+        start, end = date_window(days)
+        verification[f"{days}d"] = verify_models(
+            model_codes, VERIFICATION_VARIABLES, start, end,
+            fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
+        )
+    if external_enabled:
+        for code, _name, _fn in EXTERNAL_MODELS:
+            verification["7d"][code] = {v: None for v in VERIFICATION_VARIABLES}
+            verification["30d"][code] = {v: None for v in VERIFICATION_VARIABLES}
+    weights_by_var = {
+        v: make_weights(verification["7d"], v)
+        for v in VERIFICATION_VARIABLES
+    }
+
+    grid = next(iter(hourly_by_model.values()))["time"]
+    city_codes = list(model_codes)
+    city_names = dict(model_names)
+    providers = [(YR_CODE, YR_NAME, fetch_yr)]
+    if external_enabled:
+        providers = providers + list(EXTERNAL_MODELS)
+    for code, name, _fn in providers:
+        rows = external_rows.get(code, {}).get(loc["slug"], [])
+        if not rows:
+            continue
+        if code == YR_CODE:
+            hourly_by_model[YR_CODE] = align_yr_to_grid(
+                rows, grid, timezone(timedelta(hours=3))
             )
-        except Exception as exc:
-            print(f"[warn] {code}: {exc}")
+        else:
+            hourly_by_model[code] = align_to_grid(
+                rows, grid, timezone(timedelta(hours=3))
+            )
+        city_codes.append(code)
+        city_names[code] = name
+
+    consensus = assemble_consensus(
+        hourly_by_model, HOURLY_VARIABLES, weights_by_var
+    )
+    return build_payload(
+        city_codes, city_names, hourly_by_model, daily_by_model,
+        consensus, verification, generated_at, loc,
+    )
+
+
+def main():
+    generated_at = moscow_now_iso()
+    raw_by_model = fetch_all_forecasts(
+        FORECAST_MODELS, HOURLY_VARIABLES,
+        days=FORECAST_DAYS, timezone=TIMEZONE,
+    )
     if not raw_by_model:
         raise SystemExit("no model data available")
 
+    external_enabled = os.environ.get("ENABLE_EXTERNAL") == "1"
+    providers = [(YR_CODE, YR_NAME, fetch_yr)]
+    if external_enabled:
+        providers = providers + list(EXTERNAL_MODELS)
+    external_rows = fetch_external_providers(providers, LOCATIONS)
+
     payload_by_city = {}
     for loc in LOCATIONS:
-        idx = LOCATIONS.index(loc)
-        hourly_by_model = {}
-        daily_by_model = {}
-        for code, responses in raw_by_model.items():
-            if idx >= len(responses):
-                print(f"[warn] {code}: no data for {loc['name']}")
-                continue
-            data = responses[idx]
-            hourly_by_model[code] = normalize_model_response(data, HOURLY_VARIABLES)
-            daily_by_model[code] = dict(data.get("daily") or {})
-        if not hourly_by_model:
-            print(f"[warn] no model data for {loc['name']}")
-            continue
-
-        verification = {}
-        for days in (7, 30):
-            start, end = date_window(days)
-            verification[f"{days}d"] = verify_models(
-                model_codes, VERIFICATION_VARIABLES, start, end,
-                fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
-            )
-        # внешние источники: историю MAE не считаем → нейтральный (средний) вес
-        external_enabled = os.environ.get("ENABLE_EXTERNAL") == "1"
-        for code, _name, _fn in EXTERNAL_MODELS:
-            if not external_enabled:
-                continue
-            verification["7d"][code] = {v: None for v in VERIFICATION_VARIABLES}
-            verification["30d"][code] = {v: None for v in VERIFICATION_VARIABLES}
-        weights_by_var = {
-            v: make_weights(verification["7d"], v)
-            for v in VERIFICATION_VARIABLES
-        }
-        try:
-            yr_rows = fetch_yr(lat=loc["lat"], lon=loc["lon"])
-        except Exception as exc:
-            print(f"[warn] {YR_CODE} {loc['name']}: {exc}")
-            yr_rows = []
-        city_codes = list(model_codes)
-        city_names = dict(model_names)
-        if not hourly_by_model:
-            print(f"[warn] no hourly data for {loc['name']}")
-            continue
-        grid = next(iter(hourly_by_model.values()))["time"]
-        if yr_rows:
-            hourly_by_model[YR_CODE] = align_yr_to_grid(
-                yr_rows, grid, timezone(timedelta(hours=3))
-            )
-            city_codes.append(YR_CODE)
-            city_names[YR_CODE] = YR_NAME
-        for code, name, fetch_fn in EXTERNAL_MODELS:
-            if not external_enabled:
-                break
-            try:
-                rows = fetch_fn(lat=loc["lat"], lon=loc["lon"])
-            except Exception as exc:
-                print(f"[warn] {code} {loc['name']}: {exc}")
-                rows = []
-            if rows:
-                hourly_by_model[code] = align_to_grid(
-                    rows, grid, timezone(timedelta(hours=3))
-                )
-                city_codes.append(code)
-                city_names[code] = name
-        consensus = assemble_consensus(
-            hourly_by_model, HOURLY_VARIABLES, weights_by_var
+        payload = build_city_payload(
+            loc, raw_by_model, external_rows, generated_at, external_enabled,
         )
-        payload_by_city[loc["slug"]] = build_payload(
-            city_codes, city_names, hourly_by_model, daily_by_model,
-            consensus, verification, generated_at, loc,
-        )
+        if payload is not None:
+            payload_by_city[loc["slug"]] = payload
 
     if not payload_by_city:
         raise SystemExit("no city data available")
@@ -890,7 +885,6 @@ def main():
         with open(os.path.join(here, "data", f"{slug}.json"), "w",
                   encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False))
-    # index.html рендерится с городом по умолчанию (первым)
     write_index(render(template, payload_by_city[LOCATIONS[0]["slug"]]))
     print(f"[ok] index.html + {len(payload_by_city)} city json written")
 
