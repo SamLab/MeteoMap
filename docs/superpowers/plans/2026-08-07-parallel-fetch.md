@@ -360,6 +360,8 @@ Expected: FAIL — `AttributeError: module 'meteo' has no attribute 'build_city_
 
 ```python
 def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_enabled):
+    model_codes = [c for c, _n, _e in FORECAST_MODELS]
+    model_names = {c: n for c, n, _e in FORECAST_MODELS}
     idx = LOCATIONS.index(loc)
     hourly_by_model = {}
     daily_by_model = {}
