@@ -157,6 +157,28 @@ def request_with_retry(url, params, timeout, get=None, max_retries=2,
             raise
 
 
+from concurrent.futures import ThreadPoolExecutor
+
+
+def fetch_all_forecasts(models, variables, days, timezone, max_workers=5):
+    """Параллельные батч-запросы по всем моделям. Возвращает {code: [ответы по городам]}."""
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        future_by_code = {
+            code: ex.submit(
+                fetch_model, code, endpoint, variables,
+                days=days, timezone=timezone,
+            )
+            for code, _name, endpoint in models
+        }
+    raw = {}
+    for code, _name, _endpoint in models:
+        try:
+            raw[code] = future_by_code[code].result()
+        except Exception as exc:
+            print(f"[warn] {code}: {exc}")
+    return raw
+
+
 def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
                 lats=None, lons=None, timezone="UTC"):
     if lats is None:
