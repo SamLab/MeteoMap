@@ -72,3 +72,30 @@ def test_verify_models_tolerates_archive_failure():
         "a": {"temperature_2m": None},
         "b": {"temperature_2m": None},
     }
+
+
+def test_verify_models_parallel_skips_failing_models():
+    variables = ["temperature_2m"]
+    calls = []
+
+    def _hist(code, start_date, end_date, variables):
+        calls.append(code)
+        if code == "broken":
+            raise RuntimeError("model unavailable")
+        return {
+            "hourly": {
+                "time": ["2026-07-01T00:00"],
+                "temperature_2m": [1.0],
+            }
+        }
+
+    def _arch(start_date, end_date, variables):
+        return {"hourly": {"time": ["2026-07-01T00:00"], "temperature_2m": [0.0]}}
+
+    result = meteo.verify_models(
+        ["a", "broken", "c"], variables, "2026-07-01", "2026-07-02",
+        fetch_hist=_hist, fetch_arch=_arch,
+    )
+    assert set(result) == {"a", "c"}
+    assert "broken" not in result
+    assert set(calls) == {"a", "broken", "c"}

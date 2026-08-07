@@ -579,9 +579,14 @@ def verify_models(model_codes, variables, start_date, end_date,
         print(f"[warn] verify archive: {exc}")
         return {code: {v: None for v in variables} for code in model_codes}
     result = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        future_by_code = {
+            code: ex.submit(fetch_hist, code, start_date, end_date, variables)
+            for code in model_codes
+        }
     for code in model_codes:
         try:
-            resp = fetch_hist(code, start_date, end_date, variables)
+            resp = future_by_code[code].result()
         except Exception as exc:
             print(f"[warn] verify {code}: {exc}")
             continue
