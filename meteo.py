@@ -425,6 +425,29 @@ EXTERNAL_MODELS = [
 ]
 
 
+def fetch_external_providers(providers, locations, max_workers=5):
+    """Параллельно грузит строки внешних провайдеров по всем городам.
+    Возвращает {code: {slug: rows}}."""
+    def _fetch(code, name, fetch_fn, loc):
+        try:
+            return code, loc["slug"], fetch_fn(lat=loc["lat"], lon=loc["lon"])
+        except Exception as exc:
+            print(f"[warn] {code} {name}: {exc}")
+            return code, loc["slug"], []
+
+    out = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = [
+            ex.submit(_fetch, code, name, fn, loc)
+            for code, name, fn in providers
+            for loc in locations
+        ]
+        for f in futures:
+            code, slug, rows = f.result()
+            out.setdefault(code, {})[slug] = rows
+    return out
+
+
 import math
 from collections import Counter
 
