@@ -465,11 +465,14 @@ function buildWarnings(){
   const el=document.getElementById('warnings');
   if(!el)return;
   const ts=D.time||[],wc=D.weighted.weather_code||[];
+  const nowMin=nowLocal.replace(', ','T').slice(0,16);
+  const futureIdx=ts.findIndex(t=>t>=nowMin);
+  const from=futureIdx<0?curIdx:futureIdx;
   const R=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   const S=[95,96,99];
   const H=[96,99];
-  const findSrc=list=>{for(let i=curIdx;i<ts.length;i++){if(sourceCountAt(i,list)>0)return i;}return -1;};
-  const findCon=list=>{for(let i=curIdx;i<ts.length;i++){if(list.includes(wc[i]))return i;}return -1;};
+  const findSrc=list=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list)>0)return i;}return -1;};
+  const findCon=list=>{for(let i=from;i<ts.length;i++){if(list.includes(wc[i]))return i;}return -1;};
   const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16)+'</span>';};
   const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmt(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
   const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
@@ -492,7 +495,7 @@ function buildWarnings(){
   const CIN_BLOCK=-50;
   const cinBlock=(c,i)=>{const v=D.models[c]?D.models[c].convective_inhibition?.[i]:undefined;return v!==null&&v!==undefined&&v<=CIN_BLOCK;};
   const modelRisk=(c,i)=>{const v=D.models[c]?D.models[c].cape?.[i]:undefined;return v!==null&&v!==undefined&&v>1000&&!cinBlock(c,i);};
-  const findRisk=()=>{for(let i=curIdx;i<ts.length;i++){for(const c of codes){if(modelRisk(c,i))return i;}}return -1;};
+  const findRisk=()=>{for(let i=from;i<ts.length;i++){for(const c of codes){if(modelRisk(c,i))return i;}}return -1;};
   const maxCapeUnblocked=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m&&!cinBlock(c,i))m=v;}return m;};
   const col=(icon,list,extra=[])=>{
     const s=findSrc(list),c=findCon(list);
