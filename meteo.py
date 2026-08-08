@@ -22,7 +22,7 @@ FORECAST_MODELS = [
     ("meteofrance_arpege_world025", "Météo-France", "forecast"),
     ("ukmo_global_deterministic_10km", "UKMO Global", "forecast"),
     ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
-    ("google_weathernext2_ensemble", "Google WeatherNext 2", "ensemble"),
+    ("google_weathernext2_ensemble", "Google", "ensemble"),
 ]
 
 HOURLY_VARIABLES = [
