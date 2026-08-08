@@ -52,6 +52,11 @@ header .meta{color:var(--muted);font-size:12px}
 .tblwrap{overflow:auto;max-width:100%}
 .tblwrap table{width:max-content;min-width:100%}
 #tab-compare .card,#tab-accuracy .card{min-width:0}
+#tab-compare .card{flex:1;min-height:0;display:flex;flex-direction:column}
+#tab-compare .varsel{flex:none}
+#tab-compare .tblwrap{flex:1;min-height:0}
+#tab-compare .tblwrap thead th{position:sticky;top:0;background:var(--card);z-index:1}
+#tab-compare .tblwrap table{border-collapse:separate;border-spacing:0}
 table{border-collapse:collapse;font-size:12px;width:100%}
 th,td{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{color:var(--muted);font-weight:500}
@@ -629,7 +634,7 @@ let cmpVar='temperature_2m';
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
   const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
-  const head='<tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr>';
+  const head='<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
   const cell=v=>v===null||v===undefined?'—':(isWc?wcode(v)[1]+' '+wcode(v)[0]:fmt(v));
   const rows=D.time.map((t,i)=>{
@@ -650,7 +655,7 @@ function buildCmpTable(){
     });
     return `<tr class="${i===curIdx?'now':''}">${cells}</tr>`;
   }).join('');
-  el.innerHTML=head+rows;
+  el.innerHTML=head+'<tbody>'+rows+'</tbody>';
 }
 
 // accuracy
