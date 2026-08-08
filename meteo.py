@@ -84,7 +84,7 @@ OWM_CODE = "owm"
 OWM_NAME = "OpenWeather"
 WEATHERAPI_URL = "https://api.weatherapi.com/v1/forecast.json"
 WEATHERAPI_CODE = "weatherapi"
-WEATHERAPI_NAME = "WeatherAPI.com"
+WEATHERAPI_NAME = "WeatherAPI"
 
 # OpenWeather condition id -> WMO
 OWM_WMO = {
