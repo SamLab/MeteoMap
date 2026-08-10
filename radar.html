@@ -142,7 +142,7 @@ var LUT=[39,39,0,0,0,0,0,0,1,3,4,4,4,5,6,8,39,0,0,0,0,0,0,1,2,3,4,4,5,6,8,10,39,
     i=Math.max(0,Math.min(frames.length-1,i));
     idx=i;cur=frames[i];
     if(overlay){map.removeLayer(overlay);}
-    overlay=new RecolorLayer('',{maxZoom:10,attribution:'© RainViewer',opacity:0.9}).addTo(map);
+    overlay=new RecolorLayer('',{maxZoom:10,maxNativeZoom:7,attribution:'© RainViewer',opacity:0.9}).addTo(map);
     elTime.textContent=fmtTime(cur.time)+(cur.future?' (прогноз)':'');
     if(elSegs.children.length===frames.length){
       for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
@@ -180,7 +180,8 @@ var LUT=[39,39,0,0,0,0,0,0,1,3,4,4,4,5,6,8,39,0,0,0,0,0,0,1,2,3,4,4,5,6,8,10,39,
         frames=past.concat(now);
         if(!frames.length)throw new Error('нет кадров');
         renderSegs();
-        var c=frames.map(function(f){return f.future;}).indexOf(false);
+        var c=frames.length-1;
+        while(c>0&&frames[c].future){c--;}
         showFrame(c>=0?c:0);
         clearStatus();
       })

@@ -51,6 +51,8 @@ def test_radar_html_is_built_and_self_contained():
     assert "tilecache.rainviewer.com" in radar
     assert "basemaps.cartocdn.com" in radar
     assert "api.rainviewer.com/public/weather-maps.json" in radar
+    assert "maxNativeZoom:7" in radar
+    assert "while(c>0&&frames[c].future){c--;}" in radar
 
 
 def test_radar_uses_light_rainradar_theme():

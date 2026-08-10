@@ -139,7 +139,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     i=Math.max(0,Math.min(frames.length-1,i));
     idx=i;cur=frames[i];
     if(overlay){map.removeLayer(overlay);}
-    overlay=new RecolorLayer('',{maxZoom:10,attribution:'© RainViewer',opacity:0.9}).addTo(map);
+    overlay=new RecolorLayer('',{maxZoom:10,maxNativeZoom:7,attribution:'© RainViewer',opacity:0.9}).addTo(map);
     elTime.textContent=fmtTime(cur.time)+(cur.future?' (прогноз)':'');
     if(elSegs.children.length===frames.length){
       for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
@@ -177,7 +177,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
         frames=past.concat(now);
         if(!frames.length)throw new Error('нет кадров');
         renderSegs();
-        var c=frames.map(function(f){return f.future;}).indexOf(false);
+        var c=frames.length-1;
+        while(c>0&&frames[c].future){c--;}
         showFrame(c>=0?c:0);
         clearStatus();
       })
