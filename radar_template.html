@@ -5,37 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Радар осадков — MeteoMap</title>
 <style>
-:root{--dark:#14161c;--panel:#1d2027;--line:#2a2e37;--text:#e8eaf0;--muted:#9aa3b8}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
-body{background:var(--dark);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
-#map{position:absolute;inset:0;background:var(--dark)}
-.leaflet-container{background:var(--dark)}
-.leaflet-control-attribution{font-size:10px;background:rgba(20,22,28,.75);color:var(--muted)}
-.leaflet-control-attribution a{color:#c7d2e0}
-#timeline{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:14px}
-#play{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:#262a33;color:var(--text);font-size:15px;cursor:pointer;flex:none}
-#play:hover{background:#2e333e}
-#time{font-size:12px;color:var(--muted);min-width:120px;flex:none;font-variant-numeric:tabular-nums}
-#slider{flex:1;accent-color:#e09b00;height:4px;cursor:pointer}
-#legend{position:absolute;right:14px;bottom:80px;z-index:1000;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center;font-size:10px;color:var(--muted)}
-#legend .grad{width:16px;height:120px;margin:4px auto;border-radius:3px;background:linear-gradient(180deg,#169810 0%,#b6e90c 25%,#fbf205 40%,#f19a09 55%,#f21b0b 75%,#c40a85 90%,#8d1fb8 100%)}
-#legend .lbl{font-size:9px}
-#status{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 14px;font-size:12px;display:none}
+body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
+#map{position:absolute;inset:0;background:#acacac}
+.leaflet-container{background:#acacac}
+.lightbase .leaflet-tile{filter:grayscale(1) brightness(0.72)}
+.leaflet-bar a,.leaflet-bar a:hover{background-color:#42434b;width:35px;height:35px;line-height:35px;text-align:center;text-decoration:none;color:#fff;margin-bottom:10px;border-radius:50%;font-size:28px}
+.leaflet-bar a.leaflet-disabled{cursor:default;background-color:#42434b;color:#5f6065}
+.leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8);color:#666}
+.leaflet-control-attribution a{color:#415fad}
+#timeline{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:#fff;border-top:1px solid #d8d8d8;padding:10px 14px;display:flex;align-items:center;gap:14px}
+#play{width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:0 2px 2px rgba(85,85,85,.4);color:#42434b;font-size:16px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;border:0}
+#play:hover{background:#f2f2f2}
+#segwrap{flex:1;position:relative;height:10px;cursor:pointer}
+#segs{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;gap:1px}
+#segs div{flex:1;position:relative;cursor:pointer}
+#segs div:after{content:'';display:block;position:absolute;background-color:#42434b;opacity:.35;left:0;right:0;top:0;bottom:0;border-radius:2px}
+#segs div.on:after{opacity:1}
+#segs div:first-child:after{border-radius:9px 2px 2px 9px}
+#segs div:last-child:after{border-radius:2px 9px 9px 2px}
+#time{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#415fad;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
+#legend{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:1000;background:#42434b;padding:0 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 4px rgba(0,0,0,.3);border-radius:20px;height:20px}
+#legend .g{width:180px;height:10px;border-radius:9px;background:linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2);margin:0 8px}
+#legend span{font-size:10px;color:#fff;font-weight:600;white-space:nowrap}
+#status{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#fff;border:1px solid #d8d8d8;color:#42434b;border-radius:8px;padding:6px 14px;font-size:12px;display:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #status.show{display:block}
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div id="status"></div>
-<div id="legend">Интенсивность<div class="grad"></div><div class="lbl">слабо → сильно</div></div>
+<div id="legend"><span>слабо</span><div class="g"></div><span>сильно</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
+  <div id="segwrap"><div id="segs"></div></div>
   <span id="time">—</span>
-  <input id="slider" type="range" min="0" value="0">
 </div>
 <script>
 /*__LEAFLET__*/
+</script>
+<script>
+/*__PALETTE__*/
 </script>
 <script>
 (function(){
@@ -44,14 +55,14 @@ body{background:var(--dark);color:var(--text);font-family:-apple-system,BlinkMac
   var lon=parseFloat(params.get('lon'))||39.87;
   var zoom=parseInt(params.get('zoom')||'8',10);
   var map=L.map('map',{zoomControl:true}).setView([lat,lon],zoom);
-  L.tileLayer('https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{
-    maxZoom:10,attribution:'© OpenStreetMap contributors © CARTO'
+  L.tileLayer('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{
+    maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors © CARTO'
   }).addTo(map);
 
-  var frames=[],idx=0,playing=false,timer=null,overlay=null,host='';
+  var frames=[],idx=0,playing=false,timer=null,overlay=null,host='',cur=null;
   var elPlay=document.getElementById('play');
   var elTime=document.getElementById('time');
-  var elSlider=document.getElementById('slider');
+  var elSegs=document.getElementById('segs');
   var elStatus=document.getElementById('status');
 
   function setStatus(t){elStatus.textContent=t;elStatus.classList.add('show');}
@@ -62,31 +73,97 @@ body{background:var(--dark);color:var(--text);font-family:-apple-system,BlinkMac
     return p(d.getDate())+'.'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes());
   }
 
+  function colorTile(url){
+    var tile=document.createElement('canvas');
+    tile.width=256;tile.height=256;
+    var ctx=tile.getContext('2d');
+    var img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=function(){
+      try{
+        ctx.drawImage(img,0,0,256,256);
+        var id=ctx.getImageData(0,0,256,256);
+        var d=id.data;
+        for(var i=0;i<d.length;i+=4){
+          if(d[i+3]<12)continue;
+          var li=((d[i]>>4)<<8)|((d[i+1]>>4)<<4)|(d[i+2]>>4);
+          var rv=LUT[li];
+          var t=rv/(RV.length-1);
+          var p=t*(RR.length-1);
+          var lo=Math.floor(p),hi=Math.min(lo+1,RR.length-1),fr=p-lo;
+          var c0=RR[lo],c1=RR[hi];
+          d[i]=Math.round(c0[0]+(c1[0]-c0[0])*fr);
+          d[i+1]=Math.round(c0[1]+(c1[1]-c0[1])*fr);
+          d[i+2]=Math.round(c0[2]+(c1[2]-c0[2])*fr);
+        }
+        ctx.putImageData(id,0,0);
+        tile.complete=true;
+      }catch(e){tile.complete=false;}
+    };
+    img.onerror=function(){tile.complete=false;};
+    img.src=url;
+    return tile;
+  }
+
+  var RecolorLayer=L.TileLayer.extend({
+    getTileUrl:function(c){
+      return host+cur.path+'/256/'+c.z+'/'+c.x+'/'+c.y+'/2/1_1.png';
+    },
+    createTile:function(coords,done){
+      var url=this.getTileUrl(coords);
+      var tile=colorTile(url);
+      var self=this;
+      var check=function(){
+        if(tile.complete){done(null,tile);}
+        else if(tile.complete===false){done(new Error('tile error'),tile);}
+        else{setTimeout(check,30);}
+      };
+      check();
+      return tile;
+    }
+  });
+
+  function renderSegs(){
+    elSegs.innerHTML='';
+    frames.forEach(function(f,i){
+      var d=document.createElement('div');
+      d.title=fmtTime(f.time);
+      d.addEventListener('click',function(){showFrame(i);});
+      elSegs.appendChild(d);
+    });
+    elSegs.childNodes.forEach(function(c,j){c.classList.toggle('on',j===idx);});
+  }
+
   function showFrame(i){
     if(!frames.length)return;
     i=Math.max(0,Math.min(frames.length-1,i));
-    idx=i;var f=frames[i];
+    idx=i;cur=frames[i];
     if(overlay){map.removeLayer(overlay);}
-    overlay=L.tileLayer(host+f.path+'/256/{z}/{x}/{y}/2/1_1.png',{
-      maxZoom:10,attribution:'© RainViewer',opacity:0.85
-    }).addTo(map);
-    elSlider.value=i;
-    elTime.textContent=fmtTime(f.time)+(f.future?' (прогноз)':'');
+    overlay=new RecolorLayer('',{maxZoom:10,attribution:'© RainViewer',opacity:0.9}).addTo(map);
+    elTime.textContent=fmtTime(cur.time)+(cur.future?' (прогноз)':'');
+    if(elSegs.children.length===frames.length){
+      for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
+    }
   }
 
   function togglePlay(){
     if(!frames.length)return;
     playing=!playing;
     elPlay.textContent=playing?'⏸':'▶';
+    elPlay.classList.toggle('playing',playing);
     if(playing){
       timer=setInterval(function(){showFrame(idx+1<frames.length?idx+1:0);},600);
     }else{clearInterval(timer);timer=null;}
   }
 
   elPlay.addEventListener('click',togglePlay);
-  elSlider.addEventListener('input',function(){
-    if(playing){playing=false;elPlay.textContent='▶';clearInterval(timer);timer=null;}
-    showFrame(parseInt(elSlider.value,10));
+  elSegs.addEventListener('click',function(e){
+    var t=e.target;
+    while(t&&t!==elSegs&&t.parentNode!==elSegs)t=t.parentNode;
+    if(t&&t!==elSegs&&t.parentNode===elSegs){
+      if(playing){playing=false;elPlay.textContent='▶';elPlay.classList.remove('playing');clearInterval(timer);timer=null;}
+      showFrame(Array.prototype.indexOf.call(elSegs.children,t));
+    }
   });
 
   function load(){
@@ -99,9 +176,9 @@ body{background:var(--dark);color:var(--text);font-family:-apple-system,BlinkMac
         var now=(d.radar&&d.radar.nowcast||[]).map(function(f){return {time:f.time,path:f.path,future:true};});
         frames=past.concat(now);
         if(!frames.length)throw new Error('нет кадров');
-        elSlider.max=frames.length-1;
-        var cur=frames.map(function(f){return f.future;}).indexOf(false);
-        showFrame(cur>=0?cur:0);
+        renderSegs();
+        var c=frames.map(function(f){return f.future;}).indexOf(false);
+        showFrame(c>=0?c:0);
         clearStatus();
       })
       .catch(function(e){
