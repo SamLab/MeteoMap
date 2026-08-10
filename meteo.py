@@ -48,7 +48,7 @@ HPA_TO_MMHG = 0.750061683
 
 YR_URL = "https://api.met.no/weatherapi/locationforecast/2.0/compact"
 YR_CODE = "yr_no"
-YR_NAME = "MET Norway"
+YR_NAME = "Yr.no"
 
 # MET Norway symbol_code (без суффикса _day/_night/_polartwilight) -> WMO
 YR_BASE_WMO = {
