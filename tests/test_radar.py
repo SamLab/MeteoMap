@@ -51,7 +51,7 @@ def test_radar_html_is_built_and_self_contained():
     assert "var RV=" in radar
     assert "var RR=" in radar
     assert "tilecache.rainviewer.com" in radar
-    assert "basemaps.cartocdn.com" in radar
+    assert "tile.openstreetmap.org" in radar
     assert "api.rainviewer.com/public/weather-maps.json" in radar
     assert "maxNativeZoom:7" in radar
     assert "while(c>0&&frames[c].future){c--;}" in radar
@@ -60,10 +60,10 @@ def test_radar_html_is_built_and_self_contained():
 def test_radar_uses_light_rainradar_theme():
     with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
         radar = f.read()
-    assert "light_all" in radar
+    assert "tile.openstreetmap.org" in radar
     assert "dark_all" not in radar
     assert "#acacac" in radar
-    assert "grayscale(1) brightness(0.72)" in radar
+    assert "grayscale(1) brightness(0.72)" not in radar
     assert "#415fad" in radar
     assert "linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2)" in radar
     assert "RecolorLayer" in radar
