@@ -27,6 +27,9 @@ header .meta{color:var(--muted);font-size:12px}
 #tab-forecast.active{overflow:hidden}
 #tab-compare.active,#tab-accuracy.active,#tab-help.active{overflow:auto}
 #tab-weather.active{overflow:auto}
+#tab-radar.active{overflow:hidden}
+#tab-radar{min-height:0}
+#radar-frame{width:100%;height:100%;border:0;display:block}
 #tab-weather .card{flex:none}
 .help{line-height:1.55;font-size:13px}
 .help h2{font-size:16px;margin:0 0 6px}
@@ -126,6 +129,7 @@ a{color:var(--accent)}
 <div class="tabs">
   <button class="active" data-tab="weather">Погода</button>
   <button data-tab="forecast">Прогноз</button>
+  <button data-tab="radar">Радар</button>
   <button data-tab="compare">Сравнение</button>
   <button data-tab="accuracy">Точность</button>
   <button data-tab="help" title="Справка">?</button>
@@ -144,6 +148,9 @@ a{color:var(--accent)}
     <div class="chartbox"><div class="chartinner"><canvas id="mainChart" height="120"></canvas></div></div>
     <div class="legend" id="legend"></div>
   </div>
+</div>
+<div id="tab-radar" class="panel">
+  <iframe id="radar-frame" title="Радар осадков"></iframe>
 </div>
 <div id="tab-compare" class="panel">
   <div class="card">
@@ -243,7 +250,7 @@ const hourLabel=(v)=>D.time[v].slice(11,16);
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
-  ['weather','forecast','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
+  ['weather','forecast','radar','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
   if(b.dataset.tab==='forecast'&&typeof mainChart!=='undefined'&&mainChart)setTimeout(()=>mainChart.resize(),0);
 }));
 
@@ -703,6 +710,7 @@ function renderAll(){
     g.textContent=isNaN(t)?D.generated_at:new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(t);
   }
   buildConditions(); buildWeatherNow(); buildWeatherHours();
+  updateRadarFrame();
   buildWeather10(); buildWeatherDetail(); buildWarnings();
   document.getElementById('varsel').innerHTML='';
   buildVarSel('varsel',setVar);
@@ -716,6 +724,10 @@ function renderAll(){
   buildMaeTables();
   const cs=document.getElementById('citysel');
   if(cs)cs.childNodes[0].textContent=D.location.name;
+}
+function updateRadarFrame(){
+  const f=document.getElementById('radar-frame');
+  if(f&&D.location){f.src='radar.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=8';}
 }
 async function loadCity(slug){
   try{
