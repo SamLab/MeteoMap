@@ -667,7 +667,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	}
 
 .leaflet-container{background:#acacac}
-.lightbase .leaflet-tile{filter:grayscale(1) brightness(0.72)}
 .leaflet-bar a,.leaflet-bar a:hover{background-color:#42434b;width:35px;height:35px;line-height:35px;text-align:center;text-decoration:none;color:#fff;margin-bottom:10px;border-radius:50%;font-size:28px}
 .leaflet-bar a.leaflet-disabled{cursor:default;background-color:#42434b;color:#5f6065}
 .leaflet-container .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8);color:#666}
@@ -699,8 +698,8 @@ var LUT=[39,39,0,0,0,0,0,0,1,3,4,4,4,5,6,8,39,0,0,0,0,0,0,1,2,3,4,4,5,6,8,10,39,
   var lon=parseFloat(params.get('lon'))||39.87;
   var zoom=parseInt(params.get('zoom')||'8',10);
   var map=L.map('map',{zoomControl:true}).setView([lat,lon],zoom);
-  L.tileLayer('https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{
-    maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors © CARTO'
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors'
   }).addTo(map);
 
   var frames=[],idx=0,playing=false,timer=null,overlay=null,host='',cur=null;
