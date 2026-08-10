@@ -44,6 +44,8 @@ def test_radar_html_is_built_and_self_contained():
         radar = f.read()
     assert "/*__LEAFLET__*/" not in radar
     assert "/*__PALETTE__*/" not in radar
+    assert "/*__LEAFLET_CSS__*/" not in radar
+    assert ".leaflet-tile-container" in radar
     assert "window.L=e" in radar
     assert "var LUT=" in radar
     assert "var RV=" in radar
