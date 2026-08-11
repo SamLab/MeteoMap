@@ -98,6 +98,10 @@ def test_radar_has_lightning_layer():
     assert "createPane('lightning-0')" in tpl
     assert "type=" in tpl and "ltUrl+'0'" in tpl and "ltUrl+'1'" in tpl
     assert 'id="ltoggle"' in tpl
+    assert 'url(#ltbig0)' in tpl and 'url(#ltbig1)' in tpl
+    assert 'feMorphology' in tpl and 'ltbig0' in tpl
+    assert "hue-rotate(160deg)" in tpl
+    assert "saturate(5)" in tpl
 
 
 def test_radar_palette_has_original_rainradar_colors():

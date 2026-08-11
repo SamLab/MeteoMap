@@ -66,9 +66,9 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   }).addTo(map);
 
   map.createPane('lightning-0');
-  map.getPane('lightning-0').style.filter='invert(0.15) brightness(0.7) sepia(1) hue-rotate(90deg) saturate(4)';
+  map.getPane('lightning-0').style.filter='url(#ltbig0) sepia(1) hue-rotate(160deg) saturate(5) brightness(1.2) contrast(1.15)';
   map.createPane('lightning-1');
-  map.getPane('lightning-1').style.filter='invert(0.15) brightness(0.5) sepia(1) hue-rotate(90deg) saturate(3)';
+  map.getPane('lightning-1').style.filter='url(#ltbig1) sepia(1) hue-rotate(160deg) saturate(4) brightness(0.95) contrast(1.1)';
   var ltUrl='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
   var lt0=L.tileLayer(ltUrl+'0',{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
   var lt1=L.tileLayer(ltUrl+'1',{opacity:0.9,maxZoom:10,pane:'lightning-1'});
@@ -254,5 +254,16 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   setInterval(load,5*60*1000);
 })();
 </script>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false">
+  <filter id="ltbig0" x="-15%" y="-15%" width="130%" height="130%">
+    <feMorphology in="SourceGraphic" operator="dilate" radius="2"/>
+    <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00ffcc" flood-opacity="0.85"/>
+    <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#00ccff" flood-opacity="0.45"/>
+  </filter>
+  <filter id="ltbig1" x="-15%" y="-15%" width="130%" height="130%">
+    <feMorphology in="SourceGraphic" operator="dilate" radius="1"/>
+    <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00ccff" flood-opacity="0.55"/>
+  </filter>
+</svg>
 </body>
 </html>

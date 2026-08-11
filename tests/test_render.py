@@ -1,4 +1,18 @@
+import os
+
 import meteo
+
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def test_tabs_forecast_after_compare():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    tabs = [t.split('data-tab="')[1].split('"')[0]
+            for t in tpl.split('class="tabs"')[1].split('</div>')[0].split('\n')
+            if 'data-tab="' in t]
+    assert tabs.index("forecast") > tabs.index("compare")
+    assert tabs.index("radar") < tabs.index("compare")
 
 
 def _payload():
