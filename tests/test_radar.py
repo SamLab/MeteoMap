@@ -69,13 +69,13 @@ def test_radar_uses_light_rainradar_theme():
     assert "RecolorLayer" in radar
 
 
-def test_radar_palette_has_12_rainradar_colors():
+def test_radar_palette_has_original_rainradar_colors():
     with open(os.path.join(HERE, "tools", "palette.js"), encoding="utf-8") as f:
         pal = f.read()
-    assert "var LUT=" in pal
-    assert "var RV=" in pal
-    assert "var RR=" in pal
-    rr = pal.split("var RR=")[1].split(";")[0]
-    assert rr.count("[") == rr.count("]")
-    assert rr.count("],") == 11
-    assert "184,13,178" in rr
+    assert "var RR_COLORS=" in pal
+    assert "var PAL=" in pal
+    assert "146,163,185" in pal
+    assert "169,10,158" in pal
+    assert "var RV=" not in pal
+    assert "var RR=" not in pal
+    assert "var LUT=" not in pal
