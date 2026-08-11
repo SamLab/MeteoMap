@@ -742,7 +742,7 @@ var PAL=(function(){
     img.src=url;
   }
 
-  function renderTile(e,vx,vy,dz,z,sets){
+  function renderTile(vx,vy,dz,z,sets){
     var scale=getScale(dz,z);
     var dataX=Math.floor(vx*scale),dataY=Math.floor(vy*scale);
     var tile=document.createElement('canvas');
@@ -792,7 +792,7 @@ var PAL=(function(){
   var RadarLayer=L.GridLayer.extend({
     options:{minZoom:3,maxZoom:10,opacity:0.9,attribution:'© rainradar.ru'},
     createTile:function(coords,done){
-      var tile=renderTile(coords.x,coords.y,coords.z,getDataZoom(coords.z),cur.sets);
+      var tile=renderTile(coords.x,coords.y,getDataZoom(coords.z),coords.z,cur.sets);
       var self=this;
       var check=function(){
         if(tile.complete){done(null,tile);}
@@ -820,7 +820,7 @@ var PAL=(function(){
     i=Math.max(0,Math.min(frames.length-1,i));
     idx=i;cur=frames[i];
     if(overlay){map.removeLayer(overlay);}
-    overlay=new RadarLayer('',{}).addTo(map);
+    overlay=new RadarLayer({}).addTo(map);
     elTime.textContent=fmtTime(cur.time);
     if(elSegs.children.length===frames.length){
       for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
