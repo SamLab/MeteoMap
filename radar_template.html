@@ -54,6 +54,9 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   var lon=parseFloat(params.get('lon'))||39.87;
   var zoom=parseInt(params.get('zoom')||'8',10);
   var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:10}).setView([lat,lon],zoom);
+  setTimeout(function(){
+    if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
+  },50);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors'
   }).addTo(map);
@@ -170,8 +173,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     if(!frames.length)return;
     i=Math.max(0,Math.min(frames.length-1,i));
     idx=i;cur=frames[i];
-    if(overlay){map.removeLayer(overlay);}
-    overlay=new RadarLayer({}).addTo(map);
+    if(overlay){overlay.redraw();}
+    else{overlay=new RadarLayer({}).addTo(map);}
     elTime.textContent=fmtTime(cur.time);
     if(elSegs.children.length===frames.length){
       for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
@@ -203,6 +206,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     fetch('https://rainradar.ru/composite/manifest.json?t='+Math.floor(Date.now()/1e3),{cache:'no-store'})
       .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
       .then(function(d){
+        if(overlay){map.removeLayer(overlay);overlay=null;}
         frames=d.map(function(f){
           var sets=[{},{},{}];
           for(var g=0;g<3;g++){
