@@ -20,9 +20,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #segs div:first-child:after{border-radius:9px 2px 2px 9px}
 #segs div:last-child:after{border-radius:2px 9px 9px 2px}
 #time{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#415fad;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
-#legend{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:1000;background:#42434b;padding:0 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 4px rgba(0,0,0,.3);border-radius:20px;height:20px}
-#legend .g{width:180px;height:10px;border-radius:9px;background:linear-gradient(to right,#92a1b5,#67689e,#384080,#1daf57,#fff700,#ffae00,#e22856,#a90a9e);margin:0 8px}
-#legend span{font-size:10px;color:#fff;font-weight:600;white-space:nowrap}
+#legend{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);z-index:1000;width:260px;height:20px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-radius:20px;box-shadow:0 0 2px #000;background:linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2)}
+#legend span{font-size:11px;color:#fff;text-shadow:0 0 4px #000;font-weight:600;white-space:nowrap}
 #status{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#fff;border:1px solid #d8d8d8;color:#42434b;border-radius:8px;padding:6px 14px;font-size:12px;display:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #status.show{display:block}
 /*__LEAFLET_CSS__*/
@@ -36,7 +35,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 <body>
 <div id="map"></div>
 <div id="status"></div>
-<div id="legend"><span>слабо</span><div class="g"></div><span>сильно</span></div>
+<div id="legend"><span>Облачность</span><span>Осадки</span><span>Гроза</span><span>Град</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
   <div id="segwrap"><div id="segs"></div></div>

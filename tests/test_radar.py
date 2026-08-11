@@ -79,6 +79,16 @@ def test_radar_frame_is_lazy_loaded_on_tab_activation():
     assert "f.dataset.radarSrc!==f.dataset.loadedSrc" in tpl
 
 
+def test_radar_legend_matches_original():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    for label in ("Облачность", "Осадки", "Гроза", "Град"):
+        assert label in tpl
+    assert "слабо" not in tpl
+    assert "сильно" not in tpl
+    assert "8889bd" in tpl and "b80db2" in tpl
+
+
 def test_radar_palette_has_original_rainradar_colors():
     with open(os.path.join(HERE, "tools", "palette.js"), encoding="utf-8") as f:
         pal = f.read()
