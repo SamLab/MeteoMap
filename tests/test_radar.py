@@ -70,6 +70,15 @@ def test_radar_uses_rainradar_overlay():
     assert "© rainradar.ru" in radar
 
 
+def test_radar_frame_is_lazy_loaded_on_tab_activation():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "f.dataset.radarSrc=url" in tpl
+    assert "tab.classList.contains('active')" in tpl
+    assert "b.dataset.tab==='radar'" in tpl
+    assert "f.dataset.radarSrc!==f.dataset.loadedSrc" in tpl
+
+
 def test_radar_palette_has_original_rainradar_colors():
     with open(os.path.join(HERE, "tools", "palette.js"), encoding="utf-8") as f:
         pal = f.read()

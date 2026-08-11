@@ -251,6 +251,10 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   ['weather','forecast','radar','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
+  if(b.dataset.tab==='radar'){
+    const f=document.getElementById('radar-frame');
+    if(f&&f.dataset.radarSrc&&f.dataset.radarSrc!==f.dataset.loadedSrc){f.src=f.dataset.radarSrc;f.dataset.loadedSrc=f.dataset.radarSrc;}
+  }
   if(b.dataset.tab==='forecast'&&typeof mainChart!=='undefined'&&mainChart)setTimeout(()=>mainChart.resize(),0);
 }));
 
@@ -727,7 +731,11 @@ function renderAll(){
 }
 function updateRadarFrame(){
   const f=document.getElementById('radar-frame');
-  if(f&&D.location){f.src='radar.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=8';}
+  if(!f||!D.location)return;
+  const url='radar.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=8';
+  f.dataset.radarSrc=url;
+  const tab=document.getElementById('tab-radar');
+  if(tab&&tab.classList.contains('active'))f.src=url;
 }
 async function loadCity(slug){
   try{

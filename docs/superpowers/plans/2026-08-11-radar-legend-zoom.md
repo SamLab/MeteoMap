@@ -68,11 +68,13 @@ function updateRadarFrame(){
 В обработчике клика по вкладкам (строки 250-255) после `classList.toggle` добавить:
 
 ```js
-if(b.dataset.tab==='radar'){
-  const f=document.getElementById('radar-frame');
-  if(f&&f.dataset.radarSrc&&!f.src)f.src=f.dataset.radarSrc;
-}
+  if(b.dataset.tab==='radar'){
+    const f=document.getElementById('radar-frame');
+    if(f&&f.dataset.radarSrc&&f.dataset.radarSrc!==f.dataset.loadedSrc){f.src=f.dataset.radarSrc;f.dataset.loadedSrc=f.dataset.radarSrc;}
+  }
 ```
+
+(Сравнение с `loadedSrc`, а не `!f.src`, чтобы iframe перезагружался при смене города, когда вкладка radar была неактивна.)
 
 Итоговый блок вкладок:
 
@@ -83,7 +85,7 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
   ['weather','forecast','radar','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
   if(b.dataset.tab==='radar'){
     const f=document.getElementById('radar-frame');
-    if(f&&f.dataset.radarSrc&&!f.src)f.src=f.dataset.radarSrc;
+    if(f&&f.dataset.radarSrc&&f.dataset.radarSrc!==f.dataset.loadedSrc){f.src=f.dataset.radarSrc;f.dataset.loadedSrc=f.dataset.radarSrc;}
   }
   if(b.dataset.tab==='forecast'&&typeof mainChart!=='undefined'&&mainChart)setTimeout(()=>mainChart.resize(),0);
 }));
