@@ -89,6 +89,17 @@ def test_radar_legend_matches_original():
     assert "8889bd" in tpl and "b80db2" in tpl
 
 
+def test_radar_has_lightning_layer():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "images.lightningmaps.org" in tpl
+    assert "blitzortung" in tpl
+    assert "lightning-0" in tpl and "lightning-1" in tpl
+    assert "createPane('lightning-0')" in tpl
+    assert "type=" in tpl and "ltUrl+'0'" in tpl and "ltUrl+'1'" in tpl
+    assert 'id="ltoggle"' in tpl
+
+
 def test_radar_palette_has_original_rainradar_colors():
     with open(os.path.join(HERE, "tools", "palette.js"), encoding="utf-8") as f:
         pal = f.read()
