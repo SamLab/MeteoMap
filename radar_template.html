@@ -38,7 +38,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 <body>
 <div id="map"></div>
 <div id="status"></div>
-<button id="ltoggle" title="Молнии за 30 минут (0-15 светло-голубые, 15-30 тёмно-голубые)"><span class="ltdot"></span>Молнии</button>
+<button id="ltoggle" title="Молнии: свежие — светло-голубые, постарше — тёмно-голубые"><span class="ltdot"></span>Молнии</button>
 <div id="legend"><span>Облачность</span><span>Осадки</span><span>Гроза</span><span>Град</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
@@ -65,19 +65,13 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors'
   }).addTo(map);
 
-  function ltWin(mA,mB){
-    var now=Date.now();
-    var from=new Date(now-mB*60000).toISOString();
-    var to=new Date(now-mA*60000).toISOString();
-    return '&from='+from+'&to='+to;
-  }
   map.createPane('lightning-0');
-  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(165deg) saturate(2) brightness(1.5) contrast(1.15)';
+  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(160deg) saturate(1) brightness(0.8) contrast(1.1)';
   map.createPane('lightning-1');
-  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(160deg) saturate(2) brightness(0.8) contrast(1.15)';
-  var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}';
-  var lt0=L.tileLayer(ltBase+ltWin(0,15)+'&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
-  var lt1=L.tileLayer(ltBase+ltWin(15,30)+'&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-1'});
+  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(165deg) saturate(2.5) brightness(0.6)';
+  var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
+  var lt0=L.tileLayer(ltBase+'0&_t='+Date.now(),{opacity:0.9,maxZoom:10,tileSize:512,zoomOffset:-1,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
+  var lt1=L.tileLayer(ltBase+'1&_t='+Date.now(),{opacity:0.9,maxZoom:10,tileSize:512,zoomOffset:-1,pane:'lightning-1'});
   var lightningGroup=L.layerGroup([lt0,lt1]).addTo(map);
   var elLt=document.getElementById('ltoggle');
   var ltOn=true;
@@ -88,8 +82,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     else{map.removeLayer(lightningGroup);elLt.classList.remove('on');}
   });
   setInterval(function(){
-    lt0.setUrl(ltBase+ltWin(0,15)+'&_t='+Date.now());
-    lt1.setUrl(ltBase+ltWin(15,30)+'&_t='+Date.now());
+    lt0.setUrl(ltBase+'0&_t='+Date.now());
+    lt1.setUrl(ltBase+'1&_t='+Date.now());
   },120000);
 
   var frames=[],idx=0,playing=false,timer=null,overlay=null,cur=null;

@@ -96,11 +96,11 @@ def test_radar_has_lightning_layer():
     assert "blitzortung" in tpl
     assert "lightning-0" in tpl and "lightning-1" in tpl
     assert "createPane('lightning-0')" in tpl
-    assert "ltWin(0,15)" in tpl and "ltWin(15,30)" in tpl
-    assert "&from=" in tpl and "&to=" in tpl
+    assert "type=" in tpl
+    assert "tileSize:512" in tpl and "zoomOffset:-1" in tpl
     assert 'id="ltoggle"' in tpl
-    assert "brightness(1.5)" in tpl and "brightness(0.8)" in tpl
-    assert "hue-rotate(165deg)" in tpl and "hue-rotate(160deg)" in tpl
+    assert "brightness(0.8)" in tpl and "brightness(0.6)" in tpl
+    assert "hue-rotate(160deg)" in tpl and "hue-rotate(165deg)" in tpl
 
 
 def test_radar_palette_has_original_rainradar_colors():
