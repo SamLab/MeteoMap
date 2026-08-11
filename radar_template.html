@@ -53,7 +53,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   var lat=parseFloat(params.get('lat'))||57.63;
   var lon=parseFloat(params.get('lon'))||39.87;
   var zoom=parseInt(params.get('zoom')||'8',10);
-  var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:10}).setView([lat,lon],zoom);
+  var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:10,fadeAnimation:false}).setView([lat,lon],zoom);
   setTimeout(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
   },50);
@@ -147,13 +147,11 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     options:{minZoom:3,maxZoom:10,opacity:0.9,attribution:'© rainradar.ru'},
     createTile:function(coords,done){
       var tile=renderTile(coords.x,coords.y,getDataZoom(coords.z),coords.z,cur.sets);
-      var self=this;
-      var check=function(){
-        if(tile.complete){done(null,tile);}
+      setTimeout(function poll(){
+        if(tile.complete===true){done(null,tile);}
         else if(tile.complete===false){done(new Error('tile error'),tile);}
-        else{setTimeout(check,30);}
-      };
-      check();
+        else{setTimeout(poll,30);}
+      },0);
       return tile;
     }
   });
