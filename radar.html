@@ -678,7 +678,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <body>
 <div id="map"></div>
 <div id="status"></div>
-<button id="ltoggle" title="Молнии (Blitzortung.org)"><span class="ltdot"></span>Молнии</button>
+<button id="ltoggle" title="Молнии за 30 минут (0-15 светло-голубые, 15-30 тёмно-голубые)"><span class="ltdot"></span>Молнии</button>
 <div id="legend"><span>Облачность</span><span>Осадки</span><span>Гроза</span><span>Град</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
@@ -713,13 +713,19 @@ var PAL=(function(){
     maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors'
   }).addTo(map);
 
+  function ltWin(mA,mB){
+    var now=Date.now();
+    var from=new Date(now-mB*60000).toISOString();
+    var to=new Date(now-mA*60000).toISOString();
+    return '&from='+from+'&to='+to;
+  }
   map.createPane('lightning-0');
-  map.getPane('lightning-0').style.filter='url(#ltbig0) sepia(1) hue-rotate(160deg) saturate(5) brightness(1.2) contrast(1.15)';
+  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(165deg) saturate(2) brightness(1.5) contrast(1.15)';
   map.createPane('lightning-1');
-  map.getPane('lightning-1').style.filter='url(#ltbig1) sepia(1) hue-rotate(160deg) saturate(4) brightness(0.95) contrast(1.1)';
-  var ltUrl='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
-  var lt0=L.tileLayer(ltUrl+'0',{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
-  var lt1=L.tileLayer(ltUrl+'1',{opacity:0.9,maxZoom:10,pane:'lightning-1'});
+  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(160deg) saturate(2) brightness(0.8) contrast(1.15)';
+  var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}';
+  var lt0=L.tileLayer(ltBase+ltWin(0,15)+'&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
+  var lt1=L.tileLayer(ltBase+ltWin(15,30)+'&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-1'});
   var lightningGroup=L.layerGroup([lt0,lt1]).addTo(map);
   var elLt=document.getElementById('ltoggle');
   var ltOn=true;
@@ -730,9 +736,8 @@ var PAL=(function(){
     else{map.removeLayer(lightningGroup);elLt.classList.remove('on');}
   });
   setInterval(function(){
-    var ts='&_t='+Date.now();
-    lt0.setUrl(ltUrl+'0'+ts);
-    lt1.setUrl(ltUrl+'1'+ts);
+    lt0.setUrl(ltBase+ltWin(0,15)+'&_t='+Date.now());
+    lt1.setUrl(ltBase+ltWin(15,30)+'&_t='+Date.now());
   },120000);
 
   var frames=[],idx=0,playing=false,timer=null,overlay=null,cur=null;
@@ -902,16 +907,5 @@ var PAL=(function(){
   setInterval(load,5*60*1000);
 })();
 </script>
-<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false">
-  <filter id="ltbig0" x="-15%" y="-15%" width="130%" height="130%">
-    <feMorphology in="SourceGraphic" operator="dilate" radius="2"/>
-    <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00ffcc" flood-opacity="0.85"/>
-    <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#00ccff" flood-opacity="0.45"/>
-  </filter>
-  <filter id="ltbig1" x="-15%" y="-15%" width="130%" height="130%">
-    <feMorphology in="SourceGraphic" operator="dilate" radius="1"/>
-    <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#00ccff" flood-opacity="0.55"/>
-  </filter>
-</svg>
 </body>
 </html>
