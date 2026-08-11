@@ -21,7 +21,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #segs div:last-child:after{border-radius:2px 9px 9px 2px}
 #time{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#415fad;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
 #legend{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);z-index:1000;background:#42434b;padding:0 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 0 4px rgba(0,0,0,.3);border-radius:20px;height:20px}
-#legend .g{width:180px;height:10px;border-radius:9px;background:linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2);margin:0 8px}
+#legend .g{width:180px;height:10px;border-radius:9px;background:linear-gradient(to right,#92a1b5,#67689e,#384080,#1daf57,#fff700,#ffae00,#e22856,#a90a9e);margin:0 8px}
 #legend span{font-size:10px;color:#fff;font-weight:600;white-space:nowrap}
 #status{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#fff;border:1px solid #d8d8d8;color:#42434b;border-radius:8px;padding:6px 14px;font-size:12px;display:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #status.show{display:block}
@@ -54,12 +54,12 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   var lat=parseFloat(params.get('lat'))||57.63;
   var lon=parseFloat(params.get('lon'))||39.87;
   var zoom=parseInt(params.get('zoom')||'8',10);
-  var map=L.map('map',{zoomControl:true}).setView([lat,lon],zoom);
+  var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:10}).setView([lat,lon],zoom);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors'
   }).addTo(map);
 
-  var frames=[],idx=0,playing=false,timer=null,overlay=null,host='',cur=null;
+  var frames=[],idx=0,playing=false,timer=null,overlay=null,cur=null;
   var elPlay=document.getElementById('play');
   var elTime=document.getElementById('time');
   var elSegs=document.getElementById('segs');
@@ -72,46 +72,79 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     var p=function(n){return (n<10?'0':'')+n;};
     return p(d.getDate())+'.'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes());
   }
+  function getDataZoom(z){return z>7?5:z>5?4:3;}
+  function getScale(dz,z){return Math.pow(2,dz-z);}
 
-  function colorTile(url){
-    var tile=document.createElement('canvas');
-    tile.width=256;tile.height=256;
-    var ctx=tile.getContext('2d');
+  var rawCache={};
+  function loadRaw(url,cb){
+    if(rawCache[url]){cb(rawCache[url]);return;}
     var img=new Image();
     img.crossOrigin='anonymous';
     img.onload=function(){
       try{
-        ctx.drawImage(img,0,0,256,256);
-        var id=ctx.getImageData(0,0,256,256);
-        var d=id.data;
-        for(var i=0;i<d.length;i+=4){
-          if(d[i+3]<12)continue;
-          var li=((d[i]>>4)<<8)|((d[i+1]>>4)<<4)|(d[i+2]>>4);
-          var rv=LUT[li];
-          var t=rv/(RV.length-1);
-          var p=t*(RR.length-1);
-          var lo=Math.floor(p),hi=Math.min(lo+1,RR.length-1),fr=p-lo;
-          var c0=RR[lo],c1=RR[hi];
-          d[i]=Math.round(c0[0]+(c1[0]-c0[0])*fr);
-          d[i+1]=Math.round(c0[1]+(c1[1]-c0[1])*fr);
-          d[i+2]=Math.round(c0[2]+(c1[2]-c0[2])*fr);
+        var c=document.createElement('canvas');c.width=264;c.height=264;
+        var ctx=c.getContext('2d');ctx.drawImage(img,0,0);
+        var id=ctx.getImageData(0,0,264,264);
+        var d=id.data,a=new Uint8Array(264*264);
+        for(var i=0;i<d.length;i+=4)a[i/4]=d[i];
+        rawCache[url]=a;cb(a);
+      }catch(e){cb(null);}
+    };
+    img.onerror=function(){cb(null);};
+    img.src=url;
+  }
+
+  function renderTile(e,vx,vy,dz,z,sets){
+    var scale=getScale(dz,z);
+    var dataX=Math.floor(vx*scale),dataY=Math.floor(vy*scale);
+    var tile=document.createElement('canvas');
+    tile.width=256;tile.height=256;
+    if(!sets[dz-3]||!sets[dz-3][dataX+'|'+dataY]){tile.complete=true;return tile;}
+    var url='https://rainradar.ru/composite/'+cur.time+'/'+dz+'/'+dataX+'_'+dataY+'.png';
+    loadRaw(url,function(raw){
+      if(!raw){tile.complete=false;return;}
+      try{
+        var B=256*vx,Y=256*vy,K=256*dataX,V=256*dataY;
+        var out=new Uint8ClampedArray(256*256*4);
+        var X=-1,Q=-1;
+        for(var m=0;m<256;m++)for(var h=0;h<256;h++){
+          var N=(B+m)*scale-K,D=(Y+h)*scale-V;
+          var s=Math.floor(D),o=Math.floor(N),n=N-o,C=D-s;
+          if(o!==X||s!==Q){
+            var l=o+3+(s+3)*264,c=o+3+(s+4)*264,r=o+3+(s+5)*264,a=o+3+(s+6)*264;
+            var E=raw[l],k=raw[l+1],d=raw[l+2],P=raw[l+3];
+            var u=raw[c],A=raw[c+1],x=raw[c+2],S=raw[c+3];
+            var O=raw[r],w=raw[r+1],_=raw[r+2],R=raw[r+3];
+            var g=raw[a],p=raw[a+1],f=raw[a+2],M=raw[a+3];
+            var H=3*(k-d)+P-E+2*E-5*k+4*d-P;
+            var W=3*(A-x)+S-u+2*u-5*A+4*x-S;
+            var G=3*(w-_)+R-O+2*O-5*w+4*_-R;
+            var U=3*(p-f)+M-g+2*g-5*p+4*f-M;
+            X=o;Q=s;
+          }
+          var b=.5*(d-E+H*n*n)*n+k;
+          var j=.5*(x-u+W*n*n)*n+A;
+          var y=.5*(_-O+G*n*n)*n+w;
+          var L=.5*(f-g+U*n*n)*n+p;
+          var v=.5*(y-b+(2*b-5*j+4*y-L+(3*(j-y)+L-b)*C)*C)*C+j;
+          if(v>0){
+            var ii=Math.round(v/70*700)*4;
+            if(ii>PAL.length-4)ii=PAL.length-4;
+            var oi=(h*256+m)*4;
+            out[oi]=PAL[ii];out[oi+1]=PAL[ii+1];out[oi+2]=PAL[ii+2];out[oi+3]=PAL[ii+3];
+          }
         }
-        ctx.putImageData(id,0,0);
+        tile.getContext('2d').putImageData(new ImageData(out,256,256),0,0);
         tile.complete=true;
       }catch(e){tile.complete=false;}
-    };
-    img.onerror=function(){tile.complete=false;};
-    img.src=url;
+    });
     return tile;
   }
 
-  var RecolorLayer=L.TileLayer.extend({
-    getTileUrl:function(c){
-      return host+cur.path+'/256/'+c.z+'/'+c.x+'/'+c.y+'/2/1_1.png';
-    },
+  var RadarLayer=L.GridLayer.extend({
+    options:{minZoom:3,maxZoom:10,opacity:0.9,attribution:'© rainradar.ru'},
     createTile:function(coords,done){
-      var url=this.getTileUrl(coords);
-      var tile=colorTile(url);
+      var tile=renderTile(coords.x,coords.y,coords.z,getDataZoom(coords.z),cur.sets);
       var self=this;
       var check=function(){
         if(tile.complete){done(null,tile);}
@@ -139,8 +172,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     i=Math.max(0,Math.min(frames.length-1,i));
     idx=i;cur=frames[i];
     if(overlay){map.removeLayer(overlay);}
-    overlay=new RecolorLayer('',{maxZoom:10,maxNativeZoom:7,attribution:'© RainViewer',opacity:0.9}).addTo(map);
-    elTime.textContent=fmtTime(cur.time)+(cur.future?' (прогноз)':'');
+    overlay=new RadarLayer('',{}).addTo(map);
+    elTime.textContent=fmtTime(cur.time);
     if(elSegs.children.length===frames.length){
       for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
     }
@@ -168,18 +201,20 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 
   function load(){
     setStatus('Загрузка…');
-    fetch('https://api.rainviewer.com/public/weather-maps.json?t='+Date.now(),{cache:'no-store'})
+    fetch('https://rainradar.ru/composite/manifest.json?t='+Math.floor(Date.now()/1e3),{cache:'no-store'})
       .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
       .then(function(d){
-        host=d.host||'https://tilecache.rainviewer.com';
-        var past=(d.radar&&d.radar.past||[]).map(function(f){return {time:f.time,path:f.path,future:false};});
-        var now=(d.radar&&d.radar.nowcast||[]).map(function(f){return {time:f.time,path:f.path,future:true};});
-        frames=past.concat(now);
+        frames=d.map(function(f){
+          var sets=[{},{},{}];
+          for(var g=0;g<3;g++){
+            var list=f[1][g]||[];
+            for(var i2=0;i2<list.length;i2++)sets[g][list[i2][0]+'|'+list[i2][1]]=1;
+          }
+          return {time:f[0],sets:sets,future:false};
+        }).sort(function(a,b){return a.time-b.time;});
         if(!frames.length)throw new Error('нет кадров');
         renderSegs();
-        var c=frames.length-1;
-        while(c>0&&frames[c].future){c--;}
-        showFrame(c>=0?c:0);
+        showFrame(frames.length-1);
         clearStatus();
       })
       .catch(function(e){

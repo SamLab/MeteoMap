@@ -47,26 +47,27 @@ def test_radar_html_is_built_and_self_contained():
     assert "/*__LEAFLET_CSS__*/" not in radar
     assert ".leaflet-tile-container" in radar
     assert "window.L=e" in radar
-    assert "var LUT=" in radar
-    assert "var RV=" in radar
-    assert "var RR=" in radar
-    assert "tilecache.rainviewer.com" in radar
+    assert "var RR_COLORS=" in radar
+    assert "var PAL=" in radar
+    assert "rainradar.ru/composite/manifest.json" in radar
     assert "tile.openstreetmap.org" in radar
-    assert "api.rainviewer.com/public/weather-maps.json" in radar
-    assert "maxNativeZoom:7" in radar
-    assert "while(c>0&&frames[c].future){c--;}" in radar
+    assert "maxNativeZoom:7" not in radar
+    assert "tilecache.rainviewer.com" not in radar
+    assert "api.rainviewer.com" not in radar
+    assert "RainViewer" not in radar
+    assert "RadarLayer" in radar
 
 
-def test_radar_uses_light_rainradar_theme():
+def test_radar_uses_rainradar_overlay():
     with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
         radar = f.read()
-    assert "tile.openstreetmap.org" in radar
-    assert "dark_all" not in radar
-    assert "#acacac" in radar
-    assert "grayscale(1) brightness(0.72)" not in radar
-    assert "#415fad" in radar
-    assert "linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2)" in radar
-    assert "RecolorLayer" in radar
+    assert "Math.pow(2,dz-z)" in radar
+    assert "dataX+'|'+dataY" in radar
+    assert "minZoom:3" in radar
+    assert "maxZoom:10" in radar
+    assert "opacity:0.9" in radar
+    assert "crossOrigin='anonymous'" in radar
+    assert "© rainradar.ru" in radar
 
 
 def test_radar_palette_has_original_rainradar_colors():
