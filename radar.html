@@ -673,6 +673,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-bar a.leaflet-disabled{cursor:default;background-color:#42434b;color:#5f6065}
 .leaflet-container .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8);color:#666}
 .leaflet-container .leaflet-control-attribution a{color:#415fad}
+.leaflet-labels-pane{z-index:900}
+.label{position:absolute;white-space:nowrap;pointer-events:none;line-height:1}
+.label>span{color:#fff;font-weight:500;text-shadow:-1px 0 1px rgba(0,0,0,.7),1px 0 1px rgba(0,0,0,.7),0 1px 1px rgba(0,0,0,.7),0 -1px 1px rgba(0,0,0,.7)}
+.label.l0>span{font-size:13px}
+.label.l1>span{font-size:12px}
+.label.l2>span{font-size:11px}
+.label.l3>span{font-size:10px}
 </style>
 </head>
 <body>
@@ -733,6 +740,28 @@ var PAL=(function(){
     lt0.setUrl(ltBase+'0&_t='+Date.now());
     lt1.setUrl(ltBase+'1&_t='+Date.now());
   },120000);
+
+  map.createPane('labels');
+  var LabelsLayer=L.GridLayer.extend({
+    options:{pane:'labels',minZoom:5,maxZoom:10,updateWhenZooming:false},
+    createTile:function(coords){
+      var tile=document.createElement('div');
+      var url='https://rainradar.ru/labels?z='+coords.z+'&x='+coords.x+'&y='+coords.y;
+      fetch(url).then(function(r){return r.json();}).then(function(labels){
+        for(var i=0;i<labels.length;i++){
+          var d=document.createElement('div'),s=document.createElement('span');
+          d.className='label l'+labels[i][4];
+          s.textContent=labels[i][1];
+          d.style.left=labels[i][2]+'px';
+          d.style.bottom=labels[i][3]+'px';
+          d.appendChild(s);
+          tile.appendChild(d);
+        }
+      }).catch(function(){});
+      return tile;
+    }
+  });
+  map.addLayer(new LabelsLayer());
 
   var frames=[],idx=0,playing=false,timer=null,overlay=null,cur=null;
   var elPlay=document.getElementById('play');
