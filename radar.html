@@ -714,12 +714,12 @@ var PAL=(function(){
   }).addTo(map);
 
   map.createPane('lightning-0');
-  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(160deg) saturate(1) brightness(0.8) contrast(1.1)';
+  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(155deg) saturate(1) brightness(1.1) contrast(0.8)';
   map.createPane('lightning-1');
-  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(165deg) saturate(2.5) brightness(0.6)';
+  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(160deg) saturate(1.5) brightness(1.3)';
   var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
-  var lt0=L.tileLayer(ltBase+'0&_t='+Date.now(),{opacity:0.9,maxZoom:10,tileSize:512,zoomOffset:-1,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
-  var lt1=L.tileLayer(ltBase+'1&_t='+Date.now(),{opacity:0.9,maxZoom:10,tileSize:512,zoomOffset:-1,pane:'lightning-1'});
+  var lt0=L.tileLayer(ltBase+'0&_t='+Date.now(),{opacity:0.9,maxZoom:10,tileSize:1024,zoomOffset:-2,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
+  var lt1=L.tileLayer(ltBase+'1&_t='+Date.now(),{opacity:0.9,maxZoom:10,tileSize:1024,zoomOffset:-2,pane:'lightning-1'});
   var lightningGroup=L.layerGroup([lt0,lt1]).addTo(map);
   var elLt=document.getElementById('ltoggle');
   var ltOn=true;
