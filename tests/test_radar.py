@@ -113,3 +113,23 @@ def test_radar_palette_has_original_rainradar_colors():
     assert "var RV=" not in pal
     assert "var RR=" not in pal
     assert "var LUT=" not in pal
+
+
+def test_radar_has_labels_layer():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "LabelsLayer" in tpl
+    assert "map.createPane('labels')" in tpl
+    assert "rainradar.ru/labels?z=" in tpl
+    assert ".leaflet-labels-pane{z-index:900}" in tpl
+    assert ".label.l0>span" in tpl and ".label.l3>span" in tpl
+    assert "text-shadow:-1px 0 1px" in tpl
+    assert "pointer-events:none" in tpl
+    assert "updateWhenZooming:false" in tpl
+    assert "minZoom:5" in tpl
+    with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
+        radar = f.read()
+    assert "LabelsLayer" in radar
+    assert "rainradar.ru/labels?z=" in radar
+    assert ".leaflet-labels-pane{z-index:900}" in radar
+    assert ".label.l3>span" in radar
