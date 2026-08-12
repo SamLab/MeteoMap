@@ -127,9 +127,13 @@ def test_radar_has_labels_layer():
     assert "pointer-events:none" in tpl
     assert "updateWhenZooming:false" in tpl
     assert "minZoom:5" in tpl
+    assert "tile.style.width='256px'" in tpl
+    assert "tile.style.height='256px'" in tpl
     with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
         radar = f.read()
     assert "LabelsLayer" in radar
     assert "rainradar.ru/labels?z=" in radar
     assert ".leaflet-labels-pane{z-index:900}" in radar
     assert ".label.l3>span" in radar
+    assert "tile.style.width='256px'" in radar
+    assert "tile.style.height='256px'" in radar

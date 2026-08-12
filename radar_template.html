@@ -98,6 +98,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     options:{pane:'labels',minZoom:5,maxZoom:10,updateWhenZooming:false},
     createTile:function(coords){
       var tile=document.createElement('div');
+      tile.style.width='256px';
+      tile.style.height='256px';
       var url='https://rainradar.ru/labels?z='+coords.z+'&x='+coords.x+'&y='+coords.y;
       fetch(url).then(function(r){return r.json();}).then(function(labels){
         for(var i=0;i<labels.length;i++){
