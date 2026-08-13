@@ -172,6 +172,11 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "rngUp(iMx['wind_speed_10m'],'wind_speed_10m','м/с')" not in tpl
     assert "'↑ '+fmt(w.precipitation[pMx])+' в '" in tpl
     assert "'↑ '+fmt(w.precipitation[pMx])+' мм в '" not in tpl
+    assert "D.time[i].slice(11,13)+'ч'" in tpl
+    assert "D.time[iMx['temperature_2m']].slice(11,13)+'ч'" in tpl
+    assert "D.time[pMx].slice(11,13)+'ч'" in tpl
+    assert "const aptMean=apn?temp(apt/apn):'';" in tpl
+    assert "aptMean?' ('+aptMean+')':''" in tpl
 
 
 def test_accuracy_tables_sorted_by_mean_mae():
