@@ -324,12 +324,13 @@ function buildWeatherNow(){
     }
     iMx[f]=mx;iMn[f]=mn;
   });
-  let pMx=-1;
+  let pFirst=-1,pLast=-1;
   for(let j=0;j<D.time.length;j++){
     if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
     const v=w.precipitation?.[j];
-    if(v==null)continue;
-    if(pMx<0||v>w.precipitation[pMx])pMx=j;
+    if(!(v>0))continue;
+    if(pFirst<0)pFirst=j;
+    pLast=j;
   }
   let dl='—';
   if(D.daily.sunrise?.[0]&&D.daily.sunset?.[0]){
@@ -345,11 +346,11 @@ function buildWeatherNow(){
     apt+=a;apn++;
   }
   const aptMean=apn?temp(apt/apn):'';
-  const rngUp=(i,f)=>(i<0?'—':'↑ '+num(w[f][i])+' в '+D.time[i].slice(11,13)+'ч');
-  const rngDn=(i,f)=>(i<0?'—':'↓ '+num(w[f][i])+' в '+D.time[i].slice(11,13)+'ч');
+  const rngUp=(i,f)=>(i<0?'—':'↑ '+num(w[f][i])+' в '+D.time[i].slice(11,16));
+  const rngDn=(i,f)=>(i<0?'—':'↓ '+num(w[f][i])+' в '+D.time[i].slice(11,16));
   const cells=[
-    {lab:'Температура',val:temp(w.temperature_2m?.[curIdx])+(aptMean?' ('+aptMean+')':''),mx:(iMx['temperature_2m']<0?'—':'↑ '+temp(w.temperature_2m[iMx['temperature_2m']])+' в '+D.time[iMx['temperature_2m']].slice(11,13)+'ч'),mn:(iMn['temperature_2m']<0?'—':'↓ '+temp(w.temperature_2m[iMn['temperature_2m']])+' в '+D.time[iMn['temperature_2m']].slice(11,13)+'ч')},
-    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pMx<0||!(w.precipitation[pMx]>0)?'—':'↑ '+fmt(w.precipitation[pMx])+' в '+D.time[pMx].slice(11,13)+'ч'),mn:'↓ —'},
+    {lab:'Температура',val:temp(w.temperature_2m?.[curIdx])+(aptMean?' ('+aptMean+')':''),mx:(iMx['temperature_2m']<0?'—':'↑ '+temp(w.temperature_2m[iMx['temperature_2m']])+' в '+D.time[iMx['temperature_2m']].slice(11,16)),mn:(iMn['temperature_2m']<0?'—':'↓ '+temp(w.temperature_2m[iMn['temperature_2m']])+' в '+D.time[iMn['temperature_2m']].slice(11,16))},
+    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pFirst<0?'—':'с '+D.time[pFirst].slice(11,16)),mn:(pLast<0?'—':'до '+D.time[pLast].slice(11,16))},
     {lab:'Ветер',val:wind==null?'—':num(wind)+' м/с, '+(dir==null?'':rumbShort(dir)),mx:rngUp(iMx['wind_speed_10m'],'wind_speed_10m'),mn:rngDn(iMn['wind_speed_10m'],'wind_speed_10m')},
     {lab:'Солнце',val:dl,mx:(sr==='—'?'—':'↑ '+sr),mn:(ss==='—'?'—':'↓ '+ss)}
   ];
@@ -368,14 +369,6 @@ function buildWeatherHours(){
   const hs=Math.min(curIdx+1,D.time.length-1);
   const today=D.time[hs]?D.time[hs].slice(0,10):'';
   const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs;
-  let tiMax=-1,tiMin=-1;
-  for(let j=0;j<D.time.length;j++){
-    if(!isToday(j))continue;
-    const t=w.temperature_2m?.[j];
-    if(t==null)continue;
-    if(tiMax<0||t>w.temperature_2m[tiMax])tiMax=j;
-    if(tiMin<0||t<w.temperature_2m[tiMin])tiMin=j;
-  }
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   let rainHour=-1;
@@ -385,10 +378,6 @@ function buildWeatherHours(){
   }
   if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
   else parts.push('без дождя');
-  const mn=[];
-  if(tiMax>=0)mn.push('до '+temp(w.temperature_2m[tiMax])+' в '+D.time[tiMax].slice(11,16));
-  if(tiMin>=0)mn.push(temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
-  if(mn.length)parts.push(mn.join(' и '));
   const th=document.getElementById('hourstitle');
   if(th&&parts.length)th.textContent='Далее '+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=

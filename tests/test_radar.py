@@ -170,13 +170,23 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "'↑ '" in tpl and "'↓ '" in tpl
     assert "rngUp(iMx['wind_speed_10m'],'wind_speed_10m')" in tpl
     assert "rngUp(iMx['wind_speed_10m'],'wind_speed_10m','м/с')" not in tpl
-    assert "'↑ '+fmt(w.precipitation[pMx])+' в '" in tpl
-    assert "'↑ '+fmt(w.precipitation[pMx])+' мм в '" not in tpl
-    assert "D.time[i].slice(11,13)+'ч'" in tpl
-    assert "D.time[iMx['temperature_2m']].slice(11,13)+'ч'" in tpl
-    assert "D.time[pMx].slice(11,13)+'ч'" in tpl
+    assert "' в '+D.time[i].slice(11,16)" in tpl
+    assert "D.time[i].slice(11,13)+'ч'" not in tpl
+    assert "D.time[iMx['temperature_2m']].slice(11,16)" in tpl
+    assert "'с '+D.time[pFirst].slice(11,16)" in tpl
+    assert "'до '+D.time[pLast].slice(11,16)" in tpl
+    assert "'↑ '+fmt(w.precipitation[pMx])+' в '" not in tpl
     assert "const aptMean=apn?temp(apt/apn):'';" in tpl
     assert "aptMean?' ('+aptMean+')':''" in tpl
+
+
+def test_hours_title_has_rain_only():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "parts.push('без дождя')" in tpl
+    assert "parts.push('дождь в '+D.time[rainHour].slice(11,16))" in tpl
+    assert "tiMax" not in tpl
+    assert "tiMin" not in tpl
 
 
 def test_accuracy_tables_sorted_by_mean_mae():
