@@ -154,6 +154,36 @@ def test_radar_has_lightning_layer():
     assert "hue-rotate(155deg)" in tpl and "hue-rotate(160deg)" in tpl
 
 
+def test_weather_now_parameter_table_with_sun_and_rain():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert '<table class="wnowtbl">' in tpl
+    assert "lab:'Ветер'" in tpl
+    assert "lab:'Давление'" in tpl
+    assert "lab:'Влаж.'" in tpl
+    assert "lab:'Солнце'" in tpl
+    assert "lab:'Осадки'" in tpl
+    assert "['CAPE'," not in tpl
+    assert "['Восход / закат'," not in tpl
+    assert "'↑ '" in tpl and "'↓ '" in tpl
+
+
+def test_accuracy_tables_sorted_by_mean_mae():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "mrows.sort((a,b)=>(meanOf(ver[a],vnames)??1e9)-(meanOf(ver[b],vnames)??1e9))" in tpl
+
+
+def test_hour_ribbon_rain_bar():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}" in tpl
+    assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75;pointer-events:none}" in tpl
+    assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
+    assert "class=\"hprc\"" in tpl
+    assert "Math.min(100,Math.round(pr/5*100))" in tpl
+
+
 def test_radar_has_rainradar_base_above_precipitation():
     with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
         tpl = f.read()

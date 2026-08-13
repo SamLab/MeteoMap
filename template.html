@@ -81,10 +81,18 @@ a{color:var(--accent)}
 .wcond{font-size:17px;margin-top:2px}
 .wfeel{font-size:13px;color:var(--muted)}
 .wdet{display:flex;gap:18px;flex-wrap:wrap;font-size:12px}
+.wnowtbl{border-collapse:collapse}
+.wnowtbl td{padding:3px 14px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-size:12px}
+.wnowtbl tr:first-child td{font-size:15px;font-weight:600}
+.wnowtbl tr:last-child td{border-bottom:none}
+.wnowtbl td.lab{font-size:11px;color:var(--muted);font-weight:500}
+.wnowtbl td.rng{font-size:11px;color:var(--muted)}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
 .hours{display:flex;overflow-x:auto;padding:4px 0}
-.hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line)}
+.hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}
+.hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75;pointer-events:none}
+.hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}
 .hour.nd{border-left:3px solid #9aa3b8}
 .hour .ht{color:var(--muted);font-size:11px}
 .hour .he{font-size:18px;line-height:1.3}
@@ -304,25 +312,48 @@ function buildWeatherNow(){
   const wind=w.wind_speed_10m?.[curIdx];
   const dir=w.wind_direction_10m?.[curIdx];
   const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
-  let cIdx=-1;
+  const iMx={},iMn={};
+  ['wind_speed_10m','pressure_msl','relative_humidity_2m'].forEach(f=>{
+    let mx=-1,mn=-1;
+    for(let j=0;j<D.time.length;j++){
+      if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
+      const v=w[f]?.[j];
+      if(v==null)continue;
+      if(mx<0||v>w[f][mx])mx=j;
+      if(mn<0||v<w[f][mn])mn=j;
+    }
+    iMx[f]=mx;iMn[f]=mn;
+  });
+  let pMx=-1;
   for(let j=0;j<D.time.length;j++){
     if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
-    const c=w.cape?.[j];
-    if(c==null)continue;
-    if(cIdx<0||c>w.cape[cIdx])cIdx=j;
+    const v=w.precipitation?.[j];
+    if(v==null)continue;
+    if(pMx<0||v>w.precipitation[pMx])pMx=j;
   }
-  const det=[
-    ['Ветер',wind==null?'—':num(wind)+' м/с, '+rumbShort(dir)],
-    ['Давление',num(w.pressure_msl?.[curIdx])+' рт. ст.'],
-    ['Влаж.',num(w.relative_humidity_2m?.[curIdx])+'%'],
-    ['Восход / закат',sr+' / '+ss],
-    ['CAPE',cIdx<0?'—':num(w.cape[cIdx])+' в '+D.time[cIdx].slice(11,16)]
+  let dl='—';
+  if(D.daily.sunrise?.[0]&&D.daily.sunset?.[0]){
+    const ms=new Date(D.daily.sunset[0])-new Date(D.daily.sunrise[0]);
+    if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
+  }
+  const prSum=D.daily.precipitation_sum?.[0];
+  const rngUp=(i,f,u)=>(i<0?'—':'↑ '+num(w[f][i])+' '+u+' в '+D.time[i].slice(11,16));
+  const rngDn=(i,f,u)=>(i<0?'—':'↓ '+num(w[f][i])+' '+u+' в '+D.time[i].slice(11,16));
+  const cells=[
+    {lab:'Ветер',val:wind==null?'—':num(wind)+' м/с, '+(dir==null?'':rumbShort(dir)),mx:rngUp(iMx['wind_speed_10m'],'wind_speed_10m','м/с'),mn:rngDn(iMn['wind_speed_10m'],'wind_speed_10m','м/с')},
+    {lab:'Давление',val:num(w.pressure_msl?.[curIdx])+' рт. ст.',mx:rngUp(iMx['pressure_msl'],'pressure_msl','рт. ст.'),mn:rngDn(iMn['pressure_msl'],'pressure_msl','рт. ст.')},
+    {lab:'Влаж.',val:num(w.relative_humidity_2m?.[curIdx])+'%',mx:rngUp(iMx['relative_humidity_2m'],'relative_humidity_2m','%'),mn:rngDn(iMn['relative_humidity_2m'],'relative_humidity_2m','%')},
+    {lab:'Солнце',val:dl,mx:(sr==='—'?'—':'↑ '+sr),mn:(ss==='—'?'—':'↓ '+ss)},
+    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pMx<0||!(w.precipitation[pMx]>0)?'—':'↑ '+fmt(w.precipitation[pMx])+' мм в '+D.time[pMx].slice(11,16)),mn:'↓ —'}
   ];
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
     '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
     '<div class="wcond">'+wtext+'</div></div>'+
-    '<div class="wdet">'+det.map(x=>'<div class="wd"><div class="wdv">'+x[1]+'</div><div class="wdl">'+x[0]+'</div></div>').join('')+'</div></div>';
+    '<div class="wdet"><table class="wnowtbl"><tr>'+cells.map(c=>'<td>'+c.val+'</td>').join('')+'</tr>'+
+    '<tr>'+cells.map(c=>'<td class="lab">'+c.lab+'</td>').join('')+'</tr>'+
+    '<tr>'+cells.map(c=>'<td class="rng">'+c.mx+'</td>').join('')+'</tr>'+
+    '<tr>'+cells.map(c=>'<td class="rng">'+c.mn+'</td>').join('')+'</tr></table></div></div>';
 }
 function buildWeatherHours(){
   const w=D.weighted;
@@ -366,7 +397,8 @@ function buildWeatherHours(){
       return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,16)+'</div>'+
         '<div class="he">'+we+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
         '<div class="hwnd">'+(ws==null?'':arrow+' '+num(ws)+' м/с')+'</div>'+
-        '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmt(pr)+'мм</div>':'&nbsp;')+'</div></div>';
+        '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmt(pr)+'мм</div>':'&nbsp;')+'</div>'+
+        '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>';
     }).join('');
 }
 function buildWeather10(){
@@ -700,6 +732,7 @@ function buildMaeTables(){
     const el=document.getElementById(days==='7d'?'mae7':'mae30');
     const concl=document.getElementById(days==='7d'?'concl7':'concl30');
     const mrows=codes.filter(c=>ver[c]&&vnames.some(v=>typeof ver[c][v]==='number'));
+    mrows.sort((a,b)=>(meanOf(ver[a],vnames)??1e9)-(meanOf(ver[b],vnames)??1e9));
     if(!mrows.length){
       el.innerHTML='';concl.textContent='Нет данных за этот период';return;
     }
