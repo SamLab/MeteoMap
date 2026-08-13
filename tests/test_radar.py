@@ -229,12 +229,9 @@ def test_hour_ribbon_rain_bar():
     assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}" in tpl
     assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75;pointer-events:none}" in tpl
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
-    assert ".hour .hcl{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75;pointer-events:none}" in tpl
     assert "class=\"hprc\"" in tpl
-    assert "class=\"hcl\"" in tpl
-    assert tpl.index('class="hcl"') < tpl.index('class="hprc"')
+    assert "class=\"hcl\"" not in tpl
     assert "Math.min(100,Math.round(pr/5*100))" in tpl
-    assert "Math.max(0,Math.min(100,Math.round(w.cloud_cover?.[j]||0)))" in tpl
 
 
 def test_d10_cloud_fill_top_to_bottom():
