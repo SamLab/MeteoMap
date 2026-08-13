@@ -47,7 +47,7 @@ def test_hours_title_uses_remaining_today_window():
     assert "const hs=Math.min(curIdx+1,D.time.length-1);" in tpl
     assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
-    assert "th.textContent=(rainHour>=0?'Далее ':'Сегодня ')+parts.join(', ')" in tpl
+    assert "th.textContent=(rainHour>=0?'Далее ':'Остаток дня ')+parts.join(', ')" in tpl
 
 
 def test_compare_rows_highlight_day_max_min():
@@ -186,7 +186,7 @@ def test_hours_title_has_rain_only():
         tpl = f.read()
     assert "parts.push('без дождя')" in tpl
     assert "parts.push('дождь в '+D.time[rainHour].slice(11,16))" in tpl
-    assert "'Сегодня '" in tpl
+    assert "'Остаток дня '" in tpl
     assert "tiMax" not in tpl
     assert "tiMin" not in tpl
 
@@ -205,6 +205,15 @@ def test_hour_ribbon_rain_bar():
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
     assert "class=\"hprc\"" in tpl
     assert "Math.min(100,Math.round(pr/5*100))" in tpl
+
+
+def test_d10_cloud_fill_top_to_bottom():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert ".d10cloud{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75}" in tpl
+    assert "class=\"d10cloud\"" in tpl
+    assert "Math.max(0,Math.min(100,Math.round(x.cl||0)))" in tpl
+    assert "d10prec" not in tpl
 
 
 def test_radar_has_rainradar_base_above_precipitation():
