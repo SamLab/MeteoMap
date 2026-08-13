@@ -116,13 +116,13 @@ def test_radar_has_lightning_layer():
     assert "hue-rotate(155deg)" in tpl and "hue-rotate(160deg)" in tpl
 
 
-def test_radar_has_rainradar_base_below_gray_background():
+def test_radar_has_rainradar_base_above_precipitation():
     with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "#map{position:absolute;inset:0;background:#acacac}" in tpl
     assert "rainradar.ru/tiles?z={z}&x={x}&y={y}" in tpl
     assert "tms:true" in tpl
-    assert "zIndex:0" in tpl
+    assert "zIndex:998" in tpl
     assert "basemaps.cartocdn.com" not in tpl
     assert "tile.openstreetmap.org" not in tpl
 
