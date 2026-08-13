@@ -74,6 +74,7 @@ tr.now td:first-child{border-left:2px solid #1f2637}
 tr.now td:last-child{border-right:2px solid #1f2637}
 tr.mxrow td{border-top:2px dashed #d32f2f;border-bottom:2px dashed #d32f2f}
 tr.mnrow td{border-top:2px dashed #1976d2;border-bottom:2px dashed #1976d2}
+tr.dayrow td{padding:6px 8px;background:var(--line);color:var(--muted);font-weight:600;border:none}
 a{color:var(--accent)}
 .wnow{display:flex;align-items:center;gap:28px;flex-wrap:wrap;padding:4px 2px}
 .wbig{font-size:52px;font-weight:700}
@@ -326,8 +327,9 @@ function buildWeatherNow(){
 function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
-  const today=D.time[start]?D.time[start].slice(0,10):'';
-  const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=start;
+  const hs=Math.min(curIdx+1,D.time.length-1);
+  const today=D.time[hs]?D.time[hs].slice(0,10):'';
+  const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs;
   let tiMax=-1,tiMin=-1;
   for(let j=0;j<D.time.length;j++){
     if(!isToday(j))continue;
@@ -649,21 +651,23 @@ function buildCmpTable(){
   const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
   const head='<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
-  const today=D.time[curIdx]?.slice(0,10)||'';
-  let idxMx=-1,idxMn=-1,gmx=-Infinity,gmn=Infinity;
+  const dayMx={},dayMn={};
   D.time.forEach((t,i)=>{
-    if(!isWc&&t.slice(0,10)===today){
-      const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
-      const nums=vals.filter(v=>typeof v==='number');
-      if(nums.length){
-        const mx=Math.max(...nums),mn=Math.min(...nums);
-        if(mx>gmx){gmx=mx;idxMx=i;}
-        if(mn<gmn){gmn=mn;idxMn=i;}
-      }
+    if(isWc)return;
+    const day=t.slice(0,10);
+    const nums=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined).filter(v=>typeof v==='number');
+    if(nums.length){
+      const mx=Math.max(...nums),mn=Math.min(...nums);
+      if(!(day in dayMx)||mx>dayMx[day][1])dayMx[day]=[i,mx];
+      if(!(day in dayMn)||mn<dayMn[day][1])dayMn[day]=[i,mn];
     }
   });
   const cell=v=>v===null||v===undefined?'—':(isWc?wcode(v)[1]+' '+wcode(v)[0]:fmt(v));
+  let prevDay='';
   const rows=D.time.map((t,i)=>{
+    const day=t.slice(0,10);
+    const drow=(day!==prevDay)&&(prevDay=day,'<tr class="dayrow"><td colspan="'+(3+codes.length)+'">'+
+      DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>');
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
     let cells=`<td>${DAY_NAMES_SHORT[new Date(t).getDay()]} ${fmtTime(t)}</td>`;
@@ -679,7 +683,9 @@ function buildCmpTable(){
       if(!isWc&&v!==null&&v!==undefined&&(v===mx||v===mn))cls+=' ext';
       cells+=`<td class="${cls}">${cell(v)}</td>`;
     });
-    return `<tr class="${i===curIdx?'now':''}${i===idxMx?' mxrow':''}${i===idxMn?' mnrow':''}">${cells}</tr>`;
+    const inMx=dayMx[day]&&dayMx[day][0]===i;
+    const inMn=dayMn[day]&&dayMn[day][0]===i;
+    return drow+`<tr class="${i===curIdx?'now':''}${inMx?' mxrow':''}${inMn?' mnrow':''}">${cells}</tr>`;
   }).join('');
   el.innerHTML=head+'<tbody>'+rows+'</tbody>';
 }
