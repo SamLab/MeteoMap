@@ -17,19 +17,22 @@
 
 ## Решение
 
-Добавить в `radar_template.html` базовый тайл-слой rainradar ПОД оверлеем
-осадков (в отличие от rainradar, где `zIndex:998`, у нас подложка должна лежать
-НИЖЕ canvas-осадков и молний — используем `zIndex:0`).
+Добавить в `radar_template.html` базовый тайл-слой rainradar. Исследование
+живого rainradar показало: их подложка подключается с `zIndex:998` и лежит
+ПОВЕРХ canvas-осадков (RadarLayer GridLayer с дефолтным zIndex 1, оба в
+tile-pane). Полупрозрачные тёмные линии дорог/рек поверх полупрозрачных
+облаков (палитра alpha 0–1) дают эффект «дороги и реки видно сквозь облака».
 
 ```js
 L.tileLayer('https://rainradar.ru/tiles?z={z}&x={x}&y={y}',{
-  tms:true,minZoom:3,maxZoom:10,zIndex:0
+  tms:true,minZoom:3,maxZoom:10,zIndex:998
 }).addTo(map);
 ```
 
 Порядок слоёв сверху вниз: подписи (pane z900) → молнии (pane z400) →
-осадки (canvas GridLayer, zIndex 1) → базовая подложка (zIndex 0) → фон
-`#acacac`. Тайлы подложки прозрачны, поэтому серый фон остаётся виден.
+подложка `/tiles?z=` (zIndex 998 внутри tile-pane 200) → осадки (canvas
+GridLayer zIndex 1) → фон `#acacac`. Тайлы подложки прозрачны, кроме тёмных
+линий дорог/рек, поэтому они просвечивают поверх осадков, как на rainradar.
 
 ### Что не меняем
 
@@ -47,7 +50,7 @@ L.tileLayer('https://rainradar.ru/tiles?z={z}&x={x}&y={y}',{
   `test_radar_has_rainradar_base_below_gray_background`:
   - фон `#acacac` в шаблоне;
   - базовая подложка `rainradar.ru/tiles?z=` присутствует, `tms:true`,
-    `zIndex:0`;
+    `zIndex:998` (поверх осадков, как на rainradar);
   - `basemaps.cartocdn.com` и `tile.openstreetmap.org` отсутствуют.
 
 ## Критерии приёмки
@@ -55,6 +58,6 @@ L.tileLayer('https://rainradar.ru/tiles?z={z}&x={x}&y={y}',{
 1. `python -m pytest tests/test_radar.py -q` — 11 passed.
 2. Полный `python -m pytest -q` — только 2 известных failed Open-Meteo.
 3. Headless-проверка: подложка грузится (`rainradar.ru/tiles?z=` IMG-тайлы),
-   осадки canvas поверх, подписи белые z900, фон `rgb(172,172,172)`, дороги/реки
-   видны (тёмные линии).
+   лежит ПОВЕРХ canvas-осадков (zIndex 998 vs 1), фон `rgb(172,172,172)`,
+   дороги/реки видны сквозь облака.
 4. Деплой через GitHub Actions, live-проверка.
