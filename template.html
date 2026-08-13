@@ -110,6 +110,7 @@ a{color:var(--accent)}
 .d10strip{display:flex;width:max-content;min-width:100%}
 .d10col{width:70px;flex:none;text-align:center;position:relative}
 .d10tube{height:135px;position:relative}
+.d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
 .d10cloud{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75}
 .d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
 .d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
@@ -418,9 +419,11 @@ function buildWeather10(){
   document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
     const y1=yT(x.tmax),y2=yT(x.tmin);
     const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
-    const pH=Math.max(0,Math.min(100,Math.round(x.cl||0)));
+    const pR=x.pr!=null?Math.max(0,Math.round(x.pr/50*100)):0;
+    const pC=Math.max(0,Math.min(100,Math.round(x.cl||0)));
     return '<div class="d10col"><div class="d10tube">'+
-      '<div class="d10cloud" style="height:'+pH+'%"></div>'+
+      '<div class="d10prec" style="height:'+pR+'%"></div>'+
+      '<div class="d10cloud" style="height:'+pC+'%"></div>'+
       '<div class="d10tbar" style="top:'+y1+'px;height:'+h+'px"></div>'+
             '<div class="d10tday" style="top:'+(y1-15)+'px">'+temp(x.tmax)+'</div>'
 +

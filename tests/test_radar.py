@@ -211,9 +211,11 @@ def test_d10_cloud_fill_top_to_bottom():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert ".d10cloud{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75}" in tpl
+    assert ".d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}" in tpl
     assert "class=\"d10cloud\"" in tpl
+    assert "class=\"d10prec\"" in tpl
     assert "Math.max(0,Math.min(100,Math.round(x.cl||0)))" in tpl
-    assert "d10prec" not in tpl
+    assert "Math.max(0,Math.round(x.pr/50*100))" in tpl
 
 
 def test_radar_has_rainradar_base_above_precipitation():
