@@ -137,6 +137,22 @@ def test_warnings_title_lists_nearest_confirmed():
     assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
 
 
+def test_warnings_confirmed_requires_two_models():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "sourceCountAt(i,list)>=2" in tpl
+    assert "sourceCountAt(i,list)>0)return i;" in tpl
+
+
+def test_warnings_gust_column_instead_of_hail():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const GUST_MIN=15;" in tpl
+    assert "wind_gusts_10m?.[i]" in tpl
+    assert "findGust(1)" in tpl and "findGust(2)" in tpl
+    assert "col('🧊',H)" not in tpl
+
+
 def test_wcode_rain_icons_have_no_sun():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
