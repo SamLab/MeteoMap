@@ -716,9 +716,6 @@ var PAL=(function(){
   setTimeout(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
   },50);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',{
-    maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors © CARTO'
-  }).addTo(map);
 
   map.createPane('lightning-0');
   map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(155deg) saturate(1) brightness(1.1) contrast(0.8)';

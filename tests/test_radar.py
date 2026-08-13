@@ -59,9 +59,9 @@ def test_radar_html_is_built_and_self_contained():
     assert "var RR_COLORS=" in radar
     assert "var PAL=" in radar
     assert "rainradar.ru/composite/manifest.json" in radar
-    assert "basemaps.cartocdn.com/light_nolabels" in radar
+    assert "basemaps.cartocdn.com" not in radar
     assert "tile.openstreetmap.org" not in radar
-    assert "© OpenStreetMap contributors © CARTO" in radar
+    assert "#map{position:absolute;inset:0;background:#acacac}" in radar
     assert "maxNativeZoom:7" not in radar
     assert "tilecache.rainviewer.com" not in radar
     assert "api.rainviewer.com" not in radar
@@ -112,6 +112,14 @@ def test_radar_has_lightning_layer():
     assert 'id="ltoggle"' in tpl
     assert "brightness(1.1)" in tpl and "brightness(1.3)" in tpl
     assert "hue-rotate(155deg)" in tpl and "hue-rotate(160deg)" in tpl
+
+
+def test_radar_has_gray_background_without_basemap():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "#map{position:absolute;inset:0;background:#acacac}" in tpl
+    assert "basemaps.cartocdn.com" not in tpl
+    assert "tile.openstreetmap.org" not in tpl
 
 
 def test_radar_palette_has_original_rainradar_colors():
