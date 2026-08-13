@@ -36,7 +36,7 @@ def test_hours_title_uses_remaining_today_window():
     assert "const start=curIdx;" in tpl
     assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=start" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
-    assert "th.textContent='Сегодня '+parts.join(', ')" in tpl
+    assert "th.textContent='Дальше '+parts.join(', ')" in tpl
 
 
 def test_update_radar_frame_uses_location_coords():

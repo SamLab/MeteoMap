@@ -348,7 +348,7 @@ function buildWeatherHours(){
   if(tiMin>=0)mn.push(temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
   if(mn.length)parts.push(mn.join(' и '));
   const th=document.getElementById('hourstitle');
-  if(th&&parts.length)th.textContent='Сегодня '+parts.join(', ');
+  if(th&&parts.length)th.textContent='Дальше '+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
