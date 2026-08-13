@@ -50,7 +50,9 @@ def test_radar_html_is_built_and_self_contained():
     assert "var RR_COLORS=" in radar
     assert "var PAL=" in radar
     assert "rainradar.ru/composite/manifest.json" in radar
-    assert "tile.openstreetmap.org" in radar
+    assert "basemaps.cartocdn.com/light_nolabels" in radar
+    assert "tile.openstreetmap.org" not in radar
+    assert "© OpenStreetMap contributors © CARTO" in radar
     assert "maxNativeZoom:7" not in radar
     assert "tilecache.rainviewer.com" not in radar
     assert "api.rainviewer.com" not in radar

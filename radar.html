@@ -716,8 +716,8 @@ var PAL=(function(){
   setTimeout(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
   },50);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors'
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',{
+    maxZoom:10,className:'lightbase',attribution:'© OpenStreetMap contributors © CARTO'
   }).addTo(map);
 
   map.createPane('lightning-0');
