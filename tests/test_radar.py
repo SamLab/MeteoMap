@@ -130,6 +130,13 @@ def test_radar_frame_is_lazy_loaded_on_tab_activation():
     assert "f.dataset.radarSrc!==f.dataset.loadedSrc" in tpl
 
 
+def test_warnings_title_lists_nearest_confirmed():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "Предупреждения (ближайшее/подтвержденное)" in tpl
+    assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
+
+
 def test_wcode_rain_icons_have_no_sun():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
