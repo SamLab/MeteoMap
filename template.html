@@ -337,12 +337,12 @@ function buildWeatherNow(){
     if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
   }
   const prSum=D.daily.precipitation_sum?.[0];
-  const rngUp=(i,f,u)=>(i<0?'—':'↑ '+num(w[f][i])+' '+u+' в '+D.time[i].slice(11,16));
-  const rngDn=(i,f,u)=>(i<0?'—':'↓ '+num(w[f][i])+' '+u+' в '+D.time[i].slice(11,16));
+  const rngUp=(i,f)=>(i<0?'—':'↑ '+num(w[f][i])+' в '+D.time[i].slice(11,16));
+  const rngDn=(i,f)=>(i<0?'—':'↓ '+num(w[f][i])+' в '+D.time[i].slice(11,16));
   const cells=[
     {lab:'Температура',val:temp(w.temperature_2m?.[curIdx]),mx:(iMx['temperature_2m']<0?'—':'↑ '+temp(w.temperature_2m[iMx['temperature_2m']])+' в '+D.time[iMx['temperature_2m']].slice(11,16)),mn:(iMn['temperature_2m']<0?'—':'↓ '+temp(w.temperature_2m[iMn['temperature_2m']])+' в '+D.time[iMn['temperature_2m']].slice(11,16))},
-    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pMx<0||!(w.precipitation[pMx]>0)?'—':'↑ '+fmt(w.precipitation[pMx])+' мм в '+D.time[pMx].slice(11,16)),mn:'↓ —'},
-    {lab:'Ветер',val:wind==null?'—':num(wind)+' м/с, '+(dir==null?'':rumbShort(dir)),mx:rngUp(iMx['wind_speed_10m'],'wind_speed_10m','м/с'),mn:rngDn(iMn['wind_speed_10m'],'wind_speed_10m','м/с')},
+    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pMx<0||!(w.precipitation[pMx]>0)?'—':'↑ '+fmt(w.precipitation[pMx])+' в '+D.time[pMx].slice(11,16)),mn:'↓ —'},
+    {lab:'Ветер',val:wind==null?'—':num(wind)+' м/с, '+(dir==null?'':rumbShort(dir)),mx:rngUp(iMx['wind_speed_10m'],'wind_speed_10m'),mn:rngDn(iMn['wind_speed_10m'],'wind_speed_10m')},
     {lab:'Солнце',val:dl,mx:(sr==='—'?'—':'↑ '+sr),mn:(ss==='—'?'—':'↓ '+ss)}
   ];
   document.getElementById('weather-now').innerHTML=

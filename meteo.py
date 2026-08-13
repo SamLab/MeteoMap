@@ -193,6 +193,7 @@ def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
         "timezone": timezone,
         "forecast_days": days,
         "models": code,
+        "wind_speed_unit": "ms",
     }
     resp = request_with_retry(ENDPOINTS[endpoint], params, timeout=15)
     return resp if isinstance(resp, list) else [resp]
@@ -212,6 +213,7 @@ def fetch_historical_model(code, start_date, end_date, variables,
         "hourly": ",".join(variables),
         "timezone": "UTC",
         "models": code,
+        "wind_speed_unit": "ms",
     }
     resp = request_with_retry(ENDPOINTS["historical"], params, timeout=20)
     return resp if isinstance(resp, list) else [resp]
@@ -229,6 +231,7 @@ def fetch_archive(start_date, end_date, variables, lats=None, lons=None):
         "end_date": end_date,
         "hourly": ",".join(variables),
         "timezone": "UTC",
+        "wind_speed_unit": "ms",
     }
     resp = request_with_retry(ENDPOINTS["archive"], params, timeout=20)
     return resp if isinstance(resp, list) else [resp]

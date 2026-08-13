@@ -60,6 +60,32 @@ def test_fetch_external_providers_tolerates_failure():
 from datetime import datetime, timezone, timedelta
 
 
+def test_fetch_model_requests_wind_in_ms(monkeypatch):
+    captured = {}
+
+    def fake_retry(url, params, timeout):
+        captured["params"] = params
+        return {"hourly": {}, "daily": {}}
+
+    monkeypatch.setattr(meteo, "request_with_retry", fake_retry)
+    meteo.fetch_model("a", "forecast", ["wind_speed_10m"])
+    assert captured["params"]["wind_speed_unit"] == "ms"
+
+
+def test_fetch_historical_and_archive_wind_in_ms(monkeypatch):
+    captured = []
+
+    def fake_retry(url, params, timeout):
+        captured.append(params)
+        return {"hourly": {}}
+
+    monkeypatch.setattr(meteo, "request_with_retry", fake_retry)
+    meteo.fetch_historical_model("a", "2026-08-01", "2026-08-07", ["wind_speed_10m"])
+    meteo.fetch_archive("2026-08-01", "2026-08-07", ["wind_speed_10m"])
+    assert all(p.get("wind_speed_unit") == "ms" for p in captured)
+
+
+
 def test_build_city_payload_with_external(monkeypatch):
     loc = meteo.LOCATIONS[0]
     raw = {

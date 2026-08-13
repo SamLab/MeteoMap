@@ -168,6 +168,10 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "['CAPE'," not in tpl
     assert "['Восход / закат'," not in tpl
     assert "'↑ '" in tpl and "'↓ '" in tpl
+    assert "rngUp(iMx['wind_speed_10m'],'wind_speed_10m')" in tpl
+    assert "rngUp(iMx['wind_speed_10m'],'wind_speed_10m','м/с')" not in tpl
+    assert "'↑ '+fmt(w.precipitation[pMx])+' в '" in tpl
+    assert "'↑ '+fmt(w.precipitation[pMx])+' мм в '" not in tpl
 
 
 def test_accuracy_tables_sorted_by_mean_mae():
