@@ -55,13 +55,16 @@ def test_compare_rows_highlight_day_max_min():
         tpl = f.read()
     assert "tr.mxrow td{border-top:2px dashed #d32f2f;border-bottom:2px dashed #d32f2f}" in tpl
     assert "tr.mnrow td{border-top:2px dashed #1976d2;border-bottom:2px dashed #1976d2}" in tpl
-    assert "tr.dayrow td{padding:6px 8px;background:var(--line);color:var(--muted);font-weight:600;border:none}" in tpl
+    assert "tr.dayrow td{padding:6px 8px;background:var(--line);color:var(--muted);font-weight:600;border:none;text-align:left}" in tpl
     assert "const dayMx={},dayMn={};" in tpl
     assert "const day=t.slice(0,10);" in tpl
     assert "if(!(day in dayMx)||mx>dayMx[day][1])dayMx[day]=[i,mx];" in tpl
     assert "if(!(day in dayMn)||mn<dayMn[day][1])dayMn[day]=[i,mn];" in tpl
     assert "'<tr class=\"dayrow\"><td colspan=\"'+(3+codes.length)+'\">'" in tpl
     assert "prevDay=day" in tpl
+    assert "let drow='';" in tpl
+    assert "if(day!==prevDay){" in tpl
+    assert "&&(prevDay=day," not in tpl
     assert "const inMx=dayMx[day]&&dayMx[day][0]===i;" in tpl
     assert "const inMn=dayMn[day]&&dayMn[day][0]===i;" in tpl
     assert "mxrow':''}${inMn?' mnrow':''}" in tpl

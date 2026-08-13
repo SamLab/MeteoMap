@@ -74,7 +74,7 @@ tr.now td:first-child{border-left:2px solid #1f2637}
 tr.now td:last-child{border-right:2px solid #1f2637}
 tr.mxrow td{border-top:2px dashed #d32f2f;border-bottom:2px dashed #d32f2f}
 tr.mnrow td{border-top:2px dashed #1976d2;border-bottom:2px dashed #1976d2}
-tr.dayrow td{padding:6px 8px;background:var(--line);color:var(--muted);font-weight:600;border:none}
+tr.dayrow td{padding:6px 8px;background:var(--line);color:var(--muted);font-weight:600;border:none;text-align:left}
 a{color:var(--accent)}
 .wnow{display:flex;align-items:center;gap:28px;flex-wrap:wrap;padding:4px 2px}
 .wbig{font-size:52px;font-weight:700}
@@ -666,8 +666,9 @@ function buildCmpTable(){
   let prevDay='';
   const rows=D.time.map((t,i)=>{
     const day=t.slice(0,10);
-    const drow=(day!==prevDay)&&(prevDay=day,'<tr class="dayrow"><td colspan="'+(3+codes.length)+'">'+
-      DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>');
+    let drow='';
+    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(3+codes.length)+'">'+
+      DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>';}
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
     let cells=`<td>${DAY_NAMES_SHORT[new Date(t).getDay()]} ${fmtTime(t)}</td>`;
