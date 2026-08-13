@@ -175,6 +175,7 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "D.time[iMx['temperature_2m']].slice(11,16)" in tpl
     assert "'с '+D.time[pFirst].slice(11,16)" in tpl
     assert "'до '+D.time[pLast].slice(11,16)" in tpl
+    assert "if(!rainCodes.includes(w.weather_code?.[j]))continue;" in tpl
     assert "'↑ '+fmt(w.precipitation[pMx])+' в '" not in tpl
     assert "const aptMean=apn?temp(apt/apn):'';" in tpl
     assert "aptMean?' ('+aptMean+')':''" in tpl
