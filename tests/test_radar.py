@@ -151,6 +151,8 @@ def test_warnings_gust_column_instead_of_hail():
     assert "const GUST_MIN=15;" in tpl
     assert "wind_gusts_10m?.[i]" in tpl
     assert "findGust(1)" in tpl and "findGust(2)" in tpl
+    assert "g.lst.join(' и ')" in tpl
+    assert "lst.push(names[c])" in tpl
     assert "col('🧊',H)" not in tpl
 
 

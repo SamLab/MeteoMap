@@ -567,12 +567,13 @@ function buildWarnings(){
   };
   const ci=findRisk();
   const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' риск грозы · CAPE '+num(maxCapeUnblocked(ci))+' Дж/кг</div>'];
-  const gustInfo=i=>{let n=0,m=0;for(const c of codes){const v=D.models[c]?D.models[c].wind_gusts_10m?.[i]:undefined;if(v===null||v===undefined)continue;if(v>m)m=v;if(v>=GUST_MIN)n++;}return {n,m};};
+  const gustInfo=i=>{let n=0,m=0;const lst=[];for(const c of codes){const v=D.models[c]?D.models[c].wind_gusts_10m?.[i]:undefined;if(v===null||v===undefined)continue;if(v>m)m=v;if(v>=GUST_MIN){n++;lst.push(names[c]);}}return {n,m,lst};};
   const findGust=minN=>{for(let i=from;i<ts.length;i++){if(gustInfo(i).n>=minN)return i;}return -1;};
+  const gustRow=i=>{const g=gustInfo(i);return tstr(i)+' до '+num(g.m)+' м/с · '+((g.n===1)?g.lst.join(' и '):'по '+g.n+' моделям');};
   const gRows=[];
   const g1=findGust(1),g2=findGust(2);
-  if(g1>=0)gRows.push('<div class="wr1">'+tstr(g1)+' до '+num(gustInfo(g1).m)+' м/с · по '+(gustInfo(g1).n===1?'1 модели':gustInfo(g1).n+' моделям')+'</div>');
-  if(g2>=0)gRows.push('<div class="wr2">'+tstr(g2)+' до '+num(gustInfo(g2).m)+' м/с · по '+(gustInfo(g2).n===1?'1 модели':gustInfo(g2).n+' моделям')+'</div>');
+  if(g1>=0)gRows.push('<div class="wr1">'+gustRow(g1)+'</div>');
+  if(g2>=0)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
   if(gRows.length===0)gRows.push('<div class="wr1">&nbsp;</div>');
   el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S,capeRow)+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
 }
