@@ -737,14 +737,14 @@ function updateRadarFrame(){
   const tab=document.getElementById('tab-radar');
   if(tab&&tab.classList.contains('active'))f.src=url;
 }
-async function loadCity(slug){
+async function loadCity(slug,silent){
   try{
     const r=await fetch('data/'+slug+'.json',{cache:'no-cache'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     D=await r.json();
     renderAll();
   }catch(e){
-    alert('Не удалось загрузить данные города: '+e.message);
+    if(!silent)alert('Не удалось загрузить данные города: '+e.message);
   }
 }
 function setupCitySel(){
@@ -767,6 +767,7 @@ function setupCitySel(){
 
 setupCitySel();
 renderAll();
+setInterval(()=>loadCity(D.location.slug,true),5*60*1000);
 </script>
 </body>
 </html>

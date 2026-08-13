@@ -30,6 +30,16 @@ def test_index_has_radar_tab_and_iframe():
     assert "updateRadarFrame()" in html
 
 
+def test_index_autorefreshes_every_5_minutes():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "async function loadCity(slug,silent)" in tpl
+    assert "if(!silent)alert('Не удалось загрузить данные города: '+e.message)" in tpl
+    assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" in tpl
+    html = meteo.render(tpl, _payload())
+    assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" in html
+
+
 def test_hours_title_uses_remaining_today_window():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
