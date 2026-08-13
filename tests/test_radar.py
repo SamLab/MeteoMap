@@ -1,4 +1,5 @@
 import os
+import re
 
 import meteo
 
@@ -153,6 +154,24 @@ def test_warnings_gust_column_instead_of_hail():
     assert "col('🧊',H)" not in tpl
 
 
+def test_precip_shows_hundredths_for_small_values():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const fmtP=v=>" in tpl
+    assert "Math.round(v*100)/100" in tpl
+    assert "fmtP(pr)+'мм'" in tpl
+    assert "fmtP(x.pr))+'мм / '" in tpl
+    assert "fmtP(prSum)+' мм'" in tpl
+
+
+def test_hourly_rain_fill_less_bright():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    m = re.search(r"\.hour \.hprc\{[^}]+\}", tpl)
+    assert m and "opacity:.45" in m.group(0)
+    assert ".hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);" in tpl
+
+
 def test_wcode_rain_icons_have_no_sun():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
@@ -250,7 +269,7 @@ def test_hour_ribbon_rain_bar():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}" in tpl
-    assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75;pointer-events:none}" in tpl
+    assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}" in tpl
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
     assert "class=\"hprc\"" in tpl
     assert "class=\"hcl\"" not in tpl
