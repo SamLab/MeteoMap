@@ -325,7 +325,7 @@ function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
   const today=D.time[start]?D.time[start].slice(0,10):'';
-  const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today;
+  const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=start;
   let tiMax=-1,tiMin=-1;
   for(let j=0;j<D.time.length;j++){
     if(!isToday(j))continue;
