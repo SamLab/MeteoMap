@@ -379,7 +379,7 @@ function buildWeatherHours(){
   if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
-  if(th&&parts.length)th.textContent='Далее '+parts.join(', ');
+  if(th&&parts.length)th.textContent=(rainHour>=0?'Далее ':'Сегодня ')+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
