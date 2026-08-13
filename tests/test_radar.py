@@ -59,6 +59,8 @@ def test_radar_html_is_built_and_self_contained():
     assert "var RR_COLORS=" in radar
     assert "var PAL=" in radar
     assert "rainradar.ru/composite/manifest.json" in radar
+    assert "rainradar.ru/tiles?z={z}&x={x}&y={y}" in radar
+    assert "tms:true" in radar
     assert "basemaps.cartocdn.com" not in radar
     assert "tile.openstreetmap.org" not in radar
     assert "#map{position:absolute;inset:0;background:#acacac}" in radar
@@ -114,10 +116,13 @@ def test_radar_has_lightning_layer():
     assert "hue-rotate(155deg)" in tpl and "hue-rotate(160deg)" in tpl
 
 
-def test_radar_has_gray_background_without_basemap():
+def test_radar_has_rainradar_base_below_gray_background():
     with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "#map{position:absolute;inset:0;background:#acacac}" in tpl
+    assert "rainradar.ru/tiles?z={z}&x={x}&y={y}" in tpl
+    assert "tms:true" in tpl
+    assert "zIndex:0" in tpl
     assert "basemaps.cartocdn.com" not in tpl
     assert "tile.openstreetmap.org" not in tpl
 

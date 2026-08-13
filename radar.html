@@ -717,6 +717,10 @@ var PAL=(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
   },50);
 
+  L.tileLayer('https://rainradar.ru/tiles?z={z}&x={x}&y={y}',{
+    tms:true,minZoom:3,maxZoom:10,zIndex:0
+  }).addTo(map);
+
   map.createPane('lightning-0');
   map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(155deg) saturate(1) brightness(1.1) contrast(0.8)';
   map.createPane('lightning-1');
