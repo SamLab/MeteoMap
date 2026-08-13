@@ -46,7 +46,27 @@ def test_hours_title_uses_remaining_today_window():
     assert "const start=curIdx;" in tpl
     assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=start" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
-    assert "th.textContent='Дальше '+parts.join(', ')" in tpl
+    assert "th.textContent='Далее '+parts.join(', ')" in tpl
+
+
+def test_compare_rows_highlight_day_max_min():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "tr.mxrow td{border-top:2px dashed #d32f2f;border-bottom:2px dashed #d32f2f}" in tpl
+    assert "tr.mnrow td{border-top:2px dashed #1976d2;border-bottom:2px dashed #1976d2}" in tpl
+    assert "const today=D.time[curIdx]?.slice(0,10)||'';" in tpl
+    assert "let idxMx=-1,idxMn=-1,gmx=-Infinity,gmn=Infinity;" in tpl
+    assert "t.slice(0,10)===today" in tpl
+    assert "if(mx>gmx){gmx=mx;idxMx=i;}" in tpl
+    assert "if(mn<gmn){gmn=mn;idxMn=i;}" in tpl
+    assert "mxrow':''}${i===idxMn?' mnrow':''}" in tpl
+
+
+def test_compare_tab_named_chasy():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert '<button data-tab="compare">Часы</button>' in tpl
+    assert "<h2>Часы</h2>" in tpl
 
 
 def test_update_radar_frame_uses_location_coords():

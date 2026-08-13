@@ -72,6 +72,8 @@ td.ext{font-weight:700}
 tr.now td{border-top:2px solid #1f2637;border-bottom:2px solid #1f2637;background:#eef1f8}
 tr.now td:first-child{border-left:2px solid #1f2637}
 tr.now td:last-child{border-right:2px solid #1f2637}
+tr.mxrow td{border-top:2px dashed #d32f2f;border-bottom:2px dashed #d32f2f}
+tr.mnrow td{border-top:2px dashed #1976d2;border-bottom:2px dashed #1976d2}
 a{color:var(--accent)}
 .wnow{display:flex;align-items:center;gap:28px;flex-wrap:wrap;padding:4px 2px}
 .wbig{font-size:52px;font-weight:700}
@@ -129,7 +131,7 @@ a{color:var(--accent)}
 <div class="tabs">
   <button class="active" data-tab="weather">Погода</button>
   <button data-tab="radar">Радар</button>
-  <button data-tab="compare">Сравнение</button>
+  <button data-tab="compare">Часы</button>
   <button data-tab="forecast">Графики</button>
   <button data-tab="accuracy">Точность</button>
   <button data-tab="help" title="Справка">?</button>
@@ -183,7 +185,7 @@ a{color:var(--accent)}
     <ul>
       <li><b>Среднее</b> — простой средний прогноз всех моделей. <b>Консенсус</b> — то же, но с весом по точности модели за последние 7 дней.</li>
     </ul>
-    <h2>Сравнение</h2>
+    <h2>Часы</h2>
     <ul>
       <li>Все модели по часам. Жирное — экстремум среди моделей, красное/синее — выше/ниже консенсуса, «—» — нет данных. Вниз и вправо прокручивайте.</li>
     </ul>
@@ -348,7 +350,7 @@ function buildWeatherHours(){
   if(tiMin>=0)mn.push(temp(w.temperature_2m[tiMin])+' в '+D.time[tiMin].slice(11,16));
   if(mn.length)parts.push(mn.join(' и '));
   const th=document.getElementById('hourstitle');
-  if(th&&parts.length)th.textContent='Дальше '+parts.join(', ');
+  if(th&&parts.length)th.textContent='Далее '+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
@@ -647,6 +649,19 @@ function buildCmpTable(){
   const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
   const head='<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
+  const today=D.time[curIdx]?.slice(0,10)||'';
+  let idxMx=-1,idxMn=-1,gmx=-Infinity,gmn=Infinity;
+  D.time.forEach((t,i)=>{
+    if(!isWc&&t.slice(0,10)===today){
+      const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
+      const nums=vals.filter(v=>typeof v==='number');
+      if(nums.length){
+        const mx=Math.max(...nums),mn=Math.min(...nums);
+        if(mx>gmx){gmx=mx;idxMx=i;}
+        if(mn<gmn){gmn=mn;idxMn=i;}
+      }
+    }
+  });
   const cell=v=>v===null||v===undefined?'—':(isWc?wcode(v)[1]+' '+wcode(v)[0]:fmt(v));
   const rows=D.time.map((t,i)=>{
     const w=D.weighted[cmpVar]?.[i];
@@ -664,7 +679,7 @@ function buildCmpTable(){
       if(!isWc&&v!==null&&v!==undefined&&(v===mx||v===mn))cls+=' ext';
       cells+=`<td class="${cls}">${cell(v)}</td>`;
     });
-    return `<tr class="${i===curIdx?'now':''}">${cells}</tr>`;
+    return `<tr class="${i===curIdx?'now':''}${i===idxMx?' mxrow':''}${i===idxMn?' mnrow':''}">${cells}</tr>`;
   }).join('');
   el.innerHTML=head+'<tbody>'+rows+'</tbody>';
 }
