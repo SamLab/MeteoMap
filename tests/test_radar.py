@@ -158,11 +158,13 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert '<table class="wnowtbl">' in tpl
-    assert "lab:'Ветер'" in tpl
-    assert "lab:'Давление'" in tpl
-    assert "lab:'Влаж.'" in tpl
-    assert "lab:'Солнце'" in tpl
+    assert "lab:'Температура'" in tpl
     assert "lab:'Осадки'" in tpl
+    assert "lab:'Ветер'" in tpl
+    assert "lab:'Солнце'" in tpl
+    assert "lab:'Влажность'" not in tpl
+    assert "lab:'Давление'" not in tpl
+    assert tpl.index("lab:'Температура'") < tpl.index("lab:'Осадки'") < tpl.index("lab:'Ветер'") < tpl.index("lab:'Солнце'")
     assert "['CAPE'," not in tpl
     assert "['Восход / закат'," not in tpl
     assert "'↑ '" in tpl and "'↓ '" in tpl

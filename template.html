@@ -313,7 +313,7 @@ function buildWeatherNow(){
   const dir=w.wind_direction_10m?.[curIdx];
   const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
   const iMx={},iMn={};
-  ['wind_speed_10m','pressure_msl','relative_humidity_2m'].forEach(f=>{
+  ['temperature_2m','wind_speed_10m'].forEach(f=>{
     let mx=-1,mn=-1;
     for(let j=0;j<D.time.length;j++){
       if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
@@ -340,11 +340,10 @@ function buildWeatherNow(){
   const rngUp=(i,f,u)=>(i<0?'—':'↑ '+num(w[f][i])+' '+u+' в '+D.time[i].slice(11,16));
   const rngDn=(i,f,u)=>(i<0?'—':'↓ '+num(w[f][i])+' '+u+' в '+D.time[i].slice(11,16));
   const cells=[
+    {lab:'Температура',val:temp(w.temperature_2m?.[curIdx]),mx:(iMx['temperature_2m']<0?'—':'↑ '+temp(w.temperature_2m[iMx['temperature_2m']])+' в '+D.time[iMx['temperature_2m']].slice(11,16)),mn:(iMn['temperature_2m']<0?'—':'↓ '+temp(w.temperature_2m[iMn['temperature_2m']])+' в '+D.time[iMn['temperature_2m']].slice(11,16))},
+    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pMx<0||!(w.precipitation[pMx]>0)?'—':'↑ '+fmt(w.precipitation[pMx])+' мм в '+D.time[pMx].slice(11,16)),mn:'↓ —'},
     {lab:'Ветер',val:wind==null?'—':num(wind)+' м/с, '+(dir==null?'':rumbShort(dir)),mx:rngUp(iMx['wind_speed_10m'],'wind_speed_10m','м/с'),mn:rngDn(iMn['wind_speed_10m'],'wind_speed_10m','м/с')},
-    {lab:'Давление',val:num(w.pressure_msl?.[curIdx])+' рт. ст.',mx:rngUp(iMx['pressure_msl'],'pressure_msl','рт. ст.'),mn:rngDn(iMn['pressure_msl'],'pressure_msl','рт. ст.')},
-    {lab:'Влаж.',val:num(w.relative_humidity_2m?.[curIdx])+'%',mx:rngUp(iMx['relative_humidity_2m'],'relative_humidity_2m','%'),mn:rngDn(iMn['relative_humidity_2m'],'relative_humidity_2m','%')},
-    {lab:'Солнце',val:dl,mx:(sr==='—'?'—':'↑ '+sr),mn:(ss==='—'?'—':'↓ '+ss)},
-    {lab:'Осадки',val:prSum==null?'—':fmt(prSum)+' мм',mx:(pMx<0||!(w.precipitation[pMx]>0)?'—':'↑ '+fmt(w.precipitation[pMx])+' мм в '+D.time[pMx].slice(11,16)),mn:'↓ —'}
+    {lab:'Солнце',val:dl,mx:(sr==='—'?'—':'↑ '+sr),mn:(ss==='—'?'—':'↓ '+ss)}
   ];
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
