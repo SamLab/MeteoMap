@@ -130,6 +130,14 @@ def test_radar_frame_is_lazy_loaded_on_tab_activation():
     assert "f.dataset.radarSrc!==f.dataset.loadedSrc" in tpl
 
 
+def test_radar_play_runs_single_loop_to_current_hour():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "showFrame(idx+1<frames.length?idx+1:0)" not in tpl
+    assert "if(idx>=frames.length-1)showFrame(0);" in tpl
+    assert "else{playing=false;elPlay.textContent='▶';elPlay.classList.remove('playing');clearInterval(timer);timer=null;}" in tpl
+
+
 def test_radar_legend_matches_original():
     with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
         tpl = f.read()
@@ -203,8 +211,12 @@ def test_hour_ribbon_rain_bar():
     assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}" in tpl
     assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75;pointer-events:none}" in tpl
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
+    assert ".hour .hcl{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75;pointer-events:none}" in tpl
     assert "class=\"hprc\"" in tpl
+    assert "class=\"hcl\"" in tpl
+    assert tpl.index('class="hcl"') < tpl.index('class="hprc"')
     assert "Math.min(100,Math.round(pr/5*100))" in tpl
+    assert "Math.max(0,Math.min(100,Math.round(w.cloud_cover?.[j]||0)))" in tpl
 
 
 def test_d10_cloud_fill_top_to_bottom():
@@ -214,6 +226,7 @@ def test_d10_cloud_fill_top_to_bottom():
     assert ".d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}" in tpl
     assert "class=\"d10cloud\"" in tpl
     assert "class=\"d10prec\"" in tpl
+    assert tpl.index('<div class="d10cloud"') < tpl.index('<div class="d10prec"')
     assert "Math.max(0,Math.min(100,Math.round(x.cl||0)))" in tpl
     assert "Math.max(0,Math.round(x.pr/50*100))" in tpl
 

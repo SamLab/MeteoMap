@@ -894,7 +894,11 @@ var PAL=(function(){
     elPlay.textContent=playing?'⏸':'▶';
     elPlay.classList.toggle('playing',playing);
     if(playing){
-      timer=setInterval(function(){showFrame(idx+1<frames.length?idx+1:0);},600);
+      if(idx>=frames.length-1)showFrame(0);
+      timer=setInterval(function step(){
+        if(idx+1<frames.length){showFrame(idx+1);}
+        else{playing=false;elPlay.textContent='▶';elPlay.classList.remove('playing');clearInterval(timer);timer=null;}
+      },600);
     }else{clearInterval(timer);timer=null;}
   }
 
