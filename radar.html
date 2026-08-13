@@ -674,12 +674,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .leaflet-container .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8);color:#666}
 .leaflet-container .leaflet-control-attribution a{color:#415fad}
 .leaflet-labels-pane{z-index:900}
-.label{position:absolute;white-space:nowrap;pointer-events:none;line-height:1}
-.label>span{color:#fff;font-weight:500;text-shadow:-1px 0 1px rgba(0,0,0,.7),1px 0 1px rgba(0,0,0,.7),0 1px 1px rgba(0,0,0,.7),0 -1px 1px rgba(0,0,0,.7)}
+.label{position:absolute;pointer-events:none}
+.label::before{content:" ";position:absolute;left:-3px;bottom:-3px;border:1px solid #000;border-radius:50%;width:6px;height:6px;background-color:#eee}
+.label>span{position:absolute;left:-9px;bottom:5px;white-space:nowrap;color:#fff;font-weight:500;text-shadow:-1px 0 1px rgba(0,0,0,.7),1px 0 1px rgba(0,0,0,.7),0 1px 1px rgba(0,0,0,.7),0 -1px 1px rgba(0,0,0,.7)}
 .label.l0>span{font-size:13px}
 .label.l1>span{font-size:12px}
 .label.l2>span{font-size:11px}
-.label.l3>span{font-size:10px}
+.label.l3>span,.label.l4>span{font-size:10px}
+.label.l1::before,.label.l2::before{left:-2px;bottom:-2px;width:4px;height:4px}
+.label.l3::before,.label.l4::before{left:-1px;bottom:-1px;width:2px;height:2px}
+.label.l3 span,.label.l4 span{left:-7px}
 </style>
 </head>
 <body>

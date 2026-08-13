@@ -161,3 +161,28 @@ def test_radar_has_labels_layer():
     assert ".label.l3>span" in radar
     assert "tile.style.width='256px'" in radar
     assert "tile.style.height='256px'" in radar
+
+
+def test_radar_labels_have_city_dots_like_rainradar():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # точка = ::before у .label: круг с чёрной обводкой, заливка #eee
+    assert ".label::before{content:\" \";" in tpl
+    assert "border:1px solid #000" in tpl
+    assert "border-radius:50%" in tpl
+    assert "background-color:#eee" in tpl
+    assert "width:6px;height:6px" in tpl
+    # размеры точек по классам: l0=6px, l1/l2=4px, l3/l4=2px
+    assert ".label.l1::before,.label.l2::before{left:-2px;bottom:-2px;width:4px;height:4px}" in tpl
+    assert ".label.l3::before,.label.l4::before{left:-1px;bottom:-1px;width:2px;height:2px}" in tpl
+    # span absolute: текст сдвинут вправо-вверх от точки (как на rainradar)
+    assert "position:absolute;left:-9px;bottom:5px" in tpl
+    assert ".label.l3 span,.label.l4 span{left:-7px}" in tpl
+    assert ".label.l4>span{font-size:10px}" in tpl
+    with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
+        radar = f.read()
+    assert ".label::before{content:\" \";" in radar
+    assert "background-color:#eee" in radar
+    assert "width:6px;height:6px" in radar
+    assert "position:absolute;left:-9px;bottom:5px" in radar
+    assert ".label.l4>span{font-size:10px}" in radar
