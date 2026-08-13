@@ -167,12 +167,21 @@ def test_weather_now_parameter_table_with_sun_and_rain():
         tpl = f.read()
     assert '<table class="wnowtbl">' in tpl
     assert "lab:'Температура'" in tpl
+    assert "lab:'Точка росы'" in tpl
     assert "lab:'Осадки'" in tpl
+    assert "lab:'Влажность'" in tpl
+    assert "lab:'CAPE'" in tpl
     assert "lab:'Ветер'" in tpl
+    assert "lab:'Облачность'" in tpl
+    assert "lab:'Давление'" in tpl
+    assert "lab:'Видимость'" in tpl
     assert "lab:'Солнце'" in tpl
-    assert "lab:'Влажность'" not in tpl
-    assert "lab:'Давление'" not in tpl
-    assert tpl.index("lab:'Температура'") < tpl.index("lab:'Осадки'") < tpl.index("lab:'Ветер'") < tpl.index("lab:'Солнце'")
+    assert "lab:'Восход / закат'" not in tpl
+    assert tpl.index("lab:'Температура'") < tpl.index("lab:'Осадки'") < tpl.index("lab:'Облачность'") < tpl.index("lab:'Ветер'") < tpl.index("lab:'Солнце'") < tpl.index("lab:'Видимость'") < tpl.index("lab:'Точка росы'") < tpl.index("lab:'Давление'") < tpl.index("lab:'Влажность'") < tpl.index("lab:'CAPE'")
+    assert "const meanDay=f=>" in tpl
+    assert "['temperature_2m','wind_speed_10m','dew_point_2m','relative_humidity_2m','pressure_msl','cloud_cover','visibility','cape']" in tpl
+    assert "@media (max-width:700px){.wnowtbl td.wcol3,.wnowtbl td.wcol5,.wnowtbl td.wcol6,.wnowtbl td.wcol7,.wnowtbl td.wcol8,.wnowtbl td.wcol9{display:none}}" in tpl
+    assert "cells.map((c,i)=>'<td class=\"wcol'+i+'\">'" in tpl
     assert "['CAPE'," not in tpl
     assert "['Восход / закат'," not in tpl
     assert "'↑ '" in tpl and "'↓ '" in tpl
