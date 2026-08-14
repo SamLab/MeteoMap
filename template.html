@@ -396,7 +396,14 @@ function buildWeatherHours(){
     }
     let mCnt=0;
     for(const c of codes){let has=false;for(let j=rainHour;j<=jLast;j++){if(!isToday(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;if(rainCodes.includes(v)){has=true;break;}}if(has)mCnt++;}
-    parts.push('Дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+    let jPeak=rainHour,peakPr=-1;
+    for(let j=rainHour;j<=jLast;j++){
+      if(!isToday(j))continue;
+      const p=w.precipitation?.[j];
+      if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
+    }
+    const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';
+    parts.push(rainType+' с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
@@ -453,8 +460,8 @@ function buildWeather10(){
       '<div class="d10tnight" style="top:'+(y2+2)+'px">'+temp(x.tmin)+'</div>'+
       '</div>'+
       '<div class="d10mm">'+(x.pr==null?'—':fmtP(x.pr))+'мм / '+(x.pp==null?'—':num(x.pp))+'%</div>'+
-      '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
       '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('обл.'+num(x.cl)))+'</div>'+
+      '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
   }).join('')+'</div></div>';
