@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="windows-1251">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeteoMap — ближайшие часы</title>
+<style>
+:root{
+  --bg:#1b2028; --card:#232a35; --line:#2f3744;
+  --text:#e8ecf3; --muted:#8b94a7;
+  --rain:#4fc3f7; --rain-bg:rgba(79,195,247,.08);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f6fa; --card:#ffffff; --line:#dde2ed;
+    --text:#1f2637; --muted:#5c6579;
+    --rain:#0288d1; --rain-bg:rgba(2,136,209,.07);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  padding:10px;overflow:hidden;
+}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  max-width:560px;margin:0 auto;padding:10px 12px;
+}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.city{font-size:13px;font-weight:600}
+.updated{font-size:11px;color:var(--muted)}
+.strip{
+  display:flex;
+  gap:2px;
+  padding:2px 0 4px;
+}
+.hour{
+  flex:1 1 0;min-width:0;
+  text-align:center;font-size:12px;
+  padding:6px 1px;border-radius:10px;
+  overflow:hidden;
+}
+@media (max-width:420px){
+  .hour .ht{font-size:9px}
+  .hour .he{font-size:17px}
+  .hour .htemp{font-size:11.5px}
+  .hour .hpp,.hour .hmm{font-size:10.5px}
+}
+.hour.rain{background:var(--rain-bg)}
+.hour .ht{color:var(--muted);font-size:10.5px;white-space:nowrap}
+.hour .he{font-size:21px;line-height:1.35}
+.hour .htemp{font-weight:600;font-size:13.5px}
+.hour .hpp{color:var(--rain);font-size:12px;min-height:13px;white-space:nowrap}
+.hour .hmm{color:var(--rain);font-size:11.5px;min-height:13px;white-space:nowrap}
+.err{color:var(--muted);font-size:12px;padding:8px 2px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <span class="city" id="city">MeteoMap</span>
+    <span class="updated" id="updated"></span>
+  </div>
+  <div class="strip" id="strip"></div>
+</div>
+<script>
+(function(){
+'use strict';
+
+var CITIES = {
+  yaroslavl: 'Ярославль',
+  balakirevo: 'Балакирево',
+  tsedenevo: 'Цеденево'
+};
+
+var WMO = {
+  0:{e:'\u2600\uFE0F',l:'Ясно'}, 1:{e:'\uD83C\uDF24',l:'Преим. ясно'}, 2:{e:'\u26C5',l:'Переменная облачность'},
+  3:{e:'\u2601\uFE0F',l:'Пасмурно'}, 45:{e:'\uD83C\uDF2B',l:'Туман'}, 48:{e:'\uD83C\uDF2B',l:'Туман'},
+  51:{e:'\uD83C\uDF26',l:'Морось'}, 53:{e:'\uD83C\uDF26',l:'Морось'}, 55:{e:'\uD83C\uDF27',l:'Морось'},
+  56:{e:'\uD83C\uDF27',l:'Ледяная морось'}, 57:{e:'\uD83C\uDF27',l:'Ледяная морось'},
+  61:{e:'\uD83C\uDF26',l:'Небольшой дождь'}, 63:{e:'\uD83C\uDF27',l:'Дождь'}, 65:{e:'\uD83C\uDF27',l:'Сильный дождь'},
+  66:{e:'\uD83C\uDF27',l:'Ледяной дождь'}, 67:{e:'\uD83C\uDF27',l:'Ледяной дождь'},
+  71:{e:'\uD83C\uDF28',l:'Снег'}, 73:{e:'\uD83C\uDF28',l:'Снег'}, 75:{e:'\u2744\uFE0F',l:'Сильный снег'},
+  77:{e:'\u2744\uFE0F',l:'Снежная крупа'},
+  80:{e:'\uD83C\uDF26',l:'Ливень'}, 81:{e:'\uD83C\uDF27',l:'Ливень'}, 82:{e:'\u26C8',l:'Сильный ливень'},
+  85:{e:'\uD83C\uDF28',l:'Снегопад'}, 86:{e:'\uD83C\uDF28',l:'Снегопад'},
+  95:{e:'\u26C8',l:'Гроза'}, 96:{e:'\u26C8',l:'Гроза с градом'}, 99:{e:'\u26C8',l:'Гроза с градом'}
+};
+
+var DEFAULT_CITY = 'tsedenevo';
+var DEFAULT_HOURS = 12;
+var REFRESH_MS = 15 * 60 * 1000;
+
+function getParam(name, def){
+  var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
+  return m ? decodeURIComponent(m[1]) : def;
+}
+
+var city = getParam('city', DEFAULT_CITY);
+if (!CITIES[city]) city = DEFAULT_CITY;
+var hours = parseInt(getParam('hours', DEFAULT_HOURS), 10);
+if (!(hours >= 1 && hours <= 24)) hours = DEFAULT_HOURS;
+
+var strip = document.getElementById('strip');
+var cityEl = document.getElementById('city');
+var updEl = document.getElementById('updated');
+
+cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city];
+
+function relUrl(){ return 'data/' + city + '.json'; }
+function absUrl(){ return 'https://samlab.github.io/MeteoMap/data/' + city + '.json'; }
+
+function load(){
+  fetch(relUrl(), {cache:'no-cache'})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(render)
+    .catch(function(){
+      return fetch(absUrl(), {cache:'no-cache'})
+        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(render)
+        .catch(showError);
+    });
+}
+
+function getPluralModels(n){
+  var n10 = n % 10;
+  var n100 = n % 100;
+  if (n10 === 1 && n100 !== 11) return 'модели';
+  return 'моделям';
+}
+
+function parseCount(val, idx){
+  if (val == null) return null;
+  if (typeof val === 'number') return val;
+  if (Array.isArray(val)) {
+    if (idx != null && idx < val.length) {
+      var item = val[idx];
+      if (typeof item === 'number') return item;
+      if (Array.isArray(item)) return item.length;
+      if (typeof item === 'object' && item !== null) return Object.keys(item).length;
+    }
+    return val.length;
+  }
+  if (typeof val === 'object') return Object.keys(val).length;
+  var p = parseInt(val, 10);
+  return isNaN(p) ? null : p;
+}
+
+function getRainModelsCount(rawData, idx){
+  if (!rawData) return null;
+  if (rawData.rain_models_count && rawData.rain_models_count[idx] != null) {
+    return parseCount(rawData.rain_models_count, idx);
+  }
+  var models = rawData.models;
+  if (models && typeof models === 'object') {
+    var keys = Object.keys(models);
+    if (keys.length > 0) {
+      var count = 0;
+      var total = 0;
+      for (var k = 0; k < keys.length; k++) {
+        var m = models[keys[k]];
+        if (m && typeof m === 'object') {
+          total++;
+          var mm = (m.precipitation && m.precipitation[idx] != null) ? m.precipitation[idx] : 0;
+          var prob = (m.precipitation_probability && m.precipitation_probability[idx] != null) ? m.precipitation_probability[idx] : 0;
+          if (prob >= 50 || mm >= 0.1) {
+            count++;
+          }
+        }
+      }
+      if (total > 0) return count;
+    }
+  }
+  return null;
+}
+
+function buildSummary(times, data, rawData, idx){
+  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  var now=new Date();
+  var todayStr=now.toDateString();
+  var rainHour=-1,jLast=-1;
+  for(var j=idx;j<times.length;j++){
+    if(times[j].toDateString()!==todayStr) break;
+    var code=data.weather_code?Math.round(data.weather_code[j]):0;
+    if(RAIN.indexOf(code)>=0){ if(rainHour<0)rainHour=j; jLast=j; }
+  }
+  if(rainHour<0) return 'Остаток дня без дождя';
+  var sumPr=0,maxPp=0;
+  for(var j=rainHour;j<=jLast;j++){
+    var p=data.precipitation?data.precipitation[j]:0;
+    if(p!=null)sumPr+=p;
+    var pp=data.precipitation_probability?data.precipitation_probability[j]:0;
+    if(pp!=null&&pp>maxPp)maxPp=pp;
+  }
+  var mCnt=0;
+  var codesArr=(rawData&&rawData.models)?Object.keys(rawData.models):[];
+  for(var c=0;c<codesArr.length;c++){
+    var m=rawData.models[codesArr[c]];
+    var has=false;
+    for(var j=rainHour;j<=jLast;j++){
+      var v=m&&m.weather_code?m.weather_code[j]:undefined;
+      if(v!=null&&RAIN.indexOf(Math.round(v))>=0){has=true;break;}
+    }
+    if(has)mCnt++;
+  }
+  var jPeak=rainHour,peakPr=-1;
+  for(var j=rainHour;j<=jLast;j++){
+    var p=data.precipitation?data.precipitation[j]:0;
+    if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
+  }
+  var rainType=(WMO[data.weather_code?Math.round(data.weather_code[jPeak]):0]||{}).l||'Дождь';
+  var st=pad2(times[rainHour].getHours())+':00';
+  var en=pad2(times[jLast].getHours())+':00';
+  return rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям');
+}
+
+function fmtP(v){
+  if(v==null) return '—';
+  return Math.round(v*100)/100;
+}
+
+function render(data){
+  if (!data || !data.time || !data.weighted) return showError('Нет данных');
+
+  var times = data.time.map(function(t){ return new Date(t); });
+  var now = new Date();
+
+  var idx = -1;
+  for (var i = 0; i < times.length; i++){
+    if (times[i] <= now) idx = i;
+    else break;
+  }
+  if (idx < 0) idx = 0;
+
+  var summary = buildSummary(times, data.weighted, data, idx);
+  cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city] + ' \u2014 ' + summary;
+
+  var html = '';
+  for (var h = 0; h < hours && idx + h < times.length; h++){
+    var i = idx + h;
+    var t = times[i];
+    var code = data.weighted.weather_code ? Math.round(data.weighted.weather_code[i]) : 0;
+    var w = WMO[code] || {e:'\uD83C\uDF21', l:'Код ' + code};
+    var temp = Math.round(data.weighted.temperature_2m[i]);
+    var prob = data.weighted.precipitation_probability ? Math.round(data.weighted.precipitation_probability[i]) : 0;
+    var mm = data.weighted.precipitation ? data.weighted.precipitation[i] : 0;
+    var rain = prob >= 50 || mm >= 0.1;
+    var tempStr = (temp > 0 ? '+' : '') + temp + '\u00B0';
+    
+    var drop = (mm >= 0.05) ? '\uD83D\uDCA7' : '';
+    var probStr = prob > 0 ? (drop + prob + '%') : '';
+    var mmStr = fmtMm(mm);
+
+    html += '<div class="hour' + (rain ? ' rain' : '') + '" title="' + w.l + '">' +
+      '<div class="ht">' + pad2(t.getHours()) + ':00</div>' +
+      '<div class="he">' + w.e + '</div>' +
+      '<div class="htemp">' + tempStr + '</div>' +
+      '<div class="hpp">' + probStr + '</div>' +
+      '<div class="hmm">' + mmStr + '</div>' +
+      '</div>';
+  }
+
+  strip.innerHTML = html;
+
+  var gen = data.generated_at ? new Date(data.generated_at) : null;
+  updEl.textContent = gen ? pad2(gen.getHours()) + ':' + pad2(gen.getMinutes()) : '\u2014';
+}
+
+function showError(msg){
+  strip.innerHTML = '<div class="err">\u26A0\uFE0F Не удалось загрузить данные' + (msg ? ' (' + msg + ')' : '') + '</div>';
+  updEl.textContent = '';
+  cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city];
+}
+
+function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+function fmtMm(v){
+  if (v == null || v < 0.05) return '0 мм';
+  var x = Math.round(v * 10) / 10;
+  return (x >= 10 ? Math.round(x) : x.toFixed(1).replace('.', ',')) + ' мм';
+}
+
+load();
+setInterval(load, REFRESH_MS);
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) load();
+});
+})();
+</script>
+</body>
+</html>
