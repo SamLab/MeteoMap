@@ -23,8 +23,6 @@ FORECAST_MODELS = [
     ("cma_grapes_global", "CMA GRAPES", "forecast"),
     ("meteofrance_arpege_world025", "Météo-France", "forecast"),
     ("ecmwf_aifs025", "ECMWF AIFS", "forecast"),
-    ("bom_access_global", "BOM ACCESS-G", "forecast"),
-    ("kma_gdps", "KMA GDPS", "forecast"),
 ]
 
 HOURLY_VARIABLES = [

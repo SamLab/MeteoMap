@@ -162,7 +162,8 @@ def test_help_text_up_to_date():
     assert "дождь 61→63→65" in tpl
     assert "Google AI (WeatherNext) — Google DeepMind" in tpl
     assert "ECMWF IFS и ECMWF AIFS" in tpl
-    assert "KMA GDPS — Южная Корея" in tpl
+    assert "BOM ACCESS" not in tpl
+    assert "KMA GDPS" not in tpl
     assert "1/MAE за 7 дней" in tpl
     assert "голосование моделей по коду" in tpl
     assert "дождь, гроза, град" not in tpl
