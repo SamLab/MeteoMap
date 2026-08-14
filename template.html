@@ -118,6 +118,7 @@ a{color:var(--accent)}
 .d10tday{color:#c0392b}
 .d10tnight{color:#2c6f9b}
 .d10mm{font-size:10.5px;color:#666;padding:6px 0 2px;white-space:nowrap}
+.d10wind{font-size:10.5px;color:#666;padding-bottom:3px;white-space:nowrap}
 .d10cond{font-size:10px;color:#555;min-height:26px;display:flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
 .d10cond .ic{font-size:15px}
 .d10day{font-size:10.5px;color:#666;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;white-space:nowrap}
@@ -427,8 +428,11 @@ function buildWeather10(){
     const pr=D.daily.precipitation_sum?.[di];
     const pp=D.daily.precipitation_probability_max?.[di];
     const cl=D.daily.cloud_cover_mean?.[di];
+    const ws=D.daily.wind_speed_10m_max?.[di];
+    const wd=D.daily.wind_direction_10m_dominant?.[di];
+    const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
     const d=new Date(day);
-    return {tmin,tmax,pr,pp,cl,wtext,we,d};
+    return {tmin,tmax,pr,pp,cl,wtext,we,d,ws,arrow};
   });
   const lo=Math.min(...arr.map(x=>x.tmin==null?Infinity:x.tmin));
   const hi=Math.max(...arr.map(x=>x.tmax==null?-Infinity:x.tmax));
@@ -449,6 +453,7 @@ function buildWeather10(){
       '<div class="d10tnight" style="top:'+(y2+2)+'px">'+temp(x.tmin)+'</div>'+
       '</div>'+
       '<div class="d10mm">'+(x.pr==null?'—':fmtP(x.pr))+'мм / '+(x.pp==null?'—':num(x.pp))+'%</div>'+
+      '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
       '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('обл.'+num(x.cl)))+'</div>'+
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';

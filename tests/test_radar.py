@@ -158,6 +158,15 @@ def test_help_text_up_to_date():
     assert "<b>Сегодня</b> — ближайшие 48 часов по часам." not in tpl
 
 
+def test_d10_wind_like_hourly():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const ws=D.daily.wind_speed_10m_max?.[di];" in tpl
+    assert "const wd=D.daily.wind_direction_10m_dominant?.[di];" in tpl
+    assert "'<div class=\"d10wind\">'" in tpl
+    assert ".d10wind{font-size:10.5px" in tpl
+
+
 def test_cmp_table_shows_all_available_hours():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

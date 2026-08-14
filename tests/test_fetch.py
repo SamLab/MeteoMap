@@ -15,6 +15,11 @@ def test_model_order():
     assert ext == [meteo.WEATHERAPI_CODE, meteo.OWM_CODE]
 
 
+def test_daily_variables_include_dominant_wind_direction():
+    assert "wind_direction_10m_dominant" in meteo.DAILY_VARIABLES
+    assert "wind_speed_10m_max" in meteo.DAILY_VARIABLES
+
+
 def test_fetch_all_forecasts_returns_all_models(monkeypatch):
     calls = []
 
