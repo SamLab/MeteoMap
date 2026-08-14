@@ -29,7 +29,7 @@ body{
   max-width:560px;margin:0 auto;padding:10px 12px;
 }
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
-.city{font-size:14px;font-weight:600}
+.city{font-size:15px;font-weight:600}
 .updated{font-size:11px;color:var(--muted)}
 .strip{
   display:flex;
@@ -194,17 +194,6 @@ function buildSummary(times, data, rawData, idx){
     var pp=data.precipitation_probability?data.precipitation_probability[j]:0;
     if(pp!=null&&pp>maxPp)maxPp=pp;
   }
-  var mCnt=0;
-  var codesArr=(rawData&&rawData.models)?Object.keys(rawData.models):[];
-  for(var c=0;c<codesArr.length;c++){
-    var m=rawData.models[codesArr[c]];
-    var has=false;
-    for(var j=rainHour;j<=jLast;j++){
-      var v=m&&m.weather_code?m.weather_code[j]:undefined;
-      if(v!=null&&RAIN.indexOf(Math.round(v))>=0){has=true;break;}
-    }
-    if(has)mCnt++;
-  }
   var jPeak=rainHour,peakPr=-1;
   for(var j=rainHour;j<=jLast;j++){
     var p=data.precipitation?data.precipitation[j]:0;
@@ -213,7 +202,7 @@ function buildSummary(times, data, rawData, idx){
   var rainType=(WMO[data.weather_code?Math.round(data.weather_code[jPeak]):0]||{}).l||'Дождь';
   var st=pad2(times[rainHour].getHours())+':00';
   var en=pad2(times[jLast].getHours())+':00';
-  return rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям');
+  return rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%';
 }
 
 function fmtP(v){

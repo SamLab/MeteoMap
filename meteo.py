@@ -13,7 +13,7 @@ FORECAST_DAYS = 16
 # (model_code, display_name, endpoint) — endpoint: "forecast" or "ensemble"
 FORECAST_MODELS = [
     ("ecmwf_ifs025", "ECMWF IFS", "forecast"),
-    ("google_weathernext2_ensemble", "Google", "ensemble"),
+    ("google_weathernext2_ensemble", "Google AI", "ensemble"),
     ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
     ("ncep_gfs_seamless", "NOAA GFS", "forecast"),
     ("jma_gsm", "JMA GSM", "forecast"),
