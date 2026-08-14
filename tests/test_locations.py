@@ -47,6 +47,18 @@ def test_fetch_model_wraps_single_response(monkeypatch):
     assert isinstance(res, list) and len(res) == 1
 
 
+def test_fetch_model_ensemble_has_longer_timeout(monkeypatch):
+    seen = {}
+
+    def fake(url, params, timeout):
+        seen["timeout"] = timeout
+        return {"hourly": {"time": ["t"], "temperature_2m": [1.0]}}
+
+    monkeypatch.setattr(meteo, "request_with_retry", fake)
+    meteo.fetch_model("n", "ensemble", ["temperature_2m"], lats="57.63", lons="39.87")
+    assert seen["timeout"] == 30
+
+
 def test_fetch_historical_model_wraps_single_response(monkeypatch):
     monkeypatch.setattr(
         meteo, "request_with_retry",

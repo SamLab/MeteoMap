@@ -197,7 +197,10 @@ def fetch_model(code, endpoint, variables, days=FORECAST_DAYS,
         "models": code,
         "wind_speed_unit": "ms",
     }
-    resp = request_with_retry(ENDPOINTS[endpoint], params, timeout=15)
+    resp = request_with_retry(
+        ENDPOINTS[endpoint], params,
+        timeout=30 if endpoint == "ensemble" else 15,
+    )
     return resp if isinstance(resp, list) else [resp]
 
 
