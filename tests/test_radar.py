@@ -39,6 +39,8 @@ def test_index_autorefreshes_every_5_minutes():
     assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" in tpl
     html = meteo.render(tpl, _payload())
     assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" in html
+    assert "URLSearchParams(location.search).get('city')" in tpl
+    assert "loadCity(_uc); else renderAll();" in tpl
 
 
 def test_hours_title_uses_remaining_today_window():

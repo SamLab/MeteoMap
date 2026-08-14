@@ -4,6 +4,8 @@ LOCATIONS = [
     {"name": "Ярославль", "slug": "yaroslavl", "lat": 57.63, "lon": 39.87},
     {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
     {"name": "Цеденево", "slug": "tsedenevo", "lat": 57.533, "lon": 39.905},
+    {"name": "Москва", "slug": "moscow", "lat": 55.7558, "lon": 37.6173,
+     "external": False},
 ]
 TIMEZONE = "Europe/Moscow"
 FORECAST_DAYS = 16
@@ -867,7 +869,9 @@ def main():
     providers = [(YR_CODE, YR_NAME, fetch_yr)]
     if external_enabled:
         providers = providers + list(EXTERNAL_MODELS)
-    external_rows = fetch_external_providers(providers, LOCATIONS)
+    external_rows = fetch_external_providers(
+        providers, [loc for loc in LOCATIONS if loc.get("external", True)]
+    )
 
     payload_by_city = {}
     for loc in LOCATIONS:

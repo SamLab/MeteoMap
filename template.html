@@ -865,7 +865,8 @@ function setupCitySel(){
 }
 
 setupCitySel();
-renderAll();
+const _uc=new URLSearchParams(location.search).get('city');
+if(_uc&&CITIES.some(c=>c.slug===_uc))loadCity(_uc); else renderAll();
 setInterval(()=>loadCity(D.location.slug,true),5*60*1000);
 </script>
 </body>

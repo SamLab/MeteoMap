@@ -10,6 +10,12 @@ def test_locations_have_unique_slugs():
     assert meteo.LOCATIONS[0]["name"] == "Ярославль"
 
 
+def test_moscow_external_disabled():
+    m = next(loc for loc in meteo.LOCATIONS if loc["slug"] == "moscow")
+    assert m["name"] == "Москва"
+    assert m.get("external") is False
+
+
 def test_fetch_model_batch_splits_by_city(monkeypatch):
     calls = {}
 
