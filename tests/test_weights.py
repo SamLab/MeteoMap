@@ -8,18 +8,19 @@ def test_make_weights_inverse_mae():
     assert abs(w["b"] - 0.25) < 1e-6
 
 
-def test_make_weights_missing_gets_average():
+def test_make_weights_missing_gets_lowest():
     mae = {
         "a": {"temperature_2m": 1.0},
         "b": {"temperature_2m": 2.0},
-        "c": {},  # no data → gets average inverse weight
+        "c": {},  # no data → gets lowest inverse weight
     }
     w = meteo.make_weights(mae, "temperature_2m")
     assert abs(sum(w.values()) - 1.0) < 1e-6
     inv = [1.0, 0.5]
-    avg = sum(inv) / 2
-    total = sum(inv) + avg
-    assert abs(w["c"] - avg / total) < 1e-6
+    lowest = min(inv)
+    total = sum(inv) + lowest
+    assert abs(w["c"] - lowest / total) < 1e-6
+    assert w["c"] == w["b"]
 
 
 def test_make_weights_all_missing_equal():

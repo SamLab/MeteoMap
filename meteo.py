@@ -552,10 +552,10 @@ def make_weights(mae_by_model, variable):
             inv[code] = 1.0 / m
     if not inv:
         return {code: 1.0 / len(mae_by_model) for code in mae_by_model}
-    avg = sum(inv.values()) / len(inv)
+    lowest = min(inv.values())
     for code in mae_by_model:
         if code not in inv:
-            inv[code] = avg
+            inv[code] = lowest
     total = sum(inv.values())
     return {code: w / total for code, w in inv.items()}
 
