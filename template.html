@@ -703,12 +703,10 @@ function buildCmpTable(){
   D.time.forEach((t,i)=>{
     if(isWc)return;
     const day=t.slice(0,10);
-    const nums=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined).filter(v=>typeof v==='number');
-    if(nums.length){
-      const mx=Math.max(...nums),mn=Math.min(...nums);
-      if(!(day in dayMx)||mx>dayMx[day][1])dayMx[day]=[i,mx];
-      if(!(day in dayMn)||mn<dayMn[day][1])dayMn[day]=[i,mn];
-    }
+    const w=D.weighted[cmpVar]?.[i];
+    if(typeof w!=='number')return;
+    if(!(day in dayMx)||w>dayMx[day][1])dayMx[day]=[i,w];
+    if(!(day in dayMn)||w<dayMn[day][1])dayMn[day]=[i,w];
   });
   const cell=v=>v===null||v===undefined?'—':(isWc?wcode(v)[1]+' '+wcode(v)[0]:fmt(v));
   let prevDay='';

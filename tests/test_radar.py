@@ -59,8 +59,9 @@ def test_compare_rows_highlight_day_max_min():
     assert "tr.dayrow td{padding:6px 8px;background:var(--line);color:var(--muted);font-weight:600;border:none;text-align:left}" in tpl
     assert "const dayMx={},dayMn={};" in tpl
     assert "const day=t.slice(0,10);" in tpl
-    assert "if(!(day in dayMx)||mx>dayMx[day][1])dayMx[day]=[i,mx];" in tpl
-    assert "if(!(day in dayMn)||mn<dayMn[day][1])dayMn[day]=[i,mn];" in tpl
+    assert "if(!(day in dayMx)||w>dayMx[day][1])dayMx[day]=[i,w];" in tpl
+    assert "if(!(day in dayMn)||w<dayMn[day][1])dayMn[day]=[i,w];" in tpl
+    assert "Math.max(...nums),mn=Math.min(...nums)" not in tpl
     assert "'<tr class=\"dayrow\"><td colspan=\"'+(3+codes.length)+'\">'" in tpl
     assert "prevDay=day" in tpl
     assert "let drow='';" in tpl
@@ -136,6 +137,15 @@ def test_warnings_title_lists_nearest_confirmed():
         tpl = f.read()
     assert "Предупреждения (ближайшее/подтвержденное)" in tpl
     assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
+
+
+def test_cmp_row_highlight_uses_consensus_not_model_extreme():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const w=D.weighted[cmpVar]?.[i];" in tpl
+    assert "w>dayMx[day][1]" in tpl
+    assert "w<dayMn[day][1]" in tpl
+    assert "Math.max(...nums),mn=Math.min(...nums)" not in tpl
 
 
 def test_warnings_confirmed_requires_two_models():
