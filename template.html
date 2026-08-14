@@ -395,7 +395,7 @@ function buildWeatherHours(){
     }
     let mCnt=0;
     for(const c of codes){let has=false;for(let j=rainHour;j<=jLast;j++){if(!isToday(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;if(rainCodes.includes(v)){has=true;break;}}if(has)mCnt++;}
-    parts.push('дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+    parts.push('Дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');

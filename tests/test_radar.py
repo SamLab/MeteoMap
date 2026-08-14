@@ -142,7 +142,7 @@ def test_warnings_title_lists_nearest_confirmed():
 def test_hourstitle_rain_interval():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "'дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)" in tpl
+    assert "'Дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)" in tpl
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
@@ -284,7 +284,7 @@ def test_hours_title_has_rain_only():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "parts.push('без дождя')" in tpl
-    assert "'дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)" in tpl
+    assert "'Дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)" in tpl
     assert "'Остаток дня '" in tpl
     assert "tiMax" not in tpl
     assert "tiMin" not in tpl
