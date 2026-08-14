@@ -12,8 +12,8 @@ FORECAST_DAYS = 16
 FORECAST_MODELS = [
     ("ecmwf_ifs025", "ECMWF IFS", "forecast"),
     ("google_weathernext2_ensemble", "Google", "ensemble"),
-    ("ncep_gfs_seamless", "NOAA GFS", "forecast"),
     ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
+    ("ncep_gfs_seamless", "NOAA GFS", "forecast"),
     ("jma_gsm", "JMA GSM", "forecast"),
     ("gem_global", "GEM Global", "forecast"),
     ("dwd_icon_global", "DWD ICON", "forecast"),
