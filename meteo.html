@@ -29,7 +29,7 @@ body{
   max-width:560px;margin:0 auto;padding:10px 12px;
 }
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
-.city{font-size:13px;font-weight:600}
+.city{font-size:14px;font-weight:600}
 .updated{font-size:11px;color:var(--muted)}
 .strip{
   display:flex;
@@ -107,7 +107,7 @@ var strip = document.getElementById('strip');
 var cityEl = document.getElementById('city');
 var updEl = document.getElementById('updated');
 
-cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city];
+cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city].charAt(0);
 
 function relUrl(){ return 'data/' + city + '.json'; }
 function absUrl(){ return 'https://samlab.github.io/MeteoMap/data/' + city + '.json'; }
@@ -235,7 +235,7 @@ function render(data){
   if (idx < 0) idx = 0;
 
   var summary = buildSummary(times, data.weighted, data, idx);
-  cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city] + ' \u2014 ' + summary;
+  cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city].charAt(0) + ' \u2014 ' + summary;
 
   var html = '';
   for (var h = 0; h < hours && idx + h < times.length; h++){
@@ -271,7 +271,7 @@ function render(data){
 function showError(msg){
   strip.innerHTML = '<div class="err">\u26A0\uFE0F Не удалось загрузить данные' + (msg ? ' (' + msg + ')' : '') + '</div>';
   updEl.textContent = '';
-  cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city];
+  cityEl.textContent = '\uD83C\uDF24 ' + CITIES[city].charAt(0);
 }
 
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
