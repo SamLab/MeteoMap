@@ -381,15 +381,25 @@ function buildWeatherHours(){
   const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs;
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  let rainHour=-1;
+  let rainHour=-1,jLast=-1;
   for(let j=0;j<D.time.length;j++){
     if(!isToday(j))continue;
-    if(rainCodes.includes(w.weather_code?.[j])){rainHour=j;break;}
+    if(rainCodes.includes(w.weather_code?.[j])){if(rainHour<0)rainHour=j;jLast=j;}
   }
-  if(rainHour>=0)parts.push('дождь в '+D.time[rainHour].slice(11,16));
+  if(rainHour>=0){
+    let sumPr=0,maxPp=0;
+    for(let j=rainHour;j<=jLast;j++){
+      if(!isToday(j))continue;
+      const p=w.precipitation?.[j];if(p!=null)sumPr+=p;
+      const pp=w.precipitation_probability?.[j];if(pp!=null&&pp>maxPp)maxPp=pp;
+    }
+    let mCnt=0;
+    for(const c of codes){let has=false;for(let j=rainHour;j<=jLast;j++){if(!isToday(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;if(rainCodes.includes(v)){has=true;break;}}if(has)mCnt++;}
+    parts.push('дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'% · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+  }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
-  if(th&&parts.length)th.textContent=(rainHour>=0?'Далее ':'Остаток дня ')+parts.join(', ');
+  if(th&&parts.length)th.textContent=(rainHour>=0?'':'Остаток дня ')+parts.join(', ');
   document.getElementById('weather-hours').innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;

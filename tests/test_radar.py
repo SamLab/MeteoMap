@@ -48,7 +48,7 @@ def test_hours_title_uses_remaining_today_window():
     assert "const hs=Math.min(curIdx+1,D.time.length-1);" in tpl
     assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
-    assert "th.textContent=(rainHour>=0?'Далее ':'Остаток дня ')+parts.join(', ')" in tpl
+    assert "th.textContent=(rainHour>=0?'':'Остаток дня ')+parts.join(', ')" in tpl
 
 
 def test_compare_rows_highlight_day_max_min():
@@ -137,6 +137,15 @@ def test_warnings_title_lists_nearest_confirmed():
         tpl = f.read()
     assert "Предупреждения (ближайшее/подтвержденное)" in tpl
     assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
+
+
+def test_hourstitle_rain_interval():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "'дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)" in tpl
+    assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
+    assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
+    assert "rainHour>=0?'Далее '" not in tpl
 
 
 def test_help_text_up_to_date():
@@ -275,7 +284,7 @@ def test_hours_title_has_rain_only():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "parts.push('без дождя')" in tpl
-    assert "parts.push('дождь в '+D.time[rainHour].slice(11,16))" in tpl
+    assert "'дождь с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)" in tpl
     assert "'Остаток дня '" in tpl
     assert "tiMax" not in tpl
     assert "tiMin" not in tpl
