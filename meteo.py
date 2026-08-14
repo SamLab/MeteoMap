@@ -827,9 +827,9 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
     grid = next(iter(hourly_by_model.values()))["time"]
     city_codes = list(model_codes)
     city_names = dict(model_names)
-    providers = [(YR_CODE, YR_NAME, fetch_yr)]
+    providers = list(EXTERNAL_MODELS[:1]) + [(YR_CODE, YR_NAME, fetch_yr)]
     if external_enabled:
-        providers = providers + list(EXTERNAL_MODELS)
+        providers = providers + list(EXTERNAL_MODELS[1:])
     for code, name, _fn in providers:
         rows = external_rows.get(code, {}).get(loc["slug"], [])
         if not rows:
