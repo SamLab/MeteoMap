@@ -160,6 +160,9 @@ def test_help_text_up_to_date():
     assert "Типы погоды" in tpl
     assert "51–57 — морось" in tpl
     assert "дождь 61→63→65" in tpl
+    assert "Google AI (WeatherNext) — Google DeepMind" in tpl
+    assert "ECMWF IFS и ECMWF AIFS" in tpl
+    assert "KMA GDPS — Южная Корея" in tpl
     assert "1/MAE за 7 дней" in tpl
     assert "голосование моделей по коду" in tpl
     assert "дождь, гроза, град" not in tpl
