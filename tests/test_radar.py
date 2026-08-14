@@ -139,6 +139,16 @@ def test_warnings_title_lists_nearest_confirmed():
     assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
 
 
+def test_help_text_up_to_date():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с)" in tpl
+    assert "Ближайшее — по одной модели, подтверждённое — по двум и более" in tpl
+    assert "час минимума/максимума дня по консенсусу" in tpl
+    assert "дождь, гроза, град" not in tpl
+    assert "<b>Сегодня</b> — ближайшие 48 часов по часам." not in tpl
+
+
 def test_cmp_row_highlight_uses_consensus_not_model_extreme():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
