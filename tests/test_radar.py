@@ -158,6 +158,13 @@ def test_help_text_up_to_date():
     assert "<b>Сегодня</b> — ближайшие 48 часов по часам." not in tpl
 
 
+def test_cmp_table_cutoff_at_least_three_models():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "if(n>=3){endI=i;break;}" in tpl
+    assert "D.time.slice(0,endI+1).map((t,i)=>" in tpl
+
+
 def test_cmp_row_highlight_uses_consensus_not_model_extreme():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
