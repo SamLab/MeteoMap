@@ -11,18 +11,18 @@ FORECAST_DAYS = 16
 # (model_code, display_name, endpoint) — endpoint: "forecast" or "ensemble"
 FORECAST_MODELS = [
     ("ecmwf_ifs025", "ECMWF IFS", "forecast"),
-    ("ecmwf_aifs025", "ECMWF AIFS", "forecast"),
-    ("cma_grapes_global", "CMA GRAPES", "forecast"),
-    ("bom_access_global", "BOM ACCESS-G", "forecast"),
-    ("ncep_gfs_seamless", "NOAA GFS", "forecast"),
-    ("jma_gsm", "JMA GSM", "forecast"),
-    ("kma_gdps", "KMA GDPS", "forecast"),
-    ("dwd_icon_global", "DWD ICON", "forecast"),
-    ("gem_global", "GEM Global", "forecast"),
-    ("meteofrance_arpege_world025", "Météo-France", "forecast"),
-    ("ukmo_global_deterministic_10km", "UKMO Global", "forecast"),
-    ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
     ("google_weathernext2_ensemble", "Google", "ensemble"),
+    ("ncep_gfs_seamless", "NOAA GFS", "forecast"),
+    ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
+    ("jma_gsm", "JMA GSM", "forecast"),
+    ("gem_global", "GEM Global", "forecast"),
+    ("dwd_icon_global", "DWD ICON", "forecast"),
+    ("ukmo_global_deterministic_10km", "UKMO Global", "forecast"),
+    ("cma_grapes_global", "CMA GRAPES", "forecast"),
+    ("meteofrance_arpege_world025", "Météo-France", "forecast"),
+    ("ecmwf_aifs025", "ECMWF AIFS", "forecast"),
+    ("bom_access_global", "BOM ACCESS-G", "forecast"),
+    ("kma_gdps", "KMA GDPS", "forecast"),
 ]
 
 HOURLY_VARIABLES = [
@@ -423,8 +423,8 @@ def fetch_weatherapi(lat=None, lon=None, api_key=None):
 
 
 EXTERNAL_MODELS = [
-    (OWM_CODE, OWM_NAME, fetch_owm),
     (WEATHERAPI_CODE, WEATHERAPI_NAME, fetch_weatherapi),
+    (OWM_CODE, OWM_NAME, fetch_owm),
 ]
 
 
