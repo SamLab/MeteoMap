@@ -155,6 +155,11 @@ def test_help_text_up_to_date():
     assert "Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с)" in tpl
     assert "Ближайшее — по одной модели, подтверждённое — по двум и более" in tpl
     assert "час минимума/максимума дня по консенсусу" in tpl
+    assert "Типы погоды" in tpl
+    assert "51–57 — морось" in tpl
+    assert "дождь 61→63→65" in tpl
+    assert "1/MAE за 7 дней" in tpl
+    assert "голосование моделей по коду" in tpl
     assert "дождь, гроза, град" not in tpl
     assert "<b>Сегодня</b> — ближайшие 48 часов по часам." not in tpl
 
