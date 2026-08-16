@@ -110,8 +110,8 @@ a{color:var(--accent)}
 .wr3{color:#c62828;font-weight:600}
 .wr2{font-weight:700}
 .d10wrap{overflow-x:auto;padding:2px 0}
-.d10strip{display:flex;width:max-content;min-width:100%}
-.d10col{width:70px;flex:none;text-align:center;position:relative}
+.d10strip{display:flex;width:100%;min-width:100%}
+.d10col{flex:1;min-width:70px;text-align:center;position:relative}
 .d10tube{height:135px;position:relative}
 .d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
 .d10cloud{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75}
@@ -483,7 +483,7 @@ function buildWeather10(){
       '<div class="d10tnight" style="top:'+(y2+2)+'px">'+temp(x.tmin)+'</div>'+
       '</div>'+
       '<div class="d10mm">'+(x.pr==null?'—':fmtP(x.pr))+'мм / '+(x.pp==null?'—':num(x.pp))+'%</div>'+
-      '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('обл.'+num(x.cl)))+'</div>'+
+      '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('облака '+num(x.cl)+'%'))+'</div>'+
       '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
