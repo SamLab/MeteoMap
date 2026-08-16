@@ -60,6 +60,7 @@ header .meta{color:var(--muted);font-size:12px}
 #tab-compare .tblwrap{flex:1;min-height:0}
 #tab-compare .tblwrap table{table-layout:fixed;width:100%;min-width:0}
 #tab-compare .tblwrap th{font-size:10px;padding:3px 2px;line-height:1.2}
+#tab-compare .tblwrap th,#tab-compare .tblwrap td{text-align:center}
 #tab-compare .tblwrap thead th{position:sticky;top:0;background:var(--card);z-index:1}
 #tab-compare .tblwrap table{border-collapse:separate;border-spacing:0}
 table{border-collapse:collapse;font-size:12px;width:100%}
@@ -121,7 +122,7 @@ a{color:var(--accent)}
 .d10tnight{color:#2c6f9b}
 .d10mm{font-size:10.5px;color:#666;padding:6px 0 2px;white-space:nowrap}
 .d10wind{font-size:10.5px;color:#666;padding-bottom:3px;white-space:nowrap}
-.d10cond{font-size:10px;color:#555;min-height:26px;display:flex;align-items:center;justify-content:center;gap:3px;white-space:nowrap}
+.d10cond{font-size:10px;color:#555;min-height:26px;display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}
 .d10cond .ic{font-size:15px}
 .d10day{font-size:10.5px;color:#666;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;white-space:nowrap}
 .d10day b{color:#222}
@@ -605,7 +606,7 @@ function buildWarnings(){
     const s=findSrc(list),c=findCon(list);
     const rows=[];
     if(s>=0){const sL=sourceList(s,list);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list)+' · '+sLabel+'</div>');}
-    if(c>=0){const n=sourceCountAt(c,list);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+    if(c>=0&&c!==s){const n=sourceCountAt(c,list);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
@@ -618,7 +619,7 @@ function buildWarnings(){
   const gRows=[];
   const g1=findGust(1),g2=findGust(2);
   if(g1>=0)gRows.push('<div class="wr1">'+gustRow(g1)+'</div>');
-  if(g2>=0)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
+  if(g2>=0&&g2!==g1)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
   if(gRows.length===0)gRows.push('<div class="wr1">&nbsp;</div>');
   el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S,capeRow)+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
 }

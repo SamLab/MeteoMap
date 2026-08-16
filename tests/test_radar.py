@@ -214,6 +214,13 @@ def test_warnings_gust_column_instead_of_hail():
     assert "col('🧊',H)" not in tpl
 
 
+def test_warnings_do_not_duplicate_when_nearest_confirmed_coincide():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "if(c>=0&&c!==s)" in tpl
+    assert "if(g2>=0&&g2!==g1)" in tpl
+
+
 def test_precip_shows_hundredths_for_small_values():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
