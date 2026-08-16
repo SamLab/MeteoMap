@@ -730,7 +730,7 @@ var PAL=(function(){
   map.createPane('lightning-1');
   map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(160deg) saturate(1.5) brightness(1.3)';
   var ltCss=document.createElement('style');
-  ltCss.textContent='.leaflet-lightning-0-pane img,.leaflet-lightning-1-pane img{transform:scale(2.5);transform-origin:0 0}';
+  ltCss.textContent='.leaflet-lightning-0-pane img,.leaflet-lightning-1-pane img{transform:scale(2.5);transform-origin:center}';
   document.head.appendChild(ltCss);
   var ltBase='https://tiles.lightningmaps.org/?x={x}&y={y}&z={z}&s=256&t=';
   var lt0=L.tileLayer(ltBase+'5&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.lightningmaps.org">Lightningmaps.org</a>'});
