@@ -857,6 +857,7 @@ function updateRadarFrame(){
   const f=document.getElementById('radar-frame');
   if(!f||!D.location)return;
   const url='radar.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=8';
+  if(f.dataset.radarSrc===url)return;
   f.dataset.radarSrc=url;
   const tab=document.getElementById('tab-radar');
   if(tab&&tab.classList.contains('active'))f.src=url;

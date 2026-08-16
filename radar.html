@@ -912,11 +912,17 @@ var PAL=(function(){
     }
   });
 
+  var loading=false;
   function load(){
+    if(loading)return;
+    loading=true;
     setStatus('Загрузка…');
-    fetch('https://rainradar.ru/composite/manifest.json?t='+Math.floor(Date.now()/1e3),{cache:'no-store'})
+    var ctrl=typeof AbortController!=='undefined'?new AbortController():null;
+    var tid=ctrl?setTimeout(function(){ctrl.abort();},15000):null;
+    fetch('https://rainradar.ru/composite/manifest.json?t='+Math.floor(Date.now()/1e3),{cache:'no-store',signal:ctrl?ctrl.signal:undefined})
       .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
       .then(function(d){
+        if(tid)clearTimeout(tid);
         if(overlay){map.removeLayer(overlay);overlay=null;}
         frames=d.map(function(f){
           var sets=[{},{},{}];
@@ -927,11 +933,32 @@ var PAL=(function(){
           return {time:f[0],sets:sets,future:false};
         }).sort(function(a,b){return a.time-b.time;});
         if(!frames.length)throw new Error('нет кадров');
+        try{sessionStorage.setItem('rr_manifest',JSON.stringify(d));}catch(e){}
         renderSegs();
         showFrame(frames.length-1);
         clearStatus();
+        loading=false;
       })
       .catch(function(e){
+        if(tid)clearTimeout(tid);
+        loading=false;
+        var cached=null;
+        try{cached=JSON.parse(sessionStorage.getItem('rr_manifest'));}catch(x){}
+        if(cached&&cached.length){
+          frames=cached.map(function(f){
+            var sets=[{},{},{}];
+            for(var g=0;g<3;g++){
+              var list=f[1][g]||[];
+              for(var i2=0;i2<list.length;i2++)sets[g][list[i2][0]+'|'+list[i2][1]]=1;
+            }
+            return {time:f[0],sets:sets,future:false};
+          }).sort(function(a,b){return a.time-b.time;});
+          if(frames.length){
+            if(overlay){map.removeLayer(overlay);overlay=null;}
+            renderSegs();showFrame(frames.length-1);clearStatus();
+            setTimeout(load,60000);return;
+          }
+        }
         setStatus('Радар недоступен: '+e.message);
         setTimeout(load,30000);
       });
