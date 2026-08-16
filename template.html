@@ -61,6 +61,7 @@ header .meta{color:var(--muted);font-size:12px}
 #tab-compare .tblwrap table{table-layout:fixed;width:100%;min-width:0}
 #tab-compare .tblwrap th{font-size:10px;padding:3px 2px;line-height:1.2}
 #tab-compare .tblwrap th,#tab-compare .tblwrap td{text-align:center}
+#tab-compare .tblwrap td:first-child,#tab-compare .tblwrap tr.dayrow td{text-align:left}
 #tab-compare .tblwrap thead th{position:sticky;top:0;background:var(--card);z-index:1}
 #tab-compare .tblwrap table{border-collapse:separate;border-spacing:0}
 table{border-collapse:collapse;font-size:12px;width:100%}
@@ -605,8 +606,8 @@ function buildWarnings(){
   const col=(icon,list,extra=[])=>{
     const s=findSrc(list),c=findCon(list);
     const rows=[];
-    if(s>=0){const sL=sourceList(s,list);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list)+' · '+sLabel+'</div>');}
-    if(c>=0&&c!==s){const n=sourceCountAt(c,list);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+    if(s>=0&&s!==c){const sL=sourceList(s,list);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list)+' · '+sLabel+'</div>');}
+    if(c>=0){const n=sourceCountAt(c,list);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
@@ -618,8 +619,8 @@ function buildWarnings(){
   const gustRow=i=>{const g=gustInfo(i);return tstr(i)+' до '+num(g.m)+' м/с · '+((g.n===1)?g.lst.join(' и '):'по '+g.n+' моделям');};
   const gRows=[];
   const g1=findGust(1),g2=findGust(2);
-  if(g1>=0)gRows.push('<div class="wr1">'+gustRow(g1)+'</div>');
-  if(g2>=0&&g2!==g1)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
+  if(g1>=0&&g1!==g2)gRows.push('<div class="wr1">'+gustRow(g1)+'</div>');
+  if(g2>=0)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
   if(gRows.length===0)gRows.push('<div class="wr1">&nbsp;</div>');
   el.innerHTML='<div class="warn">'+col('🌧️',R)+col('⚡',S,capeRow)+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
 }
