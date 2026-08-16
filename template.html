@@ -58,6 +58,8 @@ header .meta{color:var(--muted);font-size:12px}
 #tab-compare .card{flex:1;min-height:0;display:flex;flex-direction:column}
 #tab-compare .varsel{flex:none}
 #tab-compare .tblwrap{flex:1;min-height:0}
+#tab-compare .tblwrap table{table-layout:fixed;width:100%;min-width:0}
+#tab-compare .tblwrap th{font-size:10px;padding:3px 2px;line-height:1.2}
 #tab-compare .tblwrap thead th{position:sticky;top:0;background:var(--card);z-index:1}
 #tab-compare .tblwrap table{border-collapse:separate;border-spacing:0}
 table{border-collapse:collapse;font-size:12px;width:100%}
@@ -765,7 +767,7 @@ function buildCmpTable(){
     const day=t.slice(0,10);
     let drow='';
     if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(3+cc.length)+'">'+
-      DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>';}
+      DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+'</td></tr>';}
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
     let cells=`<td>${t.slice(11,13)}ч</td>`;
