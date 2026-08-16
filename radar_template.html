@@ -78,15 +78,12 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   }).addTo(map);
 
   map.createPane('lightning-0');
-  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(155deg) saturate(1) brightness(1.1) contrast(0.8)';
+  map.getPane('lightning-0').style.filter='hue-rotate(110deg) saturate(6) brightness(1.5) drop-shadow(0 0 2px #ff003c) drop-shadow(0 0 4px #ff003c)';
   map.createPane('lightning-1');
-  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(160deg) saturate(1.5) brightness(1.3)';
-  var ltCss=document.createElement('style');
-  ltCss.textContent='.leaflet-lightning-0-pane img,.leaflet-lightning-1-pane img{transform:scale(2.5);transform-origin:center}';
-  document.head.appendChild(ltCss);
-  var ltBase='https://tiles.lightningmaps.org/?x={x}&y={y}&z={z}&s=256&t=';
-  var lt0=L.tileLayer(ltBase+'5&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.lightningmaps.org">Lightningmaps.org</a>'});
-  var lt1=L.tileLayer(ltBase+'6&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-1'});
+  map.getPane('lightning-1').style.filter='hue-rotate(110deg) saturate(4) brightness(1.2) drop-shadow(0 0 2px #cc0033) drop-shadow(0 0 3px #cc0033)';
+  var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
+  var lt0=L.tileLayer(ltBase+'0&_t='+Date.now(),{opacity:0.9,maxZoom:19,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
+  var lt1=L.tileLayer(ltBase+'1&_t='+Date.now(),{opacity:0.9,maxZoom:19,pane:'lightning-1'});
   var lightningGroup=L.layerGroup([lt0,lt1]).addTo(map);
   var elLt=document.getElementById('ltoggle');
   var ltOn=true;
