@@ -726,9 +726,9 @@ var PAL=(function(){
   }).addTo(map);
 
   map.createPane('lightning-0');
-  map.getPane('lightning-0').style.filter='hue-rotate(110deg) saturate(6) brightness(1.5) drop-shadow(0 0 2px #ff003c) drop-shadow(0 0 4px #ff003c)';
+  map.getPane('lightning-0').style.filter='sepia(1) hue-rotate(330deg) saturate(8) brightness(1.5) drop-shadow(0 0 2px #ff003c) drop-shadow(0 0 4px #ff003c)';
   map.createPane('lightning-1');
-  map.getPane('lightning-1').style.filter='hue-rotate(110deg) saturate(4) brightness(1.2) drop-shadow(0 0 2px #cc0033) drop-shadow(0 0 3px #cc0033)';
+  map.getPane('lightning-1').style.filter='sepia(1) hue-rotate(330deg) saturate(5) brightness(1.2) drop-shadow(0 0 2px #cc0033) drop-shadow(0 0 3px #cc0033)';
   var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
   var lt0=L.tileLayer(ltBase+'0&_t='+Date.now(),{opacity:0.9,maxZoom:19,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
   var lt1=L.tileLayer(ltBase+'1&_t='+Date.now(),{opacity:0.9,maxZoom:19,pane:'lightning-1'});

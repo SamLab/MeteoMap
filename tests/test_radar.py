@@ -275,9 +275,9 @@ def test_radar_has_lightning_layer():
     assert "t=" in tpl
     assert "maxZoom:10" in tpl
     assert 'id="ltoggle"' in tpl
-    assert "saturate(6)" in tpl or "saturate(4)" in tpl
+    assert "saturate(8)" in tpl or "saturate(6)" in tpl or "saturate(5)" in tpl
     assert "drop-shadow" in tpl
-    assert "hue-rotate(110deg)" in tpl
+    assert "hue-rotate(330deg)" in tpl
 
 
 def test_weather_now_parameter_table_with_sun_and_rain():
