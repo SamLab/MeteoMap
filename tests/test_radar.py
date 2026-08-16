@@ -269,11 +269,10 @@ def test_radar_legend_matches_original():
 def test_radar_has_lightning_layer():
     with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "images.lightningmaps.org" in tpl
-    assert "blitzortung" in tpl
+    assert "tiles.lightningmaps.org" in tpl
     assert "lightning-0" in tpl and "lightning-1" in tpl
     assert "createPane('lightning-0')" in tpl
-    assert "type=" in tpl
+    assert "t=" in tpl
     assert "maxZoom:10" in tpl
     assert 'id="ltoggle"' in tpl
     assert "brightness(1.1)" in tpl and "brightness(1.3)" in tpl

@@ -732,9 +732,9 @@ var PAL=(function(){
   var ltCss=document.createElement('style');
   ltCss.textContent='.leaflet-lightning-0-pane img,.leaflet-lightning-1-pane img{transform:scale(2.5);transform-origin:0 0}';
   document.head.appendChild(ltCss);
-  var ltBase='https://images.lightningmaps.org/blitzortung/europe/index.php?tile&zoom={z}&x={x}&y={y}&type=';
-  var lt0=L.tileLayer(ltBase+'0&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.blitzortung.org">Blitzortung.org</a>'});
-  var lt1=L.tileLayer(ltBase+'1&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-1'});
+  var ltBase='https://tiles.lightningmaps.org/?x={x}&y={y}&z={z}&s=256&t=';
+  var lt0=L.tileLayer(ltBase+'5&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-0',attribution:'Молнии: <a href="https://www.lightningmaps.org">Lightningmaps.org</a>'});
+  var lt1=L.tileLayer(ltBase+'6&_t='+Date.now(),{opacity:0.9,maxZoom:10,pane:'lightning-1'});
   var lightningGroup=L.layerGroup([lt0,lt1]).addTo(map);
   var elLt=document.getElementById('ltoggle');
   var ltOn=true;
