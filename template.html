@@ -630,7 +630,8 @@ let mainChart,curVar='temperature_2m';
 function setVar(v){
   curVar=v;
   const d=mainChart.data;
-  d.datasets=codes.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
+  const cc=cmpColOrder(codes);
+  d.datasets=cc.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
   d.datasets.push({label:'Консенсус',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#e09b00',borderWidth:3,pointRadius:0,tension:0.2});
   d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#2563eb',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
   if(v==='precipitation'){
@@ -725,7 +726,7 @@ function makeMainChart(){
 function updateLegend(){
   const el=document.getElementById('legend');
   el.innerHTML='';
-  codes.forEach((c,i)=>{
+  cmpColOrder(codes).forEach((c,i)=>{
     const ds=mainChart.data.datasets[i];
     if(!ds)return;
     const lab=document.createElement('label');
@@ -770,7 +771,7 @@ function buildCmpTable(){
     const day=t.slice(0,10);
     let drow='';
     if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(2+cc.length)+'">'+
-      DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+'</td></tr>';}
+      DAY_NAMES[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>';}
     const w=D.weighted[cmpVar]?.[i];
     let cells=`<td>${t.slice(11,13)}ч</td>`;
     cells+=`<td><b>${cell(w)}</b></td>`;
