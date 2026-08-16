@@ -36,11 +36,26 @@ def test_vc_wmo_mapping():
     assert meteo.VC_WMO["thunderstorm"] == 95
 
 
+def test_mb_wmo_mapping():
+    assert meteo.MB_WMO[1] == 0
+    assert meteo.MB_WMO[4] == 1
+    assert meteo.MB_WMO[7] == 2
+    assert meteo.MB_WMO[20] == 3
+    assert meteo.MB_WMO[16] == 45
+    assert meteo.MB_WMO[23] == 61
+    assert meteo.MB_WMO[25] == 82
+    assert meteo.MB_WMO[24] == 71
+    assert meteo.MB_WMO[10] == 95
+    assert meteo.MB_WMO[28] == 95
+    assert meteo.MB_WMO[35] == 67
+
+
 def test_external_models_registry():
     codes = [c for c, _n, _f in meteo.EXTERNAL_MODELS]
     assert meteo.OWM_CODE in codes
     assert meteo.WEATHERAPI_CODE in codes
     assert meteo.VC_CODE in codes
+    assert meteo.MB_CODE in codes
 
 
 class _FakeResponse:
@@ -188,6 +203,50 @@ def test_fetch_vc_requires_key(monkeypatch, capsys):
     assert "VISUALCROSSING_KEY" in capsys.readouterr().out
 
 
+def test_fetch_mb_parses_hourly(monkeypatch):
+    captured = {}
+
+    def fake_get(url, params, timeout):
+        captured["url"] = url
+        captured["params"] = params
+        return _FakeResponse({"metadata": {
+            "name": "Yaroslavl", "utc_timeoffset": 3.0, "timezone_abbrevation": "MSK",
+        }, "data_1h": {
+            "time": ["2026-08-06 15:00"],
+            "pictocode": [28],
+            "temperature": [20.5], "felttemperature": [19.8],
+            "precipitation": [0.2], "precipitation_probability": [40],
+            "relativehumidity": [60], "sealevelpressure": [1013.0],
+            "windspeed": [5.0], "winddirection": [180],
+        }})
+
+    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    rows = meteo.fetch_mb(57.63, 39.87, api_key="test")
+    assert captured["url"] == meteo.MB_URL
+    assert captured["params"]["apikey"] == "test"
+    assert captured["params"]["format"] == "json"
+    assert len(rows) == 1
+    r = rows[0]
+    assert r["temperature_2m"] == 20.5
+    assert r["apparent_temperature"] == 19.8
+    assert r["precipitation"] == 0.2
+    assert r["precipitation_probability"] == 40
+    assert r["weather_code"] == 95
+    assert r["pressure_msl"] == round(1013.0 * meteo.HPA_TO_MMHG, 1)
+    assert r["relative_humidity_2m"] == 60
+    assert r["wind_speed_10m"] == 5.0
+    assert r["wind_direction_10m"] == 180
+    assert r["utc"].astimezone(timezone.utc) == datetime(
+        2026, 8, 6, 12, 0, tzinfo=timezone.utc
+    )
+
+
+def test_fetch_mb_requires_key(monkeypatch, capsys):
+    monkeypatch.delenv("METEOBLUE_KEY", raising=False)
+    assert meteo.fetch_mb(57.63, 39.87) == []
+    assert "METEOBLUE_KEY" in capsys.readouterr().out
+
+
 def test_align_to_grid_places_external_rows():
     tz = timezone(timedelta(hours=3))
     grid = ["2026-08-06T15:00", "2026-08-06T16:00", "2026-08-06T17:00"]
@@ -226,7 +285,7 @@ def test_render_attribution_includes_external_sources():
     payload = {
         "location": meteo.LOCATIONS[0],
         "model_codes": ["a", meteo.OWM_CODE, meteo.WEATHERAPI_CODE,
-                        meteo.VC_CODE],
+                        meteo.VC_CODE, meteo.MB_CODE],
         "generated_at": "2026-08-06T12:00:00+03:00",
     }
     html = meteo.render("__ATTRIBUTION__", payload)
@@ -234,6 +293,7 @@ def test_render_attribution_includes_external_sources():
     assert "openweathermap.org" in html
     assert "weatherapi.com" in html
     assert "visualcrossing.com" in html
+    assert "meteoblue.com" in html
 
 
 def test_render_attribution_omits_absent_sources():

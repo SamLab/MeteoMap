@@ -137,6 +137,32 @@ VC_WMO = {
     "thunder-showers-day": 95, "thunder-showers-night": 95,
 }
 
+MB_URL = "https://my.meteoblue.com/packages/basic-1h"
+MB_CODE = "mb"
+MB_NAME = "Meteoblue"
+
+# Meteoblue hourly pictocode -> WMO (docs.meteoblue.com/en/meteo/variables/pictograms)
+MB_WMO = {
+    1: 0, 2: 0, 3: 0,
+    4: 1, 5: 2, 6: 2, 7: 2, 8: 2, 9: 2,
+    10: 95, 11: 95, 12: 95,
+    13: 0, 14: 0, 15: 0,
+    16: 45, 17: 45, 18: 45,
+    19: 3, 20: 3, 21: 3, 22: 3,
+    23: 61,
+    24: 71,
+    25: 82,
+    26: 71,
+    27: 95, 28: 95,
+    29: 71,
+    30: 95,
+    31: 61,
+    32: 71,
+    33: 61,
+    34: 71,
+    35: 67,
+}
+
 
 import requests
 import time
@@ -490,10 +516,67 @@ def fetch_vc(lat=None, lon=None, api_key=None):
     return rows
 
 
+def fetch_mb(lat=None, lon=None, api_key=None):
+    """Meteoblue basic-1h hourly forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("METEOBLUE_KEY")
+    if not key:
+        print("[warn] METEOBLUE_KEY not set, skipping MB")
+        return []
+    params = {
+        "apikey": key,
+        "lat": lat,
+        "lon": lon,
+        "format": "json",
+    }
+    resp = request_with_retry(MB_URL, params, timeout=30)
+    offset = resp.get("metadata", {}).get("utc_timeoffset") or 0
+    tz = timezone(timedelta(hours=offset))
+    data = resp.get("data_1h", {})
+    times = data.get("time") or []
+    temps = data.get("temperature") or []
+    feels = data.get("felttemperature") or []
+    humidity = data.get("relativehumidity") or []
+    precip = data.get("precipitation") or []
+    precip_prob = data.get("precipitation_probability") or []
+    picto = data.get("pictocode") or []
+    pressure = data.get("sealevelpressure") or []
+    windspeed = data.get("windspeed") or []
+    winddir = data.get("winddirection") or []
+    rows = []
+    for i, t in enumerate(times):
+        try:
+            dt = datetime.strptime(t, "%Y-%m-%d %H:%M").replace(tzinfo=tz)
+        except (TypeError, ValueError):
+            continue
+        p = pressure[i] if i < len(pressure) else None
+        rows.append({
+            "utc": dt.astimezone(timezone.utc),
+            "temperature_2m": temps[i] if i < len(temps) else None,
+            "apparent_temperature": feels[i] if i < len(feels) else None,
+            "dew_point_2m": None,
+            "relative_humidity_2m": humidity[i] if i < len(humidity) else None,
+            "precipitation": precip[i] if i < len(precip) else None,
+            "precipitation_probability": precip_prob[i] if i < len(precip_prob) else None,
+            "weather_code": MB_WMO.get(picto[i]) if i < len(picto) else None,
+            "pressure_msl": round(p * HPA_TO_MMHG, 1) if p is not None else None,
+            "cloud_cover": None,
+            "wind_speed_10m": windspeed[i] if i < len(windspeed) else None,
+            "wind_direction_10m": winddir[i] if i < len(winddir) else None,
+            "wind_gusts_10m": None,
+            "visibility": None,
+        })
+    return rows
+
+
 EXTERNAL_MODELS = [
     (WEATHERAPI_CODE, WEATHERAPI_NAME, fetch_weatherapi),
     (OWM_CODE, OWM_NAME, fetch_owm),
     (VC_CODE, VC_NAME, fetch_vc),
+    (MB_CODE, MB_NAME, fetch_mb),
 ]
 
 
@@ -822,6 +905,8 @@ def render(template, payload):
         attribs.append('<a href="https://www.weatherapi.com/">WeatherAPI.com</a>')
     if VC_CODE in codes:
         attribs.append('<a href="https://www.visualcrossing.com/">Visual Crossing</a>')
+    if MB_CODE in codes:
+        attribs.append('<a href="https://www.meteoblue.com/">Meteoblue</a>')
     html = html.replace("__ATTRIBUTION__", " · ".join(attribs))
     return html
 
