@@ -139,7 +139,7 @@ VC_WMO = {
 
 MB_URL = "https://my.meteoblue.com/packages/basic-1h"
 MB_CODE = "mb"
-MB_NAME = "Meteoblue"
+MB_NAME = "MeteoBlue"
 
 # Meteoblue hourly pictocode -> WMO (docs.meteoblue.com/en/meteo/variables/pictograms)
 MB_WMO = {

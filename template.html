@@ -737,9 +737,17 @@ function updateLegend(){
 
 // comparison table
 let cmpVar='temperature_2m';
+function cmpColOrder(codes){
+  const out=codes.filter(c=>c!=='vc'&&c!=='mb');
+  const ins=(after,code)=>{const i=out.indexOf(after);if(i>=0)out.splice(i+1,0,code);else out.push(code);};
+  ins('google_weathernext2_ensemble','vc');
+  ins('dwd_icon_global','mb');
+  return out;
+}
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
-  const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(codes.map(c=>({t:names[c]})));
+  const cc=cmpColOrder(codes);
+  const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(cc.map(c=>({t:names[c]})));
   const head='<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
   const dayMx={},dayMn={};
@@ -756,14 +764,14 @@ function buildCmpTable(){
   const rows=D.time.map((t,i)=>{
     const day=t.slice(0,10);
     let drow='';
-    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(3+codes.length)+'">'+
+    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(3+cc.length)+'">'+
       DAY_NAMES_SHORT[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>';}
     const w=D.weighted[cmpVar]?.[i];
     const mean=D.mean[cmpVar]?.[i];
-    let cells=`<td>${DAY_NAMES_SHORT[new Date(t).getDay()]} ${fmtTime(t)}</td>`;
+    let cells=`<td>${t.slice(11,13)}ч</td>`;
     cells+=`<td><b>${cell(w)}</b></td>`;
     cells+=`<td>${cell(mean)}</td>`;
-    const vals=codes.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
+    const vals=cc.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
     const nums=vals.filter(v=>typeof v==='number');
     const mx=nums.length?Math.max(...nums):null;
     const mn=nums.length?Math.min(...nums):null;
