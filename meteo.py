@@ -118,6 +118,25 @@ WEATHERAPI_WMO = {
     1273: 95, 1276: 95, 1279: 95, 1282: 95,
 }
 
+VC_URL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/"
+VC_CODE = "vc"
+VC_NAME = "VC"
+
+# Visual Crossing icon -> WMO
+VC_WMO = {
+    "clear-day": 0, "clear-night": 0,
+    "partly-cloudy-day": 2, "partly-cloudy-night": 2,
+    "cloudy": 3,
+    "fog": 45, "wind": 45,
+    "rain": 61, "showers-day": 80, "showers-night": 80,
+    "rain-snow": 66, "rain-snow-showers-day": 67, "rain-snow-showers-night": 67,
+    "sleet": 66,
+    "snow": 71, "snow-showers-day": 85, "snow-showers-night": 85,
+    "hail": 96,
+    "thunderstorm": 95, "thunder-rain": 95,
+    "thunder-showers-day": 95, "thunder-showers-night": 95,
+}
+
 
 import requests
 import time
@@ -425,9 +444,56 @@ def fetch_weatherapi(lat=None, lon=None, api_key=None):
     return rows
 
 
+def fetch_vc(lat=None, lon=None, api_key=None):
+    """Visual Crossing 15-day hourly forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("VISUALCROSSING_KEY")
+    if not key:
+        print("[warn] VISUALCROSSING_KEY not set, skipping VC")
+        return []
+    params = {"key": key, "unitGroup": "metric", "include": "hours"}
+    url = VC_URL + f"{lat}%2C{lon}"
+    resp = request_with_retry(url, params, timeout=30)
+    rows = []
+    for day in resp.get("days", []):
+        for hour in day.get("hours", []):
+            ts = hour.get("datetimeEpoch")
+            if ts is None:
+                continue
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            wind_kph = hour.get("windspeed")
+            gust_kph = hour.get("windgust")
+            vis_km = hour.get("visibility")
+            pressure_mb = hour.get("pressure")
+            rows.append({
+                "utc": dt,
+                "temperature_2m": hour.get("temp"),
+                "apparent_temperature": hour.get("feelslike"),
+                "dew_point_2m": hour.get("dew"),
+                "relative_humidity_2m": hour.get("humidity"),
+                "precipitation": hour.get("precip"),
+                "precipitation_probability": hour.get("precipprob"),
+                "weather_code": VC_WMO.get(hour.get("icon")),
+                "pressure_msl": round(pressure_mb * HPA_TO_MMHG, 1)
+                if pressure_mb is not None else None,
+                "cloud_cover": hour.get("cloudcover"),
+                "wind_speed_10m": round(wind_kph / 3.6, 2)
+                if wind_kph is not None else None,
+                "wind_direction_10m": hour.get("winddir"),
+                "wind_gusts_10m": round(gust_kph / 3.6, 2)
+                if gust_kph is not None else None,
+                "visibility": round(vis_km * 1000) if vis_km is not None else None,
+            })
+    return rows
+
+
 EXTERNAL_MODELS = [
     (WEATHERAPI_CODE, WEATHERAPI_NAME, fetch_weatherapi),
     (OWM_CODE, OWM_NAME, fetch_owm),
+    (VC_CODE, VC_NAME, fetch_vc),
 ]
 
 
@@ -754,6 +820,8 @@ def render(template, payload):
         attribs.append('<a href="https://openweathermap.org/">OpenWeather</a>')
     if WEATHERAPI_CODE in codes:
         attribs.append('<a href="https://www.weatherapi.com/">WeatherAPI.com</a>')
+    if VC_CODE in codes:
+        attribs.append('<a href="https://www.visualcrossing.com/">Visual Crossing</a>')
     html = html.replace("__ATTRIBUTION__", " · ".join(attribs))
     return html
 
