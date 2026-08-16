@@ -120,7 +120,7 @@ WEATHERAPI_WMO = {
 
 VC_URL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/"
 VC_CODE = "vc"
-VC_NAME = "VC"
+VC_NAME = "Visual Crossing"
 
 # Visual Crossing icon -> WMO
 VC_WMO = {
