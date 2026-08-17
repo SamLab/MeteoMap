@@ -752,8 +752,8 @@ function cmpColOrder(codes){
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
   const cc=cmpColOrder(codes);
-  const cols=[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
-  const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(1+cc.length)+'</colgroup>';
+  const cols=[{t:'Время'},{t:'Консенсус'},{t:'Среднее'}].concat(cc.map(c=>({t:names[c]})));
+  const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(2+cc.length)+'</colgroup>';
   const head=colg+'<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
   const dayMx={},dayMn={};
@@ -770,11 +770,13 @@ function buildCmpTable(){
   const rows=D.time.map((t,i)=>{
     const day=t.slice(0,10);
     let drow='';
-    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(2+cc.length)+'">'+
+    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(3+cc.length)+'">'+
       DAY_NAMES[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>';}
     const w=D.weighted[cmpVar]?.[i];
     let cells=`<td>${t.slice(11,13)}ч</td>`;
     cells+=`<td><b>${cell(w)}</b></td>`;
+    const m=D.mean[cmpVar]?.[i];
+    cells+=`<td>${cell(m)}</td>`;
     const vals=cc.map(c=>D.models[c]?D.models[c][cmpVar]?.[i]:undefined);
     const nums=vals.filter(v=>typeof v==='number');
     const mx=nums.length?Math.max(...nums):null;
