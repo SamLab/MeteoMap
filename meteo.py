@@ -2,10 +2,12 @@
 
 LOCATIONS = [
     {"name": "Ярославль", "slug": "yaroslavl", "lat": 57.63, "lon": 39.87},
-    {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
     {"name": "Цеденево", "slug": "tsedenevo", "lat": 57.533, "lon": 39.905},
+    {"name": "Петропавловка", "slug": "petropavlovka", "lat": 50.09, "lon": 40.89},
     {"name": "Москва", "slug": "moscow", "lat": 55.7558, "lon": 37.6173,
      "external": False},
+    {"name": "Лоо", "slug": "loo", "lat": 43.70, "lon": 39.59},
+    {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
 ]
 TIMEZONE = "Europe/Moscow"
 FORECAST_DAYS = 16
