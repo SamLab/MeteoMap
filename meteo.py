@@ -80,13 +80,10 @@ YR_VARIABLES = [
     "weather_code", "precipitation",
 ]
 
-# Внешние источники с API-ключами (коды WeatherAPI.com / OpenWeather)
+# Внешние источники с API-ключами (OpenWeather / Visual Crossing)
 OWM_URL = "https://api.openweathermap.org/data/2.5/forecast"
 OWM_CODE = "owm"
 OWM_NAME = "OpenWeather"
-WEATHERAPI_URL = "https://api.weatherapi.com/v1/forecast.json"
-WEATHERAPI_CODE = "weatherapi"
-WEATHERAPI_NAME = "WeatherAPI"
 
 # OpenWeather condition id -> WMO
 OWM_WMO = {
@@ -103,22 +100,6 @@ OWM_WMO = {
     800: 0, 801: 1, 802: 2, 803: 3, 804: 3,
 }
 
-# WeatherAPI.com condition code -> WMO
-WEATHERAPI_WMO = {
-    1000: 0, 1003: 1, 1006: 2, 1009: 3, 1030: 45,
-    1063: 61, 1066: 71, 1069: 66, 1072: 51, 1087: 95,
-    1114: 75, 1117: 75, 1135: 45, 1147: 48,
-    1150: 51, 1153: 51, 1168: 56, 1171: 57,
-    1180: 61, 1183: 61, 1186: 63, 1189: 63, 1192: 65, 1195: 65,
-    1198: 66, 1201: 67, 1204: 66, 1207: 67,
-    1210: 71, 1213: 71, 1216: 73, 1219: 73, 1222: 75, 1225: 75,
-    1237: 77,
-    1240: 80, 1243: 81, 1246: 82,
-    1249: 66, 1252: 67,
-    1255: 85, 1258: 86,
-    1261: 77, 1264: 77,
-    1273: 95, 1276: 95, 1279: 95, 1282: 95,
-}
 
 VC_URL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/"
 VC_CODE = "vc"
@@ -418,60 +399,6 @@ def fetch_owm(lat=None, lon=None, api_key=None):
     return rows
 
 
-def fetch_weatherapi(lat=None, lon=None, api_key=None):
-    """WeatherAPI.com 3-day hourly forecast -> строки YR-подобного вида."""
-    if lat is None:
-        lat = LOCATIONS[0]["lat"]
-    if lon is None:
-        lon = LOCATIONS[0]["lon"]
-    key = api_key or os.environ.get("WEATHERAPI_KEY")
-    if not key:
-        print("[warn] WEATHERAPI_KEY not set, skipping WeatherAPI")
-        return []
-    params = {"key": key, "q": f"{lat},{lon}", "days": 3, "lang": "ru"}
-    resp = request_with_retry(WEATHERAPI_URL, params, timeout=20)
-    rows = []
-    tz_msk = timezone(timedelta(hours=3))
-    for day in resp.get("forecast", {}).get("forecastday", []):
-        for hour in day.get("hour", []):
-            t = datetime.strptime(hour["time"][:16], "%Y-%m-%d %H:%M")
-            dt = t.replace(tzinfo=tz_msk).astimezone(timezone.utc)
-            cond = hour.get("condition") or {}
-            wind_kph = hour.get("wind_kph")
-            gust_kph = hour.get("gust_kph")
-            vis_km = hour.get("vis_km")
-            pressure_mb = hour.get("pressure_mb")
-            cr = hour.get("chance_of_rain")
-            cs = hour.get("chance_of_snow")
-            prob = None
-            if cr is not None and cs is not None:
-                prob = max(cr, cs)
-            elif cr is not None:
-                prob = cr
-            elif cs is not None:
-                prob = cs
-            rows.append({
-                "utc": dt,
-                "temperature_2m": hour.get("temp_c"),
-                "apparent_temperature": hour.get("feelslike_c"),
-                "dew_point_2m": hour.get("dewpoint_c"),
-                "relative_humidity_2m": hour.get("humidity"),
-                "precipitation": hour.get("precip_mm"),
-                "precipitation_probability": prob,
-                "weather_code": WEATHERAPI_WMO.get(cond.get("code")),
-                "pressure_msl": round(pressure_mb * HPA_TO_MMHG, 1)
-                if pressure_mb is not None else None,
-                "cloud_cover": hour.get("cloud"),
-                "wind_speed_10m": round(wind_kph / 3.6, 2)
-                if wind_kph is not None else None,
-                "wind_direction_10m": hour.get("wind_degree"),
-                "wind_gusts_10m": round(gust_kph / 3.6, 2)
-                if gust_kph is not None else None,
-                "visibility": round(vis_km * 1000) if vis_km is not None else None,
-            })
-    return rows
-
-
 def fetch_vc(lat=None, lon=None, api_key=None):
     """Visual Crossing 15-day hourly forecast -> строки YR-подобного вида."""
     if lat is None:
@@ -575,7 +502,6 @@ def fetch_mb(lat=None, lon=None, api_key=None):
 
 
 EXTERNAL_MODELS = [
-    (WEATHERAPI_CODE, WEATHERAPI_NAME, fetch_weatherapi),
     (OWM_CODE, OWM_NAME, fetch_owm),
     (VC_CODE, VC_NAME, fetch_vc),
     (MB_CODE, MB_NAME, fetch_mb),
@@ -903,8 +829,6 @@ def render(template, payload):
         attribs.append('<a href="https://www.met.no/">MET Norway</a>')
     if OWM_CODE in codes:
         attribs.append('<a href="https://openweathermap.org/">OpenWeather</a>')
-    if WEATHERAPI_CODE in codes:
-        attribs.append('<a href="https://www.weatherapi.com/">WeatherAPI.com</a>')
     if VC_CODE in codes:
         attribs.append('<a href="https://www.visualcrossing.com/">Visual Crossing</a>')
     if MB_CODE in codes:

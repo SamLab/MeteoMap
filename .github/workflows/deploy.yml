@@ -38,7 +38,6 @@ jobs:
       - name: Generate site
         env:
           OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
-          WEATHERAPI_KEY: ${{ secrets.WEATHERAPI_KEY }}
           VISUALCROSSING_KEY: ${{ secrets.VISUALCROSSING_KEY }}
           METEOBLUE_KEY: ${{ secrets.METEOBLUE_KEY }}
           ENABLE_EXTERNAL: "1"

@@ -12,7 +12,7 @@ def test_model_order():
     idx = [codes.index(c) for c in wanted]
     assert idx == sorted(idx)
     ext = [c for c, _n, _fn in meteo.EXTERNAL_MODELS]
-    assert ext == [meteo.WEATHERAPI_CODE, meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE]
+    assert ext == [meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE]
 
 
 def test_daily_variables_include_dominant_wind_direction():
@@ -129,29 +129,3 @@ def test_build_city_payload_with_external(monkeypatch):
     assert meteo.YR_CODE in p["model_codes"]
     assert "owm" in p["model_codes"]
     assert p["location"] == loc
-
-
-def test_external_provider_order_weatherapi_before_yr(monkeypatch):
-    loc = meteo.LOCATIONS[0]
-    raw = {
-        "ecmwf_ifs025": [{
-            "hourly": {"time": ["2026-08-07T00:00"], "temperature_2m": [10.0]},
-            "daily": {},
-        }],
-    }
-    utc_dt = datetime(2026, 8, 6, 21, 0, tzinfo=timezone.utc)
-    external_rows = {
-        meteo.WEATHERAPI_CODE: {loc["slug"]: [{"utc": utc_dt, "temperature_2m": 9.0}]},
-        meteo.YR_CODE: {loc["slug"]: [{"utc": utc_dt, "temperature_2m": 11.0}]},
-        meteo.OWM_CODE: {loc["slug"]: [{"utc": utc_dt, "temperature_2m": 8.0}]},
-    }
-    monkeypatch.setattr(
-        meteo, "verify_models",
-        lambda *a, **k: {
-            "ecmwf_ifs025": {v: 1.0 for v in meteo.VERIFICATION_VARIABLES},
-        },
-    )
-    p = meteo.build_city_payload(loc, raw, external_rows, "2026-08-07T00:00:00+03:00", True)
-    tail = [c for c in p["model_codes"] if c in
-            (meteo.WEATHERAPI_CODE, meteo.YR_CODE, meteo.OWM_CODE)]
-    assert tail == [meteo.WEATHERAPI_CODE, meteo.YR_CODE, meteo.OWM_CODE]
