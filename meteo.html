@@ -181,11 +181,22 @@ function buildSummary(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   var now=new Date();
   var todayStr=now.toDateString();
+  function hasRainAt(j){var code=data.weather_code?Math.round(data.weather_code[j]):0;return RAIN.indexOf(code)>=0;}
+  function modelRainCount(j){
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;
+  }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
     if(times[j].toDateString()!==todayStr) break;
-    var code=data.weather_code?Math.round(data.weather_code[j]):0;
-    if(RAIN.indexOf(code)>=0){ if(rainHour<0)rainHour=j; jLast=j; }
+    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}
+  }
+  var fromModels=false;
+  if(rainHour<0){
+    for(var j=idx;j<times.length;j++){
+      if(times[j].toDateString()!==todayStr) break;
+      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}
+    }
+    if(rainHour>=0)fromModels=true;
   }
   if(rainHour<0) return 'Остаток дня без дождя';
   var sumPr=0,maxPp=0;
@@ -195,6 +206,8 @@ function buildSummary(times, data, rawData, idx){
     var pp=data.precipitation_probability?data.precipitation_probability[j]:0;
     if(pp!=null&&pp>maxPp)maxPp=pp;
   }
+  var mCnt=0;
+  for(var c in rawData){var m=rawData[c];if(!m)continue;var has=false;for(var j=rainHour;j<=jLast;j++){if(times[j].toDateString()!==todayStr)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)){has=true;break;}}if(has)mCnt++;}
   var jPeak=rainHour,peakPr=-1;
   for(var j=rainHour;j<=jLast;j++){
     var p=data.precipitation?data.precipitation[j]:0;
@@ -203,7 +216,9 @@ function buildSummary(times, data, rawData, idx){
   var rainType=(WMO[data.weather_code?Math.round(data.weather_code[jPeak]):0]||{}).l||'Дождь';
   var st=pad2(times[rainHour].getHours())+':00';
   var en=pad2(times[jLast].getHours())+':00';
-  return rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%';
+  var txt=rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%';
+  if(fromModels) return 'Подтвержденного дождя нет, но по '+mCnt+' моделям '+txt;
+  return txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям');
 }
 
 function fmtP(v){
