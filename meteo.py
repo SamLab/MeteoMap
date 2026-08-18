@@ -1089,7 +1089,7 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
     grid = next(iter(hourly_by_model.values()))["time"]
     city_codes = list(model_codes)
     city_names = dict(model_names)
-    providers = list(EXTERNAL_MODELS[:1]) + [(YR_CODE, YR_NAME, fetch_yr)]
+    providers = [(YR_CODE, YR_NAME, fetch_yr)] + list(EXTERNAL_MODELS[:1])
     if external_enabled:
         providers = providers + list(EXTERNAL_MODELS[1:])
     for code, name, _fn, *_ in providers:
