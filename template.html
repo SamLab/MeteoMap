@@ -760,10 +760,11 @@ function updateLegend(){
 // comparison table
 let cmpVar='temperature_2m';
 function cmpColOrder(codes){
-  const out=codes.filter(c=>c!=='vc'&&c!=='mb');
+  const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo');
   const ins=(after,code)=>{const i=out.indexOf(after);if(i>=0)out.splice(i+1,0,code);else out.push(code);};
   ins('google_weathernext2_ensemble','vc');
   ins('dwd_icon_global','mb');
+  ins('cma_grapes_global','wwo');
   return out;
 }
 function buildCmpTable(){

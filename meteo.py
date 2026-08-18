@@ -124,6 +124,10 @@ MB_URL = "https://my.meteoblue.com/packages/basic-1h"
 MB_CODE = "mb"
 MB_NAME = "MeteoBlue"
 
+WWO_URL = "https://api.worldweatheronline.com/premium/v1/weather.ashx"
+WWO_CODE = "wwo"
+WWO_NAME = "World Weather Online"
+
 # Meteoblue hourly pictocode -> WMO (docs.meteoblue.com/en/meteo/variables/pictograms)
 MB_WMO = {
     1: 0, 2: 0, 3: 0,
@@ -501,10 +505,94 @@ def fetch_mb(lat=None, lon=None, api_key=None):
     return rows
 
 
+# WWO weather code -> WMO (worldweatheronline.com/weather-api/api/docs/weather-icons)
+WWO_WMO = {
+    113: 0, 116: 2, 119: 3, 122: 3, 143: 45,
+    176: 80, 179: 71, 182: 66, 185: 67,
+    200: 95, 227: 71, 230: 85, 248: 48,
+    260: 48, 263: 51, 266: 53, 281: 56, 284: 57,
+    293: 51, 296: 53, 299: 55, 302: 61, 305: 63,
+    308: 65, 311: 56, 314: 57, 317: 66, 320: 67,
+    323: 71, 326: 73, 329: 77, 332: 75, 335: 77,
+    338: 75, 350: 67, 353: 80, 356: 81, 359: 82,
+    362: 66, 365: 67, 368: 71, 371: 77, 374: 67,
+    377: 67, 386: 95, 389: 96, 392: 99, 395: 99,
+}
+
+
+def fetch_wwo(lat=None, lon=None, api_key=None):
+    """World Weather Online 14-day hourly forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("WWO_KEY")
+    if not key:
+        print("[warn] WWO_KEY not set, skipping WWO")
+        return []
+    params = {
+        "key": key,
+        "q": f"{lat},{lon}",
+        "format": "json",
+        "tp": "1",
+        "num_of_days": 14,
+        "includelocation": "1",
+    }
+    resp = request_with_retry(WWO_URL, params, timeout=30)
+    rows = []
+    for day in resp.get("weather", []):
+        for h in day.get("hourly", []):
+            time_str = h.get("time")
+            if time_str is None:
+                continue
+            try:
+                hh = int(time_str) // 100
+                dt = datetime.strptime(
+                    day["date"] + f" {hh:02d}:00", "%Y-%m-%d %H:%M"
+                ).replace(tzinfo=timezone.utc)
+            except (KeyError, ValueError):
+                continue
+            wind_kph = h.get("windspeedKmph")
+            gust_kph = h.get("WindGustKmph")
+            pressure = h.get("pressure")
+            wwo_code = h.get("weatherCode")
+            rows.append({
+                "utc": dt,
+                "temperature_2m": _float(h.get("tempC")),
+                "apparent_temperature": _float(h.get("FeelsLikeC")),
+                "dew_point_2m": _float(h.get("DewPointC")),
+                "relative_humidity_2m": _float(h.get("humidity")),
+                "precipitation": _float(h.get("precipMM")),
+                "precipitation_probability": _float(h.get("chanceofrain")),
+                "weather_code": WWO_WMO.get(wwo_code) if wwo_code is not None else None,
+                "pressure_msl": round(float(pressure) * HPA_TO_MMHG, 1)
+                if pressure is not None else None,
+                "cloud_cover": _float(h.get("cloudcover")),
+                "wind_speed_10m": round(float(wind_kph) / 3.6, 2)
+                if wind_kph is not None else None,
+                "wind_direction_10m": _float(h.get("winddirDegree")),
+                "wind_gusts_10m": round(float(gust_kph) / 3.6, 2)
+                if gust_kph is not None else None,
+                "visibility": round(float(h.get("visibility", 0)) * 1000)
+                if h.get("visibility") is not None else None,
+            })
+    return rows
+
+
+def _float(v):
+    if v is None:
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 EXTERNAL_MODELS = [
     (OWM_CODE, OWM_NAME, fetch_owm),
     (VC_CODE, VC_NAME, fetch_vc),
     (MB_CODE, MB_NAME, fetch_mb),
+    (WWO_CODE, WWO_NAME, fetch_wwo),
 ]
 
 
