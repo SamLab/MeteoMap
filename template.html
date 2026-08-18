@@ -762,10 +762,10 @@ let cmpVar='temperature_2m';
 function cmpColOrder(codes){
   const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo'&&c!=='xweather');
   const ins=(after,code)=>{if(!codes.includes(code))return;const i=out.indexOf(after);if(i>=0)out.splice(i+1,0,code);else out.push(code);};
-  ins('google_weathernext2_ensemble','vc');
+  ins('google_weathernext2_ensemble','xweather');
+  ins('xweather','vc');
   ins('dwd_icon_global','mb');
   ins('cma_grapes_global','wwo');
-  ins('meteofrance_arpege_world025','xweather');
   return out;
 }
 function buildCmpTable(){
