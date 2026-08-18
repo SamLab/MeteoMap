@@ -217,7 +217,7 @@ function buildSummary(times, data, rawData, idx){
   var st=pad2(times[rainHour].getHours())+':00';
   var en=pad2(times[jLast].getHours())+':00';
   var txt=rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%';
-  if(fromModels) return 'Подтвержденного дождя нет, но по '+mCnt+' моделям '+txt;
+  if(fromModels) return 'Подтвержденного дождя нет, но по '+mCnt+' моделям вероятен '+rainType+' с '+st+' до '+en+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%';
   return txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям');
 }
 
