@@ -625,8 +625,14 @@ def fetch_xw(lat=None, lon=None, api_key=None):
         print("[warn] XWEATHER_KEY not set, skipping Xweather")
         return []
     url = f"{XW_URL}/{lat},{lon}"
-    params = {"filter": "1hr", "limit": "360",
-              "client_id": key, "client_secret": key}
+    params = {"filter": "1hr", "limit": "360"}
+    if "_" in key:
+        cid, csec = key.split("_", 1)
+        params["client_id"] = cid
+        params["client_secret"] = csec
+    else:
+        params["client_id"] = key
+        params["client_secret"] = key
     resp = request_with_retry(url, params, timeout=30)
     rows = []
     for place in resp.get("response", []):
@@ -657,12 +663,13 @@ def fetch_xw(lat=None, lon=None, api_key=None):
     return rows
 
 
+_EXT = ["yaroslavl", "tsedenevo"]
 EXTERNAL_MODELS = [
-    (OWM_CODE, OWM_NAME, fetch_owm),
-    (VC_CODE, VC_NAME, fetch_vc),
-    (MB_CODE, MB_NAME, fetch_mb),
-    (WWO_CODE, WWO_NAME, fetch_wwo),
-    (XW_CODE, XW_NAME, fetch_xw),
+    (OWM_CODE, OWM_NAME, fetch_owm, _EXT),
+    (VC_CODE, VC_NAME, fetch_vc, _EXT),
+    (MB_CODE, MB_NAME, fetch_mb, _EXT),
+    (WWO_CODE, WWO_NAME, fetch_wwo, _EXT),
+    (XW_CODE, XW_NAME, fetch_xw, _EXT),
 ]
 
 
@@ -678,11 +685,13 @@ def fetch_external_providers(providers, locations, max_workers=5):
 
     out = {}
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futures = [
-            ex.submit(_fetch, code, name, fn, loc)
-            for code, name, fn in providers
-            for loc in locations
-        ]
+        futures = []
+        for item in providers:
+            code, name, fn = item[0], item[1], item[2]
+            slugs = item[3] if len(item) > 3 else None
+            locs = [l for l in locations if slugs is None or l["slug"] in slugs]
+            for loc in locs:
+                futures.append(ex.submit(_fetch, code, name, fn, loc))
         for f in futures:
             code, slug, rows = f.result()
             out.setdefault(code, {})[slug] = rows
@@ -1056,7 +1065,7 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
             fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
         )
     if external_enabled:
-        for code, _name, _fn in EXTERNAL_MODELS:
+        for code, _name, _fn, *_ in EXTERNAL_MODELS:
             verification["7d"][code] = {v: None for v in VERIFICATION_VARIABLES}
             verification["30d"][code] = {v: None for v in VERIFICATION_VARIABLES}
     weights_by_var = {
@@ -1070,7 +1079,7 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
     providers = list(EXTERNAL_MODELS[:1]) + [(YR_CODE, YR_NAME, fetch_yr)]
     if external_enabled:
         providers = providers + list(EXTERNAL_MODELS[1:])
-    for code, name, _fn in providers:
+    for code, name, _fn, *_ in providers:
         rows = external_rows.get(code, {}).get(loc["slug"], [])
         if not rows:
             continue

@@ -41,7 +41,7 @@ def test_mb_wmo_mapping():
 
 
 def test_external_models_registry():
-    codes = [c for c, _n, _f in meteo.EXTERNAL_MODELS]
+    codes = [c for c, _n, _f, *_ in meteo.EXTERNAL_MODELS]
     assert meteo.OWM_CODE in codes
     assert meteo.VC_CODE in codes
     assert meteo.MB_CODE in codes

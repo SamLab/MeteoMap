@@ -11,7 +11,7 @@ def test_model_order():
     ]
     idx = [codes.index(c) for c in wanted]
     assert idx == sorted(idx)
-    ext = [c for c, _n, _fn in meteo.EXTERNAL_MODELS]
+    ext = [c for c, _n, _fn, *_ in meteo.EXTERNAL_MODELS]
     assert ext == [meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE, meteo.WWO_CODE, meteo.XW_CODE]
 
 
