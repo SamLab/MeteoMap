@@ -190,7 +190,7 @@ a{color:var(--accent)}
       <li><b>По часам</b> — ближайшие 48 часов; заливка — дождь.</li>
       <li><b>Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое — по двум и более. Дождь: подтверждение по консенсусному коду погоды, либо если ≥ 2 моделей прогнозируют осадки ≥ 0.1 мм. Гроза: риск при CAPE &gt; 1000 Дж/кг и CIN не ≤ −50 Дж/кг (не блокирует).</li>
       <li><b>На 16 дней</b> — день, погода, температура, осадки, облачность.</li>
-      <li><b>Подробно на 16 дней</b> — по частям суток: ночь 00–06, утро 06–12, день 12–18, вечер 18–24.</li>
+      <li><b>Подробно на 16 дней</b> — почасовый прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Восход/закат и долгота дня.</li>
     </ul>
     <h2>Графики</h2>
     <ul>
@@ -439,8 +439,11 @@ function buildWeatherHours(){
       if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
     }
     const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';
-    const txt=rainType+' с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
-    parts.push(fromModels?'Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+    const st=D.time[rainHour].slice(11,16);
+    const en=D.time[jLast].slice(11,16);
+    const timeStr=st===en?'в '+st:'с '+st+' до '+en;
+    const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
+    parts.push(fromModels?'Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
@@ -536,6 +539,7 @@ function aggWcode(day,h0,h1){
   return best;
 }
 function buildWeatherDetail(){
+  const w=D.weighted;
   const dt=D.daily_time||[];
   document.getElementById('weather-detail').innerHTML=dt.map((day,di)=>{
     const d=new Date(day);
@@ -546,26 +550,25 @@ function buildWeatherDetail(){
       const ms=new Date(D.daily.sunset[di])-new Date(D.daily.sunrise[di]);
       if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
     }
-    const cells=PARTS.map(x=>{
-      const tMode=(x[0]==='ночь'?'min':(x[0]==='день'?'max':'mean'));
-      const t=aggPart(day,x[1],x[2],'temperature_2m',tMode);
-      const ws=aggPart(day,x[1],x[2],'wind_speed_10m','mean');
-      const wd=aggPart(day,x[1],x[2],'wind_direction_10m','mean');
-      const pr=aggPart(day,x[1],x[2],'precipitation','sum');
-      const pp=aggPart(day,x[1],x[2],'precipitation_probability','max');
-      const hu=aggPart(day,x[1],x[2],'relative_humidity_2m','mean');
-      const cl=aggPart(day,x[1],x[2],'cloud_cover','mean');
-      const [wtx,we]=wcode(aggWcode(day,x[1],x[2]));
+    const blocks=[];
+    for(let h=0;h<24;h+=2){
+      const hh=String(h).padStart(2,'0')+':00';
+      const j=D.time.findIndex(t=>t.slice(0,10)===day&&t.slice(11,13)===hh.slice(0,2));
+      if(j<0)continue;
+      const [wtext,we]=wcode(w.weather_code?.[j]);
+      const pp=w.precipitation_probability?.[j];
+      const pr=w.precipitation?.[j];
+      const ws=w.wind_speed_10m?.[j];
+      const wd=w.wind_direction_10m?.[j];
       const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
-      return '<div class="dpart"><div class="pt">'+(we?we+' ':'')+x[0]+(wtx?', '+wtx:'')+'</div>'+
-        '<div class="ptemp">'+temp(t)+'</div>'+
-        '<div class="pw">'+(ws==null?'—':num(ws)+' м/с')+arrow+'</div>'+
-        '<div class="ppr">'+(pr==null?'—':fmtP(pr)+' мм')+' / '+num(pp)+'%</div>'+
-        '<div class="phu">Влажность '+(hu==null?'—':num(hu)+'%')+'</div>'+
-        '<div class="pcl">Облачность '+(cl==null?'—':num(cl)+'%')+'</div></div>';
-    }).join('');
+      blocks.push('<div class="hour"><div class="ht">'+hh+'</div>'+
+        '<div class="he">'+we+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
+        '<div class="hwnd">'+(ws==null?'':arrow+' '+num(ws)+' м/с')+'</div>'+
+        '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div>'+
+        '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>');
+    }
     return '<div class="dhead">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
-      '<div class="dparts">'+cells+'</div>'+
+      '<div class="hours">'+blocks.join('')+'</div>'+
       '<div class="dsun">Восход: '+sr+' · Закат: '+ss+' · Долгота дня: '+dl+'</div>';
   }).join('');
 }
