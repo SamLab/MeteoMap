@@ -606,7 +606,6 @@ function buildWarnings(){
       const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
       const pr=D.models[c]?D.models[c].precipitation?.[i]:undefined;
       if(!list.includes(v)&&(pm==null||pr==null||pr<pm))continue;
-      const pr=D.models[c]?D.models[c].precipitation?.[i]:undefined;
       if(best===null||(pr!==null&&pr!==undefined&&(best.pr===null||pr>best.pr)))best={c,pr};
     }
     if(best===null)return wetVal(null,null);
