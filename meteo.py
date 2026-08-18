@@ -795,6 +795,9 @@ def weather_code_consensus(codes):
     return max(top, key=lambda c: (WEATHER_PRIORITY.get(c, 0), c))
 
 
+_EXTERNAL_LOW = {OWM_CODE, VC_CODE, MB_CODE, WWO_CODE}
+_EXTERNAL_MED = {XW_CODE}
+
 def make_weights(mae_by_model, variable):
     inv = {}
     for code, mae in mae_by_model.items():
@@ -804,8 +807,14 @@ def make_weights(mae_by_model, variable):
     if not inv:
         return {code: 1.0 / len(mae_by_model) for code in mae_by_model}
     lowest = min(inv.values())
+    verified = sorted(inv.values())
+    mid = verified[len(verified) // 2]
     for code in mae_by_model:
-        if code not in inv:
+        if code in inv:
+            continue
+        if code in _EXTERNAL_MED:
+            inv[code] = mid
+        else:
             inv[code] = lowest
     total = sum(inv.values())
     return {code: w / total for code, w in inv.items()}
