@@ -126,7 +126,7 @@ MB_NAME = "MeteoBlue"
 
 WWO_URL = "https://api.worldweatheronline.com/premium/v1/weather.ashx"
 WWO_CODE = "wwo"
-WWO_NAME = "World Weather Online"
+WWO_NAME = "World Weather"
 
 XW_URL = "https://data.api.xweather.com/forecasts"
 XW_CODE = "xweather"

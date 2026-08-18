@@ -226,7 +226,7 @@ a{color:var(--accent)}
         JMA GSM — Япония, GEM Global — Канада, DWD ICON — Германия,<br>
         UKMO Global — Великобритания, CMA GRAPES — Китай,<br>
         Météo-France — Франция.</li>
-      <li><b>Внешние источники</b>: <b>Yr.no</b> — MET Norway; <b>OpenWeather</b>; <b>Visual Crossing</b>; <b>Meteoblue</b>; <b>World Weather Online</b>; <b>Xweather</b> (по API-ключам).</li>
+      <li><b>Внешние источники</b>: <b>Yr.no</b> — MET Norway; <b>OpenWeather</b>; <b>Visual Crossing</b>; <b>Meteoblue</b>; <b>World Weather</b>; <b>Xweather</b> (по API-ключам).</li>
     </ul>
     <h2>Виджет</h2>
     <ul>
@@ -765,7 +765,8 @@ function cmpColOrder(codes){
   ins('google_weathernext2_ensemble','xweather');
   ins('xweather','vc');
   ins('dwd_icon_global','mb');
-  ins('cma_grapes_global','wwo');
+  ins('ukmo_global_deterministic_10km','wwo');
+  ins('cma_grapes_global','xweather');
   return out;
 }
 function buildCmpTable(){
