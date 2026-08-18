@@ -128,6 +128,10 @@ WWO_URL = "https://api.worldweatheronline.com/premium/v1/weather.ashx"
 WWO_CODE = "wwo"
 WWO_NAME = "World Weather Online"
 
+XW_URL = "https://data.api.xweather.com/forecasts"
+XW_CODE = "xweather"
+XW_NAME = "Xweather"
+
 # Meteoblue hourly pictocode -> WMO (docs.meteoblue.com/en/meteo/variables/pictograms)
 MB_WMO = {
     1: 0, 2: 0, 3: 0,
@@ -588,11 +592,77 @@ def _float(v):
         return None
 
 
+# Xweather coded weather -> WMO
+XW_CLOUD = {"CL": 0, "FW": 10, "SC": 50, "BK": 80, "OV": 100}
+XW_WX = {"R": 61, "RW": 80, "RS": 66, "IP": 66, "ZR": 66, "ZL": 56,
+         "S": 71, "SW": 85, "SN": 71, "SI": 66,
+         "T": 95, "TO": 99,
+         "L": 51, "ZF": 56, "F": 45, "BR": 45, "H": 45}
+
+
+def _xw_wmo(code_str):
+    if not code_str:
+        return None
+    parts = code_str.split(":")
+    wx = parts[2].strip() if len(parts) > 2 else ""
+    if wx in XW_WX:
+        return XW_WX[wx]
+    cloud = parts[0].strip() if parts else ""
+    if cloud in XW_CLOUD:
+        cv = XW_CLOUD[cloud]
+        return 0 if cv < 15 else (2 if cv < 40 else 3)
+    return None
+
+
+def fetch_xw(lat=None, lon=None, api_key=None):
+    """Xweather 15-day hourly forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("XWEATHER_KEY")
+    if not key:
+        print("[warn] XWEATHER_KEY not set, skipping Xweather")
+        return []
+    url = f"{XW_URL}/{lat},{lon}"
+    params = {"filter": "1hr", "limit": "360",
+              "client_id": key, "client_secret": key}
+    resp = request_with_retry(url, params, timeout=30)
+    rows = []
+    for place in resp.get("response", []):
+        for p in place.get("periods", []):
+            ts = p.get("timestamp")
+            if ts is None:
+                continue
+            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            wind_mps = p.get("windSpeedMPS")
+            gust_mps = p.get("windGustMPS")
+            rows.append({
+                "utc": dt,
+                "temperature_2m": p.get("tempC"),
+                "apparent_temperature": p.get("feelslikeC"),
+                "dew_point_2m": p.get("dewpointC"),
+                "relative_humidity_2m": p.get("humidity"),
+                "precipitation": p.get("precipMM"),
+                "precipitation_probability": p.get("pop"),
+                "weather_code": _xw_wmo(p.get("weatherPrimaryCoded")),
+                "pressure_msl": p.get("pressureMB"),
+                "cloud_cover": p.get("sky"),
+                "wind_speed_10m": wind_mps,
+                "wind_direction_10m": p.get("windDirDEG"),
+                "wind_gusts_10m": gust_mps,
+                "visibility": round(p.get("visibilityKM", 0) * 1000)
+                if p.get("visibilityKM") is not None else None,
+            })
+    return rows
+
+
 EXTERNAL_MODELS = [
     (OWM_CODE, OWM_NAME, fetch_owm),
     (VC_CODE, VC_NAME, fetch_vc),
     (MB_CODE, MB_NAME, fetch_mb),
     (WWO_CODE, WWO_NAME, fetch_wwo),
+    (XW_CODE, XW_NAME, fetch_xw),
 ]
 
 
