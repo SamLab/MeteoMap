@@ -64,7 +64,7 @@ def test_compare_rows_highlight_day_max_min():
     assert "if(!(day in dayMx)||w>dayMx[day][1])dayMx[day]=[i,w];" in tpl
     assert "if(!(day in dayMn)||w<dayMn[day][1])dayMn[day]=[i,w];" in tpl
     assert "Math.max(...nums),mn=Math.min(...nums)" not in tpl
-    assert "'<tr class=\"dayrow\"><td colspan=\"'+(3+cc.length)+'\">'" in tpl
+    assert "'<tr class=\"dayrow\"><td colspan=\"'+(2+cc.length)+'\">'" in tpl
     assert "prevDay=day" in tpl
     assert "let drow='';" in tpl
     assert "if(day!==prevDay){" in tpl
