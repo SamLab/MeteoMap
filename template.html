@@ -440,7 +440,7 @@ function buildWeatherHours(){
     }
     const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';
     const txt=rainType+' с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
-    parts.push(fromModels?'Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+    parts.push(fromModels?'По '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки с '+D.time[rainHour].slice(11,16)+' до '+D.time[jLast].slice(11,16)+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
