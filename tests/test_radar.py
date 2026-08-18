@@ -199,8 +199,8 @@ def test_cmp_row_highlight_uses_consensus_not_model_extreme():
 def test_warnings_confirmed_requires_two_models():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "sourceCountAt(i,list)>=2" in tpl
-    assert "sourceCountAt(i,list)>0)return i;" in tpl
+    assert "sourceCountAt(i,list,pm)>=2" in tpl
+    assert "sourceCountAt(i,list,pm)>0)return i;" in tpl
 
 
 def test_warnings_gust_column_instead_of_hail():
