@@ -539,12 +539,16 @@ def fetch_wwo(lat=None, lon=None, api_key=None):
         "q": f"{lat},{lon}",
         "format": "json",
         "tp": "1",
-        "num_of_days": 14,
+        "num_of_days": 5,
         "includelocation": "1",
     }
     resp = request_with_retry(WWO_URL, params, timeout=30)
+    data = resp.get("data", resp)
+    if data.get("error"):
+        print(f"[warn] wwo World Weather Online: {data['error']}")
+        return []
     rows = []
-    for day in resp.get("weather", []):
+    for day in data.get("weather", []):
         for h in day.get("hourly", []):
             time_str = h.get("time")
             if time_str is None:
