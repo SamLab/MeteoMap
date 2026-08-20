@@ -624,7 +624,7 @@ function buildWarnings(){
     const s=findSrc(list,precipMin),c=findCon(list,precipMin);
     const rows=[];
     if(s>=0&&s!==c){const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list,precipMin)+' · '+sLabel+'</div>');}
-    if(c>=0){const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+    if(c>=0){const cL=sourceList(c,list,precipMin);const cLabel=cL.length>1?('по '+cL.length+' моделям'):cL.join(' и ');rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · '+cLabel+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
