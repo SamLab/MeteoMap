@@ -248,7 +248,7 @@ const VAR_NAMES={
  snowfall:'Снег (см)',weather_code:'Погода (WMO)',pressure_msl:'Давление (мм рт. ст.)',cloud_cover:'Облачность (%)',
  wind_speed_10m:'Ветер (м/с)',wind_direction_10m:'Направление ветра (°)',wind_gusts_10m:'Порывы (м/с)',
  visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)',cape:'CAPE (Дж/кг)'};
-const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','relative_humidity_2m','pressure_msl','cloud_cover','cape'];
+const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','precipitation_probability','relative_humidity_2m','pressure_msl','cloud_cover','cape'];
 const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08d1f','#b04faf','#4168d8','#6faf2f','#cc4f9a','#2f9d8f','#c98a2f'];
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
@@ -624,7 +624,7 @@ function buildWarnings(){
     const s=findSrc(list,precipMin),c=findCon(list,precipMin);
     const rows=[];
     if(s>=0&&s!==c){const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list,precipMin)+' · '+sLabel+'</div>');}
-    if(c>=0){rows.push('<div class="wr2">'+tstr(c)+wet(c)+'</div>');}
+    if(c>=0){const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
