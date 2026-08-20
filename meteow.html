@@ -63,7 +63,7 @@ body{
 .d10mm{font-size:9px;color:#666;white-space:nowrap;padding:2px 0}
 .d10wind{display:none}
 .d10cond{display:none}
-.d10day{font-size:9px;color:#666;border-top:1px dashed var(--line);padding-top:3px;margin-top:1px;white-space:nowrap}
+.d10day{font-size:11px;color:#666;border-top:1px dashed var(--line);padding-top:3px;margin-top:1px;white-space:nowrap}
 .d10day b{color:#222}
 .err{color:var(--muted);font-size:12px;padding:8px 2px}
 </style>
@@ -237,9 +237,11 @@ function render(data){
 
   var days = data.daily_time;
   var daily = data.daily;
+  var todayStr = now.toISOString().slice(0,10);
   var arr = [];
   for (var di = 0; di < days.length; di++){
     var dateStr = days[di];
+    if (dateStr <= todayStr) continue;
     var d = new Date(dateStr + 'T12:00:00');
     var idx15 = -1;
     for (var j = 0; j < times.length; j++){
