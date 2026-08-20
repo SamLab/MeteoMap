@@ -54,6 +54,7 @@ jobs:
           cp index.html _site/
           cp radar.html _site/
           cp meteo.html _site/
+          cp meteow.html _site/
           cp -r data _site/
           echo "" > _site/.nojekyll
 
