@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeteoMap — прогноз на 16 дней</title>
+<style>
+:root{
+  --bg:#1b2028; --card:#232a35; --line:#2f3744;
+  --text:#e8ecf3; --muted:#8b94a7;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f6fa; --card:#ffffff; --line:#dde2ed;
+    --text:#1f2637; --muted:#5c6579;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  padding:10px;overflow-x:auto;overflow-y:hidden;
+}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
+  max-width:1200px;margin:0 auto;padding:10px 12px;
+}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.city{font-size:15px;font-weight:600}
+.updated{font-size:11px;color:var(--muted)}
+.d10wrap{overflow-x:auto;padding:2px 0}
+.d10strip{display:flex;width:100%;min-width:100%}
+.d10col{flex:1;min-width:70px;text-align:center;position:relative}
+.d10tube{height:135px;position:relative}
+.d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
+.d10cloud{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75}
+.d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
+.d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
+.d10tday{color:#c0392b}
+.d10tnight{color:#2c6f9b}
+.d10mm{font-size:10.5px;color:#666;padding:6px 0 2px;white-space:nowrap}
+.d10wind{font-size:10.5px;color:#666;padding-bottom:3px;white-space:nowrap}
+.d10cond{font-size:10px;color:#555;min-height:26px;display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}
+.d10cond .ic{font-size:15px}
+.d10day{font-size:10.5px;color:#666;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;white-space:nowrap}
+.d10day b{color:#222}
+.err{color:var(--muted);font-size:12px;padding:8px 2px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <span class="city" id="city">MeteoMap — На 16 дней</span>
+    <span class="updated" id="updated"></span>
+  </div>
+  <div class="d10wrap"><div class="d10strip" id="strip"></div></div>
+</div>
+<script>
+(function(){
+'use strict';
+
+var CITIES = {
+  yaroslavl: 'Ярославль',
+  balakirevo: 'Балакирево',
+  tsedenevo: 'Цеденево',
+  moscow: 'Москва'
+};
+
+var WMO = {
+  0:{e:'\u2600\uFE0F',l:'Ясно'}, 1:{e:'\uD83C\uDF24',l:'Преим. ясно'}, 2:{e:'\u26C5',l:'Переменная облачность'},
+  3:{e:'\u2601\uFE0F',l:'Пасмурно'}, 45:{e:'\uD83C\uDF2B',l:'Туман'}, 48:{e:'\uD83C\uDF2B',l:'Туман'},
+  51:{e:'\uD83C\uDF27',l:'Морось'}, 53:{e:'\uD83C\uDF27',l:'Морось'}, 55:{e:'\uD83C\uDF27',l:'Морось'},
+  56:{e:'\uD83C\uDF27',l:'Ледяная морось'}, 57:{e:'\uD83C\uDF27',l:'Ледяная морось'},
+  61:{e:'\uD83C\uDF27',l:'Небольшой дождь'}, 63:{e:'\uD83C\uDF27',l:'Дождь'}, 65:{e:'\uD83C\uDF27',l:'Сильный дождь'},
+  66:{e:'\uD83C\uDF27',l:'Ледяной дождь'}, 67:{e:'\uD83C\uDF27',l:'Ледяной дождь'},
+  71:{e:'\uD83C\uDF28',l:'Снег'}, 73:{e:'\uD83C\uDF28',l:'Снег'}, 75:{e:'\u2744\uFE0F',l:'Сильный снег'},
+  77:{e:'\u2744\uFE0F',l:'Снежная крупа'},
+  80:{e:'\uD83C\uDF27',l:'Ливень'}, 81:{e:'\uD83C\uDF27',l:'Ливень'}, 82:{e:'\u26C8',l:'Сильный ливень'},
+  85:{e:'\uD83C\uDF28',l:'Снегопад'}, 86:{e:'\uD83C\uDF28',l:'Снегопад'},
+  95:{e:'\u26C8',l:'Гроза'}, 96:{e:'\u26C8',l:'Гроза с градом'}, 99:{e:'\u26C8',l:'Гроза с градом'}
+};
+
+var DOW = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+var DEFAULT_CITY = 'tsedenevo';
+var REFRESH_MS = 15 * 60 * 1000;
+
+function getParam(name, def){
+  var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
+  return m ? decodeURIComponent(m[1]) : def;
+}
+
+var city = getParam('city', DEFAULT_CITY);
+if (!CITIES[city]) city = DEFAULT_CITY;
+
+var strip = document.getElementById('strip');
+var updEl = document.getElementById('updated');
+
+function relUrl(){ return 'data/' + city + '.json'; }
+function absUrl(){ return 'https://samlab.github.io/MeteoMap/data/' + city + '.json'; }
+
+function load(){
+  fetch(relUrl(), {cache:'no-cache'})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(render)
+    .catch(function(){
+      return fetch(absUrl(), {cache:'no-cache'})
+        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(render)
+        .catch(showError);
+    });
+}
+
+function temp(v){ return v==null ? '\u2014' : (v>0?'+':'') + Math.round(v) + '\u00B0'; }
+function num(v){ return v==null ? '\u2014' : Math.round(v); }
+function fmtP(v){ return v==null ? '\u2014' : (v>0&&v<0.1 ? (Math.round(v*100)/100) : (Math.round(v*10)/10)); }
+function rumbFull(d){
+  var r=['С','ССВ','СВ','ВСВ','В','ВЮВ','ЮВ','ЮЮВ','Ю','ЮЮЗ','ЮЗ','ЗЮЗ','З','ЗСЗ','СЗ','ССЗ'];
+  return r[Math.round(d/22.5)%16];
+}
+
+function render(data){
+  if (!data || !data.daily_time || !data.daily) return showError('Нет данных');
+
+  var days = data.daily_time;
+  var daily = data.daily;
+  var weighted = data.weighted || {};
+  var times = (data.time || []).map(function(t){ return new Date(t); });
+
+  var arr = [];
+  for (var di = 0; di < days.length; di++){
+    var dateStr = days[di];
+    var d = new Date(dateStr + 'T12:00:00');
+
+    var idx15 = -1;
+    for (var j = 0; j < times.length; j++){
+      if (times[j].toDateString() === d.toDateString() && times[j].getHours() === 15){ idx15 = j; break; }
+    }
+    var code = (idx15 >= 0 && weighted.weather_code) ? Math.round(weighted.weather_code[idx15]) : 0;
+    var w = WMO[code] || {e:'\uD83C\uDF21', l:'Код ' + code};
+
+    var tmin = daily.temperature_2m_min ? daily.temperature_2m_min[di] : null;
+    var tmax = daily.temperature_2m_max ? daily.temperature_2m_max[di] : null;
+    var pr = daily.precipitation_sum ? daily.precipitation_sum[di] : null;
+    var pp = daily.precipitation_probability_max ? daily.precipitation_probability_max[di] : null;
+    var cl = daily.cloud_cover_mean ? daily.cloud_cover_mean[di] : null;
+    var ws = daily.wind_speed_10m_max ? daily.wind_speed_10m_max[di] : null;
+    var wd = daily.wind_direction_10m_dominant ? daily.wind_direction_10m_dominant[di] : null;
+    var arrow = wd==null?'':' \u2191';
+
+    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,arrow:arrow,we:w.e,d:d});
+  }
+
+  var lo = Infinity, hi = -Infinity;
+  for (var i = 0; i < arr.length; i++){
+    if (arr[i].tmin != null && arr[i].tmin < lo) lo = arr[i].tmin;
+    if (arr[i].tmax != null && arr[i].tmax > hi) hi = arr[i].tmax;
+  }
+  if (!isFinite(lo) || !isFinite(hi) || hi <= lo){ lo = 0; hi = 30; }
+  var span = hi - lo;
+  var TOP = 16, BTM = 135 - 16;
+  var SCALE = span > 0 ? (BTM - TOP) / span : 0;
+
+  function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
+
+  var html = '';
+  for (var di = 0; di < arr.length; di++){
+    var x = arr[di];
+    var y1 = yT(x.tmax), y2 = yT(x.tmin);
+    var h = (y1==null||y2==null) ? 0 : Math.max(2, y2 - y1);
+    var pR = x.pr != null ? Math.max(0, Math.round(x.pr / 50 * 100)) : 0;
+    var pC = Math.max(0, Math.min(100, Math.round(x.cl || 0)));
+
+    html += '<div class="d10col"><div class="d10tube">' +
+      '<div class="d10cloud" style="height:' + pC + '%"></div>' +
+      '<div class="d10prec" style="height:' + pR + '%"></div>' +
+      '<div class="d10tbar" style="top:' + y1 + 'px;height:' + h + 'px"></div>' +
+      '<div class="d10tday" style="top:' + (y1-15) + 'px">' + temp(x.tmax) + '</div>' +
+      '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
+      '</div>' +
+      '<div class="d10mm">' + (x.pr==null?'\u2014':fmtP(x.pr)) + '\u043C\u043C / ' + (x.pp==null?'\u2014':num(x.pp)) + '%</div>' +
+      '<div class="d10cond"><span class="ic">' + x.we + '</span>' + (x.cl==null?'':(' \u043E\u0431\u043B\u0430\u043A\u0430 ' + num(x.cl) + '%')) + '</div>' +
+      '<div class="d10wind">' + (x.ws==null?'\u2014':x.arrow + ' ' + num(x.ws) + ' \u043C/\u0441') + '</div>' +
+      '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
+      '</div>';
+  }
+
+  strip.innerHTML = html;
+
+  var gen = data.generated_at ? new Date(data.generated_at) : null;
+  updEl.textContent = gen ? pad2(gen.getHours()) + ':' + pad2(gen.getMinutes()) : '\u2014';
+}
+
+function showError(msg){
+  strip.innerHTML = '<div class="err">\u26A0\uFE0F \u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435' + (msg ? ' (' + msg + ')' : '') + '</div>';
+  updEl.textContent = '';
+}
+
+function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+load();
+setInterval(load, REFRESH_MS);
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) load();
+});
+})();
+</script>
+</body>
+</html>
