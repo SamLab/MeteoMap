@@ -185,7 +185,7 @@ function buildSummary(times, data, rawData, idx){
 
 function fmtP(v){
   if(v==null) return '\u2014';
-  return Math.round(v*100)/100;
+  return Math.round(v*10)/10;
 }
 
 function temp(v){ return v==null ? '\u2014' : (v>0?'+':'') + Math.round(v) + '\u00B0'; }
@@ -281,7 +281,7 @@ function render(data){
       '<div class="d10tday" style="top:' + (y1-15) + 'px">' + temp(x.tmax) + '</div>' +
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
-      '<div class="d10mm">' + (x.pr==null?'\u2014':fmtP(x.pr)) + ' \u043C\u043C</div>' +
+      '<div class="d10mm">' + (x.pr==null?'\u2014':Math.round(x.pr*10)/10) + ' \u043C\u043C</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
       '<div class="d10wind">' + (x.ws==null?'\u2014':num(x.ws) + ' \u043C/\u0441') + '</div>' +
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
