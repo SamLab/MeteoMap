@@ -3,16 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MeteoMap — прогноз на 16 дней</title>
+<title>MeteoMap — почасовой + 16 дней</title>
 <style>
 :root{
   --bg:#1b2028; --card:#232a35; --line:#2f3744;
   --text:#e8ecf3; --muted:#8b94a7;
+  --rain:#4fc3f7; --rain-bg:rgba(79,195,247,.08);
 }
 @media (prefers-color-scheme: light){
   :root{
     --bg:#f4f6fa; --card:#ffffff; --line:#dde2ed;
     --text:#1f2637; --muted:#5c6579;
+    --rain:#0288d1; --rain-bg:rgba(2,136,209,.07);
   }
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -29,6 +31,25 @@ body{
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .city{font-size:15px;font-weight:600}
 .updated{font-size:11px;color:var(--muted)}
+.strip{display:flex;gap:2px;padding:2px 0 4px}
+.hour{
+  flex:1 1 0;min-width:0;
+  text-align:center;font-size:12px;
+  padding:6px 1px;border-radius:10px;
+  overflow:hidden;
+}
+@media (max-width:420px){
+  .hour .ht{font-size:9px}
+  .hour .he{font-size:17px}
+  .hour .htemp{font-size:11.5px}
+  .hour .hpp,.hour .hmm{font-size:10.5px}
+}
+.hour.rain{background:var(--rain-bg)}
+.hour .ht{color:var(--muted);font-size:10.5px;white-space:nowrap}
+.hour .he{font-size:21px;line-height:1.35}
+.hour .htemp{font-weight:600;font-size:13.5px}
+.hour .hpp{color:var(--rain);font-size:12px;min-height:13px;white-space:nowrap}
+.hour .hmm{color:var(--rain);font-size:11.5px;min-height:13px;white-space:nowrap}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:100%;min-width:100%}
 .d10col{flex:1;min-width:70px;text-align:center;position:relative}
@@ -51,10 +72,11 @@ body{
 <body>
 <div class="card">
   <div class="head">
-    <span class="city" id="city">MeteoMap — На 16 дней</span>
+    <span class="city" id="city">MeteoMap</span>
     <span class="updated" id="updated"></span>
   </div>
-  <div class="d10wrap"><div class="d10strip" id="strip"></div></div>
+  <div class="strip" id="strip"></div>
+  <div class="d10wrap"><div class="d10strip" id="d10strip"></div></div>
 </div>
 <script>
 (function(){
@@ -84,6 +106,7 @@ var WMO = {
 var DOW = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 
 var DEFAULT_CITY = 'tsedenevo';
+var DEFAULT_HOURS = 14;
 var REFRESH_MS = 15 * 60 * 1000;
 
 function getParam(name, def){
@@ -93,9 +116,15 @@ function getParam(name, def){
 
 var city = getParam('city', DEFAULT_CITY);
 if (!CITIES[city]) city = DEFAULT_CITY;
+var hours = parseInt(getParam('hours', DEFAULT_HOURS), 10);
+if (!(hours >= 1 && hours <= 24)) hours = DEFAULT_HOURS;
 
 var strip = document.getElementById('strip');
+var d10strip = document.getElementById('d10strip');
+var cityEl = document.getElementById('city');
 var updEl = document.getElementById('updated');
+
+cityEl.textContent = '\uD83C\uDF24';
 
 function relUrl(){ return 'data/' + city + '.json'; }
 function absUrl(){ return 'https://samlab.github.io/MeteoMap/data/' + city + '.json'; }
@@ -112,44 +141,120 @@ function load(){
     });
 }
 
-function temp(v){ return v==null ? '\u2014' : (v>0?'+':'') + Math.round(v) + '\u00B0'; }
-function num(v){ return v==null ? '\u2014' : Math.round(v); }
-function fmtP(v){ return v==null ? '\u2014' : (v>0&&v<0.1 ? (Math.round(v*100)/100) : (Math.round(v*10)/10)); }
-function rumbFull(d){
-  var r=['С','ССВ','СВ','ВСВ','В','ВЮВ','ЮВ','ЮЮВ','Ю','ЮЮЗ','ЮЗ','ЗЮЗ','З','ЗСЗ','СЗ','ССЗ'];
-  return r[Math.round(d/22.5)%16];
+function buildSummary(times, data, rawData, idx){
+  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  var now=new Date();
+  var todayStr=now.toDateString();
+  function hasRainAt(j){var code=data.weather_code?Math.round(data.weather_code[j]):0;return RAIN.indexOf(code)>=0;}
+  function modelRainCount(j){
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;
+  }
+  var rainHour=-1,jLast=-1;
+  for(var j=idx;j<times.length;j++){
+    if(times[j].toDateString()!==todayStr) break;
+    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}
+  }
+  var fromModels=false;
+  if(rainHour<0){
+    for(var j=idx;j<times.length;j++){
+      if(times[j].toDateString()!==todayStr) break;
+      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}
+    }
+    if(rainHour>=0)fromModels=true;
+  }
+  if(rainHour<0) return '\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0434\u043D\u044F \u0431\u0435\u0437 \u0434\u043E\u0436\u0434\u044F';
+  var sumPr=0,maxPp=0;
+  for(var j=rainHour;j<=jLast;j++){
+    var p=data.precipitation?data.precipitation[j]:0;
+    if(p!=null)sumPr+=p;
+    var pp=data.precipitation_probability?data.precipitation_probability[j]:0;
+    if(pp!=null&&pp>maxPp)maxPp=pp;
+  }
+  var jPeak=rainHour,peakPr=-1;
+  for(var j=rainHour;j<=jLast;j++){
+    var p=data.precipitation?data.precipitation[j]:0;
+    if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
+  }
+  var rainType=(WMO[data.weather_code?Math.round(data.weather_code[jPeak]):0]||{}).l||'\u0414\u043E\u0436\u0434\u044C';
+  var st=pad2(times[rainHour].getHours())+':00';
+  var en=pad2(times[jLast].getHours())+':00';
+  var timeStr=st===en?'\u0432 '+st:'\u0441 '+st+' \u0434\u043E '+en;
+  var txt=rainType+' '+timeStr+' \u043D\u0430 '+fmtP(sumPr)+'\u043C\u043C \u0441 '+Math.round(maxPp)+'%';
+  if(fromModels) return '\u0412\u0435\u0440\u043E\u044F\u0442\u043D\u044B \u041E\u0441\u0430\u0434\u043A\u0438 '+timeStr+' \u043D\u0430 '+fmtP(sumPr)+'\u043C\u043C \u0441 '+Math.round(maxPp)+'%';
+  return txt;
 }
 
+function fmtP(v){
+  if(v==null) return '\u2014';
+  return Math.round(v*100)/100;
+}
+
+function temp(v){ return v==null ? '\u2014' : (v>0?'+':'') + Math.round(v) + '\u00B0'; }
+function num(v){ return v==null ? '\u2014' : Math.round(v); }
+
 function render(data){
-  if (!data || !data.daily_time || !data.daily) return showError('Нет данных');
+  if (!data || !data.time || !data.weighted) return showError('\u041D\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0445');
+
+  var times = data.time.map(function(t){ return new Date(t); });
+  var now = new Date();
+
+  var idx = -1;
+  for (var i = 0; i < times.length; i++){
+    if (times[i] <= now) idx = i;
+    else break;
+  }
+  if (idx < 0) idx = 0;
+
+  var summary = buildSummary(times, data.weighted, data.models, idx);
+  cityEl.textContent = '\uD83C\uDF24 ' + summary;
+
+  var html = '';
+  for (var h = 0; h < hours && idx + h < times.length; h++){
+    var i = idx + h;
+    var t = times[i];
+    var code = data.weighted.weather_code ? Math.round(data.weighted.weather_code[i]) : 0;
+    var w = WMO[code] || {e:'\uD83C\uDF21', l:'\u041A\u043E\u0434 ' + code};
+    var temperature = Math.round(data.weighted.temperature_2m[i]);
+    var prob = data.weighted.precipitation_probability ? Math.round(data.weighted.precipitation_probability[i]) : 0;
+    var mm = data.weighted.precipitation ? data.weighted.precipitation[i] : 0;
+    var rain = prob >= 50 || mm >= 0.1;
+    var tempStr = (temperature > 0 ? '+' : '') + temperature + '\u00B0';
+
+    var drop = (mm >= 0.05) ? '\uD83D\uDCA7' : '';
+    var probStr = prob > 0 ? (drop + prob + '%') : '';
+    var mmStr = fmtMm(mm);
+
+    html += '<div class="hour' + (rain ? ' rain' : '') + '" title="' + w.l + '">' +
+      '<div class="ht">' + pad2(t.getHours()) + ':00</div>' +
+      '<div class="he">' + w.e + '</div>' +
+      '<div class="htemp">' + tempStr + '</div>' +
+      '<div class="hpp">' + probStr + '</div>' +
+      '<div class="hmm">' + mmStr + '</div>' +
+      '</div>';
+  }
+  strip.innerHTML = html;
+
+  if (!data.daily_time || !data.daily){ d10strip.innerHTML = ''; return; }
 
   var days = data.daily_time;
   var daily = data.daily;
-  var weighted = data.weighted || {};
-  var times = (data.time || []).map(function(t){ return new Date(t); });
-
   var arr = [];
   for (var di = 0; di < days.length; di++){
     var dateStr = days[di];
     var d = new Date(dateStr + 'T12:00:00');
-
     var idx15 = -1;
     for (var j = 0; j < times.length; j++){
       if (times[j].toDateString() === d.toDateString() && times[j].getHours() === 15){ idx15 = j; break; }
     }
-    var code = (idx15 >= 0 && weighted.weather_code) ? Math.round(weighted.weather_code[idx15]) : 0;
-    var w = WMO[code] || {e:'\uD83C\uDF21', l:'Код ' + code};
-
+    var code2 = (idx15 >= 0 && data.weighted.weather_code) ? Math.round(data.weighted.weather_code[idx15]) : 0;
+    var w2 = WMO[code2] || {e:'\uD83C\uDF21', l:'\u041A\u043E\u0434 ' + code2};
     var tmin = daily.temperature_2m_min ? daily.temperature_2m_min[di] : null;
     var tmax = daily.temperature_2m_max ? daily.temperature_2m_max[di] : null;
     var pr = daily.precipitation_sum ? daily.precipitation_sum[di] : null;
     var pp = daily.precipitation_probability_max ? daily.precipitation_probability_max[di] : null;
     var cl = daily.cloud_cover_mean ? daily.cloud_cover_mean[di] : null;
     var ws = daily.wind_speed_10m_max ? daily.wind_speed_10m_max[di] : null;
-    var wd = daily.wind_direction_10m_dominant ? daily.wind_direction_10m_dominant[di] : null;
-    var arrow = wd==null?'':' \u2191';
-
-    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,arrow:arrow,we:w.e,d:d});
+    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,we:w2.e,d:d});
   }
 
   var lo = Infinity, hi = -Infinity;
@@ -161,32 +266,29 @@ function render(data){
   var span = hi - lo;
   var TOP = 16, BTM = 135 - 16;
   var SCALE = span > 0 ? (BTM - TOP) / span : 0;
-
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
-  var html = '';
+  var html10 = '';
   for (var di = 0; di < arr.length; di++){
     var x = arr[di];
     var y1 = yT(x.tmax), y2 = yT(x.tmin);
     var h = (y1==null||y2==null) ? 0 : Math.max(2, y2 - y1);
     var pR = x.pr != null ? Math.max(0, Math.round(x.pr / 50 * 100)) : 0;
     var pC = Math.max(0, Math.min(100, Math.round(x.cl || 0)));
-
-    html += '<div class="d10col"><div class="d10tube">' +
+    html10 += '<div class="d10col"><div class="d10tube">' +
       '<div class="d10cloud" style="height:' + pC + '%"></div>' +
       '<div class="d10prec" style="height:' + pR + '%"></div>' +
       '<div class="d10tbar" style="top:' + y1 + 'px;height:' + h + 'px"></div>' +
       '<div class="d10tday" style="top:' + (y1-15) + 'px">' + temp(x.tmax) + '</div>' +
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
-      '<div class="d10mm">' + (x.pr==null?'\u2014':fmtP(x.pr)) + '\u043C\u043C / ' + (x.pp==null?'\u2014':num(x.pp)) + '%</div>' +
-      '<div class="d10cond"><span class="ic">' + x.we + '</span>' + (x.cl==null?'':(' \u043E\u0431\u043B\u0430\u043A\u0430 ' + num(x.cl) + '%')) + '</div>' +
-      '<div class="d10wind">' + (x.ws==null?'\u2014':x.arrow + ' ' + num(x.ws) + ' \u043C/\u0441') + '</div>' +
+      '<div class="d10mm">' + (x.pr==null?'\u2014':fmtP(x.pr)) + ' \u043C\u043C / ' + (x.pp==null?'\u2014':num(x.pp)) + '%</div>' +
+      '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
+      '<div class="d10wind">' + (x.ws==null?'\u2014':num(x.ws) + ' \u043C/\u0441') + '</div>' +
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
-
-  strip.innerHTML = html;
+  d10strip.innerHTML = html10;
 
   var gen = data.generated_at ? new Date(data.generated_at) : null;
   updEl.textContent = gen ? pad2(gen.getHours()) + ':' + pad2(gen.getMinutes()) : '\u2014';
@@ -194,10 +296,18 @@ function render(data){
 
 function showError(msg){
   strip.innerHTML = '<div class="err">\u26A0\uFE0F \u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435' + (msg ? ' (' + msg + ')' : '') + '</div>';
+  d10strip.innerHTML = '';
   updEl.textContent = '';
+  cityEl.textContent = '\uD83C\uDF24';
 }
 
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
+
+function fmtMm(v){
+  if (v == null || v < 0.05) return '0 \u043C\u043C';
+  var x = Math.round(v * 10) / 10;
+  return (x >= 10 ? Math.round(x) : x.toFixed(1).replace('.', ',')) + ' \u043C\u043C';
+}
 
 load();
 setInterval(load, REFRESH_MS);
