@@ -52,19 +52,18 @@ body{
 .hour .hmm{color:var(--rain);font-size:11.5px;min-height:13px;white-space:nowrap}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:100%;min-width:100%}
-.d10col{flex:1;min-width:70px;text-align:center;position:relative}
-.d10tube{height:135px;position:relative}
+.d10col{flex:1;min-width:50px;text-align:center;position:relative}
+.d10tube{height:50px;position:relative}
 .d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
 .d10cloud{position:absolute;left:0;right:0;top:0;background:linear-gradient(#eceff1,#b0bec5);opacity:.75}
-.d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
-.d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
+.d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:6px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:3px}
+.d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;white-space:nowrap;line-height:1}
 .d10tday{color:#c0392b}
 .d10tnight{color:#2c6f9b}
-.d10mm{font-size:10.5px;color:#666;padding:6px 0 2px;white-space:nowrap}
-.d10wind{font-size:10.5px;color:#666;padding-bottom:3px;white-space:nowrap}
-.d10cond{font-size:10px;color:#555;min-height:26px;display:flex;align-items:center;justify-content:center;gap:1px;white-space:nowrap}
-.d10cond .ic{font-size:15px}
-.d10day{font-size:10.5px;color:#666;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;white-space:nowrap}
+.d10mm{font-size:9px;color:#666;white-space:nowrap;padding:2px 0}
+.d10wind{display:none}
+.d10cond{display:none}
+.d10day{font-size:9px;color:#666;border-top:1px dashed var(--line);padding-top:3px;margin-top:1px;white-space:nowrap}
 .d10day b{color:#222}
 .err{color:var(--muted);font-size:12px;padding:8px 2px}
 </style>
@@ -264,7 +263,7 @@ function render(data){
   }
   if (!isFinite(lo) || !isFinite(hi) || hi <= lo){ lo = 0; hi = 30; }
   var span = hi - lo;
-  var TOP = 16, BTM = 135 - 16;
+  var TOP = 12, BTM = 50 - 8;
   var SCALE = span > 0 ? (BTM - TOP) / span : 0;
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
