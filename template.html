@@ -763,10 +763,10 @@ function cmpColOrder(codes){
   const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo'&&c!=='xweather'&&c!=='tomorrow');
   const ins=(after,code)=>{if(!codes.includes(code))return;const i=out.indexOf(after);if(i>=0)out.splice(i+1,0,code);else out.push(code);};
   ins('google_weathernext2_ensemble','xweather');
-  ins('xweather','tomorrow');
-  ins('tomorrow','vc');
+  ins('ncep_gfs_seamless','vc');
   ins('dwd_icon_global','mb');
-  ins('ukmo_global_deterministic_10km','wwo');
+  ins('ukmo_global_deterministic_10km','tomorrow');
+  ins('tomorrow','wwo');
   return out;
 }
 function buildCmpTable(){
