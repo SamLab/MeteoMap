@@ -712,7 +712,7 @@ def fetch_tomorrow(lat=None, lon=None, api_key=None):
     }
     resp = request_with_retry(TW_URL, params, timeout=30)
     rows = []
-    hourly = resp.get("data", {}).get("timelines", {}).get("hourly", [])
+    hourly = resp.get("timelines", {}).get("hourly", resp.get("data", {}).get("timelines", {}).get("hourly", []))
     for entry in hourly:
         ts = entry.get("time")
         if ts is None:
@@ -734,7 +734,7 @@ def fetch_tomorrow(lat=None, lon=None, api_key=None):
             "wind_speed_10m": v.get("windSpeed"),
             "wind_direction_10m": v.get("windDirection"),
             "wind_gusts_10m": v.get("windGust"),
-            "visibility": round(v.get("visibility", 0))
+            "visibility": round(v.get("visibility", 0) * 1000)
             if v.get("visibility") is not None else None,
         })
     return rows
