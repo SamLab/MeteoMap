@@ -132,6 +132,25 @@ XW_URL = "https://data.api.xweather.com/forecasts"
 XW_CODE = "xweather"
 XW_NAME = "Xweather"
 
+TW_URL = "https://api.tomorrow.io/v4/weather/forecast"
+TW_CODE = "tomorrow"
+TW_NAME = "Tomorrow.io"
+
+# Tomorrow.io weather codes -> WMO
+TW_WMO = {
+    1000: 0, 1100: 1, 1001: 2, 1101: 2, 1002: 3, 1102: 3,
+    2000: 45, 2100: 45,
+    3000: 51, 3001: 51, 3002: 55,
+    4000: 61, 4100: 61, 4001: 61, 4002: 65,
+    4200: 80, 4300: 80, 4400: 82,
+    5000: 71, 5100: 71, 5001: 71, 5002: 75,
+    5200: 85, 5300: 86,
+    6000: 56, 6001: 56, 6002: 57,
+    6100: 66, 6200: 66, 6201: 67,
+    7000: 77, 7100: 77, 7200: 77, 7300: 77,
+    8000: 95, 8100: 95, 8200: 95,
+}
+
 # Meteoblue hourly pictocode -> WMO (docs.meteoblue.com/en/meteo/variables/pictograms)
 MB_WMO = {
     1: 0, 2: 0, 3: 0,
@@ -667,6 +686,60 @@ def fetch_xw(lat=None, lon=None, api_key=None):
     return rows
 
 
+def fetch_tomorrow(lat=None, lon=None, api_key=None):
+    """Tomorrow.io hourly forecast -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    key = api_key or os.environ.get("TOMORROW_KEY")
+    if not key:
+        print("[warn] TOMORROW_KEY not set, skipping Tomorrow.io")
+        return []
+    fields = [
+        "temperature", "temperatureApparent", "dewPoint",
+        "humidity", "precipitationProbability", "precipitationIntensity",
+        "weatherCode", "cloudCover", "pressureSurfaceLevel",
+        "windSpeed", "windDirection", "windGust",
+        "visibility",
+    ]
+    params = {
+        "location": f"{lat},{lon}",
+        "timesteps": "1h",
+        "units": "metric",
+        "fields": ",".join(fields),
+        "apikey": key,
+    }
+    resp = request_with_retry(TW_URL, params, timeout=30)
+    rows = []
+    hourly = resp.get("data", {}).get("timelines", {}).get("hourly", [])
+    for entry in hourly:
+        ts = entry.get("time")
+        if ts is None:
+            continue
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        v = entry.get("values", {})
+        wmo = TW_WMO.get(v.get("weatherCode"))
+        rows.append({
+            "utc": dt,
+            "temperature_2m": v.get("temperature"),
+            "apparent_temperature": v.get("temperatureApparent"),
+            "dew_point_2m": v.get("dewPoint"),
+            "relative_humidity_2m": v.get("humidity"),
+            "precipitation": v.get("precipitationIntensity"),
+            "precipitation_probability": v.get("precipitationProbability"),
+            "weather_code": wmo,
+            "pressure_msl": v.get("pressureSurfaceLevel"),
+            "cloud_cover": v.get("cloudCover"),
+            "wind_speed_10m": v.get("windSpeed"),
+            "wind_direction_10m": v.get("windDirection"),
+            "wind_gusts_10m": v.get("windGust"),
+            "visibility": round(v.get("visibility", 0))
+            if v.get("visibility") is not None else None,
+        })
+    return rows
+
+
 _EXT = ["yaroslavl", "tsedenevo"]
 EXTERNAL_MODELS = [
     (OWM_CODE, OWM_NAME, fetch_owm, _EXT),
@@ -674,6 +747,7 @@ EXTERNAL_MODELS = [
     (MB_CODE, MB_NAME, fetch_mb, _EXT),
     (WWO_CODE, WWO_NAME, fetch_wwo, _EXT),
     (XW_CODE, XW_NAME, fetch_xw, _EXT),
+    (TW_CODE, TW_NAME, fetch_tomorrow, _EXT),
 ]
 
 
@@ -795,7 +869,7 @@ def weather_code_consensus(codes):
     return max(top, key=lambda c: (WEATHER_PRIORITY.get(c, 0), c))
 
 
-_EXTERNAL_LOW = {OWM_CODE, VC_CODE, MB_CODE, WWO_CODE}
+_EXTERNAL_LOW = {OWM_CODE, VC_CODE, MB_CODE, WWO_CODE, TW_CODE}
 _EXTERNAL_MED = {XW_CODE}
 
 def make_weights(mae_by_model, variable):

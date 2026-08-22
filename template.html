@@ -226,7 +226,7 @@ a{color:var(--accent)}
         JMA GSM — Япония, GEM Global — Канада, DWD ICON — Германия,<br>
         UKMO Global — Великобритания, CMA GRAPES — Китай,<br>
         Météo-France — Франция.</li>
-      <li><b>Внешние источники</b>: <b>Yr.no</b> — MET Norway; <b>OpenWeather</b>; <b>Visual Crossing</b>; <b>Meteoblue</b>; <b>World Weather</b>; <b>Xweather</b> (по API-ключам).</li>
+      <li><b>Внешние источники</b>: <b>Yr.no</b> — MET Norway; <b>OpenWeather</b>; <b>Visual Crossing</b>; <b>Meteoblue</b>; <b>World Weather</b>; <b>Xweather</b>; <b>Tomorrow.io</b> (по API-ключам).</li>
     </ul>
     <h2>Виджет</h2>
     <ul>
@@ -760,10 +760,11 @@ function updateLegend(){
 // comparison table
 let cmpVar='temperature_2m';
 function cmpColOrder(codes){
-  const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo'&&c!=='xweather');
+  const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo'&&c!=='xweather'&&c!=='tomorrow');
   const ins=(after,code)=>{if(!codes.includes(code))return;const i=out.indexOf(after);if(i>=0)out.splice(i+1,0,code);else out.push(code);};
   ins('google_weathernext2_ensemble','xweather');
-  ins('xweather','vc');
+  ins('xweather','tomorrow');
+  ins('tomorrow','vc');
   ins('dwd_icon_global','mb');
   ins('ukmo_global_deterministic_10km','wwo');
   return out;

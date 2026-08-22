@@ -42,6 +42,7 @@ jobs:
           METEOBLUE_KEY: ${{ secrets.METEOBLUE_KEY }}
           WWO_KEY: ${{ secrets.WWO_KEY }}
           XWEATHER_KEY: ${{ secrets.XWEATHER_KEY }}
+          TOMORROW_KEY: ${{ secrets.TOMORROW_KEY }}
           ENABLE_EXTERNAL: "1"
         run: python meteo.py
 
