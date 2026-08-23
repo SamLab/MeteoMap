@@ -8,6 +8,9 @@ LOCATIONS = [
      "external": False},
     {"name": "Лоо", "slug": "loo", "lat": 43.70, "lon": 39.59},
     {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
+    {"name": "Рыбинск", "slug": "rybinsk", "lat": 58.045, "lon": 38.845},
+    {"name": "Борок", "slug": "borok", "lat": 57.975, "lon": 38.227},
+    {"name": "Ростов Великий", "slug": "rostov", "lat": 57.186, "lon": 39.413},
 ]
 TIMEZONE = "Europe/Moscow"
 FORECAST_DAYS = 16
