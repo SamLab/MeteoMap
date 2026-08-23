@@ -626,8 +626,8 @@ function buildWarnings(){
     const rows=[];
     const curN=sourceCountAt(curIdx,list,precipMin);
     if(curN>0&&(curIdx<from)){
-      let endI=curIdx;for(let i=curIdx+1;i<ts.length;i++){if(sourceCountAt(i,list,precipMin)<=0)break;endI=i;}
-      const endH=endI>curIdx?ts[endI].slice(11,16):'';
+      let rainEnd=curIdx;for(let ri=curIdx+1;ri<ts.length;ri++){if(sourceCountAt(ri,list,precipMin)<=0)break;rainEnd=ri;}
+      const endH=rainEnd>curIdx?ts[rainEnd].slice(11,16):'';
       const sL=sourceList(curIdx,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');
       rows.push('<div class="wr2">Идёт'+(endH?' до '+endH:'')+' · '+srcWet(curIdx,list,precipMin)+' · '+sLabel+'</div>');
     }
