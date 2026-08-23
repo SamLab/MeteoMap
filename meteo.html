@@ -221,7 +221,7 @@ function buildSummary(times, data, rawData, idx){
   var st=pad2(times[rainHour].getHours())+'ч';
   var en=pad2(times[jLast].getHours())+'ч';
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'в '+st:'с '+st+' до '+en);
-  var cntStr=' ('+peakModels+'м'+(fromModels?'':'+')+')';
+  var cntStr=' ('+peakModels+'м)';
   var txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%'+cntStr;
   if(fromModels) return 'Вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%'+cntStr;
   return txt;
