@@ -191,6 +191,60 @@ def test_fetch_mb_requires_key(monkeypatch, capsys):
     assert "METEOBLUE_KEY" in capsys.readouterr().out
 
 
+_ROW = {"utc": datetime(2026, 8, 24, 12, 0, tzinfo=timezone.utc),
+        "temperature_2m": 20.0}
+
+
+def test_fetch_mb_cached_reuses_same_hour(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_fetch(lat=None, lon=None):
+        calls.append((lat, lon))
+        return [dict(_ROW)]
+
+    monkeypatch.setattr(meteo, "fetch_mb", fake_fetch)
+    monkeypatch.setenv("MB_CACHE_FILE", str(tmp_path / "mb_cache.json"))
+    r1 = meteo.fetch_mb_cached(lat=57.533, lon=39.905)
+    r2 = meteo.fetch_mb_cached(lat=57.533, lon=39.905)
+    assert len(calls) == 1
+    assert calls[0] == (57.533, 39.905)
+    assert r2[0]["temperature_2m"] == 20.0
+    assert r2[0]["utc"] == _ROW["utc"]
+
+
+def test_fetch_mb_cached_refetches_next_hour(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(meteo, "fetch_mb",
+                        lambda lat=None, lon=None: calls.append(1) or [dict(_ROW)])
+    monkeypatch.setenv("MB_CACHE_FILE", str(tmp_path / "mb_cache.json"))
+    meteo.fetch_mb_cached()
+    monkeypatch.setattr(meteo, "_utc_hour_key", lambda: "2099123123")
+    meteo.fetch_mb_cached()
+    assert len(calls) == 2
+
+
+def test_fetch_mb_cached_no_cache_on_failure(monkeypatch, tmp_path):
+    def boom(lat=None, lon=None):
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(meteo, "fetch_mb", boom)
+    path = tmp_path / "mb_cache.json"
+    monkeypatch.setenv("MB_CACHE_FILE", str(path))
+    with pytest.raises(RuntimeError):
+        meteo.fetch_mb_cached()
+    assert not path.exists()
+
+
+def test_mb_only_for_tsedenevo():
+    for code, _name, _fn, *rest in meteo.EXTERNAL_MODELS:
+        slugs = rest[0] if rest else None
+        if code == meteo.MB_CODE:
+            assert slugs == ["tsedenevo"]
+        elif slugs is not None:
+            assert set(slugs) == set(meteo._EXT)
+
+
+
 def test_align_to_grid_places_external_rows():
     tz = timezone(timedelta(hours=3))
     grid = ["2026-08-06T15:00", "2026-08-06T16:00", "2026-08-06T17:00"]

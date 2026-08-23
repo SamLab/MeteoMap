@@ -531,6 +531,39 @@ def fetch_mb(lat=None, lon=None, api_key=None):
     return rows
 
 
+def _utc_hour_key():
+    return datetime.now(timezone.utc).strftime("%Y%m%d%H")
+
+
+def _mb_cache_path():
+    return os.environ.get("MB_CACHE_FILE") or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "mb_cache.json")
+
+
+def fetch_mb_cached(lat=None, lon=None):
+    """Meteoblue не чаще раза в час: переиспользуем ответ между сборками."""
+    path = _mb_cache_path()
+    hour = _utc_hour_key()
+    try:
+        with open(path, encoding="utf-8") as f:
+            blob = json.load(f)
+        if blob.get("hour") == hour and blob.get("rows"):
+            return [dict(r, utc=datetime.fromisoformat(r["utc"]))
+                    for r in blob["rows"]]
+    except Exception:
+        pass
+    rows = fetch_mb(lat=lat, lon=lon)
+    if rows:
+        try:
+            blob = {"hour": hour,
+                    "rows": [dict(r, utc=r["utc"].isoformat()) for r in rows]}
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(blob, f)
+        except Exception:
+            pass
+    return rows
+
+
 # WWO weather code -> WMO (worldweatheronline.com/weather-api/api/docs/weather-icons)
 WWO_WMO = {
     113: 0, 116: 2, 119: 3, 122: 3, 143: 45,
@@ -747,7 +780,7 @@ _EXT = ["yaroslavl", "tsedenevo"]
 EXTERNAL_MODELS = [
     (OWM_CODE, OWM_NAME, fetch_owm, _EXT),
     (VC_CODE, VC_NAME, fetch_vc, _EXT),
-    (MB_CODE, MB_NAME, fetch_mb, _EXT),
+    (MB_CODE, MB_NAME, fetch_mb_cached, ["tsedenevo"]),
     (WWO_CODE, WWO_NAME, fetch_wwo, _EXT),
     (XW_CODE, XW_NAME, fetch_xw, _EXT),
     (TW_CODE, TW_NAME, fetch_tomorrow, _EXT),

@@ -35,6 +35,14 @@ jobs:
       - name: Run unit tests
         run: python -m pytest tests/ -m "not integration" -q
 
+      - name: Restore Meteoblue hourly cache
+        uses: actions/cache@v4
+        with:
+          path: mb_cache.json
+          key: mb-${{ github.run_id }}
+          restore-keys: |
+            mb-
+
       - name: Generate site
         env:
           OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}

@@ -19,3 +19,6 @@ index.html
 
 # Generated per-city data
 data/
+
+# Meteoblue hourly cache (shared between builds via actions/cache)
+mb_cache.json
