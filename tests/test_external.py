@@ -223,6 +223,20 @@ def test_fetch_mb_cached_refetches_next_hour(monkeypatch, tmp_path):
     assert len(calls) == 2
 
 
+def test_utc_hour_key_buckets_3_hours(monkeypatch):
+    cases = {
+        datetime(2026, 8, 24, 10, 0): "202608243",
+        datetime(2026, 8, 24, 12, 59): "202608244",
+        datetime(2026, 8, 24, 14, 30): "202608244",
+        datetime(2026, 8, 24, 15, 0): "202608245",
+        datetime(2026, 8, 24, 2, 5): "202608240",
+        datetime(2026, 8, 24, 0, 0): "202608240",
+    }
+    for now, key in cases.items():
+        monkeypatch.setattr(meteo, "_utc_now", lambda n=now: n)
+        assert meteo._utc_hour_key() == key
+
+
 def test_fetch_mb_cached_no_cache_on_failure(monkeypatch, tmp_path):
     def boom(lat=None, lon=None):
         raise RuntimeError("down")

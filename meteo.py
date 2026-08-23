@@ -531,8 +531,14 @@ def fetch_mb(lat=None, lon=None, api_key=None):
     return rows
 
 
+def _utc_now():
+    return datetime.now(timezone.utc)
+
+
 def _utc_hour_key():
-    return datetime.now(timezone.utc).strftime("%Y%m%d%H")
+    """Ключ 3-часового окна: Meteoblue опрашивается не чаще раза в 3 часа."""
+    n = _utc_now()
+    return f"{n:%Y%m%d}{n.hour // 3}"
 
 
 def _mb_cache_path():
@@ -541,7 +547,7 @@ def _mb_cache_path():
 
 
 def fetch_mb_cached(lat=None, lon=None):
-    """Meteoblue не чаще раза в час: переиспользуем ответ между сборками."""
+    """Meteoblue не чаще раза в 3 часа: переиспользуем ответ между сборками."""
     path = _mb_cache_path()
     hour = _utc_hour_key()
     try:
