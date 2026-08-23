@@ -1203,7 +1203,7 @@ def main():
         raise SystemExit("no model data available")
 
     external_enabled = os.environ.get("ENABLE_EXTERNAL") == "1"
-    providers = [(YR_CODE, YR_NAME, fetch_yr)]
+    providers = [(YR_CODE, YR_NAME, fetch_yr, _EXT)]
     if external_enabled:
         providers = providers + list(EXTERNAL_MODELS)
     external_rows = fetch_external_providers(
