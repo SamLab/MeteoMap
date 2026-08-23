@@ -155,7 +155,7 @@ def test_help_text_up_to_date():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с)" in tpl
-    assert "Ближайшее — по одной модели, подтверждённое — по двум и более" in tpl
+    assert "Ближайшее — по одной модели, подтверждённое (жирным) — по двум и более" in tpl
     assert "час минимума/максимума дня по консенсусу" in tpl
     assert "Типы погоды" in tpl
     assert "51–57 — морось" in tpl
