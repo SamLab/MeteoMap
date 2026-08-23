@@ -631,8 +631,14 @@ function buildWarnings(){
       const sL=sourceList(curIdx,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');
       rows.push('<div class="wr2">Идёт'+(endH?' до '+endH:'')+' · '+srcWet(curIdx,list,precipMin)+' · '+sLabel+'</div>');
     }
-    if(s>=0&&s!==c){const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+tstr(s)+srcWet(s,list,precipMin)+' · '+sLabel+'</div>');}
-    if(c>=0){const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+tstr(c)+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+    if(s>=0&&s!==c){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<=0)break;sE=k;}
+      const ds=new Date(ts[s]);const dayS='<span class="tlu">'+DAY_NAMES_SHORT[ds.getDay()]+' '+ds.getDate()+'</span>';
+      const sLbl=sE>s?(dayS+' с '+ts[s].slice(11,16)+' до '+ts[sE].slice(11,16)):tstr(s);
+      const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+sLbl+srcWet(s,list,precipMin)+' · '+sLabel+'</div>');}
+    if(c>=0){let cE=c;for(let k=c+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;cE=k;}
+      const dc=new Date(ts[c]);const dayC='<span class="tlu">'+DAY_NAMES_SHORT[dc.getDay()]+' '+dc.getDate()+'</span>';
+      const cLbl=cE>c?(dayC+' с '+ts[c].slice(11,16)+' до '+ts[cE].slice(11,16)):tstr(c);
+      const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+cLbl+wet(c)+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
