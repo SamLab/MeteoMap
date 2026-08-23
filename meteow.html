@@ -184,7 +184,7 @@ function buildSummary(times, data, rawData, idx){
   var st=pad2(times[rainHour].getHours())+'ч';
   var en=pad2(times[jLast].getHours())+'ч';
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'\u0432 '+st:'\u0441 '+st+' \u0434\u043E '+en);
-  var cntStr=' ('+peakModels+'\u043C)';
+  var cntStr=' ('+peakModels+'\u043C'+(fromModels?'':'+')+')';
   if(fromModels) return '\u0412\u0435\u0440\u043E\u044F\u0442\u043D\u044B \u041E\u0441\u0430\u0434\u043A\u0438 '+timeStr+' \u043D\u0430 '+fmtP(sumPr)+'\u043C\u043C \u0441 '+Math.round(maxPp)+'%'+cntStr;
   return rainType+' '+timeStr+' \u043D\u0430 '+fmtP(sumPr)+'\u043C\u043C \u0441 '+Math.round(maxPp)+'%'+cntStr;
 }
