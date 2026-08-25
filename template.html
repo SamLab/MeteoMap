@@ -107,7 +107,8 @@ a{color:var(--accent)}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
 .hour.hsum{width:auto;min-width:104px;background:var(--sel);text-align:left;padding-left:8px;border-right:1px solid var(--line)}
 .hour.hsum .ht{color:var(--text);font-weight:600;font-size:11px;line-height:1.25}
-.hour.hsum .htemp{font-weight:400;color:var(--muted);font-size:12px}
+.hour.hsum .he{min-height:24px}
+.hour.hsum .htemp{font-weight:700;color:var(--text);font-size:14px;line-height:1.25}
 .warn{display:flex;gap:16px;flex-wrap:wrap;padding:4px 2px}
 .wcol{display:flex;gap:10px;min-width:220px;flex:1 1 230px}
 .wicon{font-size:26px;line-height:1;align-self:center}
@@ -583,9 +584,9 @@ function buildWeatherDetail(){
     const sumCol='<div class="hour hsum">'+
       '<div class="ht">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="he"></div>'+
-      '<div class="htemp">'+(tmin==null?'—':temp(tmin))+' / '+(tmax==null?'—':temp(tmax))+'</div>'+
+      '<div class="htemp">'+(tmin==null?'':'<div>'+temp(tmin)+'</div>')+(tmax==null?'':'<div>'+temp(tmax)+'</div>')+'</div>'+
       '<div class="hwnd"></div>'+
-      '<div class="hpp">'+(psum==null?'—':fmtP(psum)+'мм / '+(ppmax==null?'—':num(ppmax))+'%')+'</div>'+
+      '<div class="hpp">'+(psum==null?'—':fmtP(psum)+' мм / '+(ppmax==null?'—':num(ppmax))+'%')+'</div>'+
       '</div>';
     return '<div class="hours">'+sumCol+blocks.join('')+'</div>'+
       '<div class="dsun">Восход: '+sr+' · Закат: '+ss+' · Долгота дня: '+dl+'</div>';

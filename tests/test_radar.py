@@ -164,8 +164,10 @@ def test_detail_summary_column():
         tpl = f.read()
     assert '<div class="hour hsum">' in tpl
     assert "DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]" in tpl
-    assert "'мм / '" in tpl
+    assert "' мм / '" in tpl
     assert "aggPart(day,'00','24','precipitation','sum')" in tpl
+    assert ".hour.hsum .he{min-height:" in tpl
+    assert ".hour.hsum .htemp{font-weight:700" in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
     i_hours = tpl.index('<div class="hours">')
