@@ -294,7 +294,7 @@ function render(data){
       '<div class="d10tday" style="top:' + (y1-15) + 'px">' + temp(x.tmax) + '</div>' +
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
-      '<div class="d10mm">' + (x.pr==null?'\u2014':Math.round(x.pr*10)/10) + ' \u043C\u043C</div>' +
+      '<div class="d10mm">' + (x.pr==null?'\u2014':Math.round(x.pr*10)/10) + '\u043C\u043C</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
       '<div class="d10wind">' + (x.ws==null?'\u2014':num(x.ws) + ' \u043C/\u0441') + '</div>' +
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
@@ -316,9 +316,9 @@ function showError(msg){
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
 
 function fmtMm(v){
-  if (v == null || v < 0.05) return '0 \u043C\u043C';
+  if (v == null || v < 0.05) return '0\u043C\u043C';
   var x = Math.round(v * 10) / 10;
-  return (x >= 10 ? Math.round(x) : x.toFixed(1).replace('.', ',')) + ' \u043C\u043C';
+  return (x >= 10 ? Math.round(x) : x.toFixed(1).replace('.', ',')) + '\u043C\u043C';
 }
 
 load();
