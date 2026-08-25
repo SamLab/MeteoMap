@@ -105,6 +105,9 @@ a{color:var(--accent)}
 .hour .hwnd{font-size:11px;color:var(--muted);min-height:14px}
 .hour .hwnd .pwarrow{font-size:15px;line-height:1}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
+.hour.hsum{width:auto;min-width:104px;background:var(--sel);text-align:left;padding-left:8px;border-right:1px solid var(--line)}
+.hour.hsum .ht{color:var(--text);font-weight:600;font-size:11px;line-height:1.25}
+.hour.hsum .htemp{font-weight:400;color:var(--muted);font-size:12px}
 .warn{display:flex;gap:16px;flex-wrap:wrap;padding:4px 2px}
 .wcol{display:flex;gap:10px;min-width:220px;flex:1 1 230px}
 .wicon{font-size:26px;line-height:1;align-self:center}
@@ -128,7 +131,6 @@ a{color:var(--accent)}
 .d10day{font-size:10.5px;color:#666;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px;white-space:nowrap}
 .d10day b{color:#222}
 .dhead{font-size:14px;font-weight:600;margin:12px 0 6px}
-.dhead .dsum{color:var(--muted);font-weight:400;font-size:12px}
 .dparts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .dpart{background:transparent;border:2px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
 .dpart .pt{color:var(--muted);font-size:11px;margin-bottom:2px}
@@ -514,7 +516,6 @@ function buildWeather10(){
   }).join('')+'</div></div>';
 }
 const PARTS=[['ночь','00','06'],['утро','06','12'],['день','12','18'],['вечер','18','24']];
-const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];
 function partIndices(day,h0,h1){
   const out=[];
   for(let i=0;i<D.time.length;i++){
@@ -546,21 +547,6 @@ function aggWcode(day,h0,h1){
   }
   return best;
 }
-function daySummary(day){
-  const tmax=aggPart(day,'00','24','temperature_2m','max');
-  let rs=-1,re=-1;
-  for(let j=0;j<D.time.length;j++){
-    const t=D.time[j];
-    if(!t||t.slice(0,10)!==day)continue;
-    if(RAIN_CODES.includes(D.weighted.weather_code?.[j])){if(rs<0)rs=j;re=j;}
-  }
-  let rain='без осадков';
-  if(rs>=0){
-    const st=D.time[rs].slice(11,16),en=D.time[re].slice(11,16);
-    rain=st===en?('Осадки в '+st):('Осадки с '+st+' до '+en);
-  }
-  return (tmax==null?'':'До '+temp(tmax)+', ')+rain;
-}
 function buildWeatherDetail(){
   const w=D.weighted;
   const dt=D.daily_time||[];
@@ -590,9 +576,19 @@ function buildWeatherDetail(){
         '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div>'+
         '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>');
     }
-    return '<div class="dhead">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+' <span class="dsum">- '+daySummary(day)+'</span></div>'+
-      '<div class="dsun">Восход: '+sr+' · Закат: '+ss+' · Долгота дня: '+dl+'</div>'+
-      '<div class="hours">'+blocks.join('')+'</div>';
+    const tmin=aggPart(day,'00','24','temperature_2m','min');
+    const tmax=aggPart(day,'00','24','temperature_2m','max');
+    const psum=aggPart(day,'00','24','precipitation','sum');
+    const ppmax=aggPart(day,'00','24','precipitation_probability','max');
+    const sumCol='<div class="hour hsum">'+
+      '<div class="ht">'+DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
+      '<div class="he"></div>'+
+      '<div class="htemp">'+(tmin==null?'—':temp(tmin))+' / '+(tmax==null?'—':temp(tmax))+'</div>'+
+      '<div class="hwnd"></div>'+
+      '<div class="hpp">'+(psum==null?'—':fmtP(psum)+'мм / '+(ppmax==null?'—':num(ppmax))+'%')+'</div>'+
+      '</div>';
+    return '<div class="hours">'+sumCol+blocks.join('')+'</div>'+
+      '<div class="dsun">Восход: '+sr+' · Закат: '+ss+' · Долгота дня: '+dl+'</div>';
   }).join('');
 }
 

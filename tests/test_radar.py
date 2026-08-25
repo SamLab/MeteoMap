@@ -159,16 +159,18 @@ def test_hourstitle_includes_current_hour_when_raining():
     assert tpl.count("if(!inWin(j))continue;") >= 3
 
 
-def test_detail_day_summary_and_sun_second_line():
+def test_detail_summary_column():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "function daySummary(day){" in tpl
-    assert "' <span class=\"dsum\">- '+daySummary(day)+'</span></div>'" in tpl
-    assert "'Осадки с '+st+' до '+en" in tpl
-    i_dhead = tpl.index('<div class="dhead">')
+    assert '<div class="hour hsum">' in tpl
+    assert "DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]" in tpl
+    assert "'мм / '" in tpl
+    assert "aggPart(day,'00','24','precipitation','sum')" in tpl
+    assert '<span class="dsum">' not in tpl
+    assert 'function daySummary' not in tpl
+    i_hours = tpl.index('<div class="hours">')
     i_sun = tpl.index('<div class="dsun">Восход: ')
-    i_hours = tpl.index('"<div class=\'hours\'>"') if '"<div class=\'hours\'>"' in tpl else tpl.index('<div class="hours">')
-    assert i_dhead < i_sun < i_hours
+    assert i_sun > i_hours
 
 
 def test_help_text_up_to_date():
