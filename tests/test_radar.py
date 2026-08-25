@@ -170,7 +170,8 @@ def test_detail_summary_column():
     assert "aggPart(day,'00','24','precipitation','sum')" in tpl
     assert "RAIN_CODES.includes(D.weighted.weather_code?.[j])" in tpl
     assert "const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];" in tpl
-    assert "' с '+rst+' до '+ren" in tpl
+    assert "' <span class=\"tmin\">/ '" in tpl
+    assert "'<div>с '+rst+' до '+ren+'</div>'" in tpl
     assert "'<div class=\"hour hsun\">'" in tpl
     assert '<div class="sunl">Долгота' in tpl
     assert "+sunCol+'</div>'" in tpl
@@ -454,3 +455,11 @@ def test_radar_labels_have_city_dots_like_rainradar():
     assert "width:6px;height:6px" in radar
     assert "position:absolute;left:-9px;bottom:5px" in radar
     assert ".label.l4>span{font-size:10px}" in radar
+
+
+def test_widget_precip_font_and_ppct():
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert '<span class="ppct">%</span>' in w, fname
+        assert ".ppct{font-size:.5em}" in w, fname

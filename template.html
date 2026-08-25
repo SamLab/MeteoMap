@@ -595,13 +595,13 @@ function buildWeatherDetail(){
         ren=t.slice(11,16);
       }
     }
-    const rainStr=rst===null?'':(rst===ren?(' в '+rst):(' с '+rst+' до '+ren));
+    const rainStr=rst===null?'':(rst===ren?('<div>в '+rst+'</div>'):('<div>с '+rst+' до '+ren+'</div>'));
     const sumCol='<div class="hour hsum">'+
       '<div class="ht">'+DAY_NAMES[d.getDay()]+',<br>'+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="he"></div>'+
-      '<div class="htemp">'+(tmin==null?'':'<div><span class="tmin">'+temp(tmin)+'</span></div>')+(tmax==null?'':'<div>'+temp(tmax)+'</div>')+'</div>'+
+      '<div class="htemp">'+(tmax==null?'—':temp(tmax))+' <span class="tmin">/ '+(tmin==null?'—':temp(tmin))+'</span></div>'+
       '<div class="hwnd"></div>'+
-      '<div class="hpp">'+(psum==null?'—':fmtP(psum)+' мм / '+(ppmax==null?'—':num(ppmax))+'%'+rainStr)+'</div>'+
+      '<div class="hpp">'+(psum==null?'—':fmtP(psum)+' мм / '+(ppmax==null?'—':num(ppmax))+'%')+rainStr+'</div>'+
       '</div>';
     const sunCol='<div class="hour hsun">'+
       '<div class="sunl">Восход</div><div class="sunv">'+sr+'</div>'+

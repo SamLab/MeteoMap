@@ -46,14 +46,15 @@ body{
   .hour .ht{font-size:9px}
   .hour .he{font-size:17px}
   .hour .htemp{font-size:11.5px}
-  .hour .hpp{font-size:9px}
+  .hour .hpp{font-size:8px}
   .hour .hmm{font-size:9.5px}
 }
 .hour.rain{background:var(--rain-bg)}
 .hour .ht{color:var(--muted);font-size:10.5px;white-space:nowrap}
 .hour .he{font-size:21px;line-height:1.35}
 .hour .htemp{font-weight:600;font-size:13.5px}
-.hour .hpp{color:var(--rain);font-size:11px;min-height:13px;white-space:nowrap}
+.hour .hpp{color:var(--rain);font-size:10px;min-height:13px;white-space:nowrap}
+.ppct{font-size:.5em}
 .hour .hmm{color:var(--rain);font-size:11.5px;min-height:13px;white-space:nowrap}
 .err{color:var(--muted);font-size:12px;padding:8px 2px}
 </style>
@@ -267,7 +268,7 @@ function render(data){
     var tempStr = (temp > 0 ? '+' : '') + temp + '\u00B0';
     
     var drop = (mm >= 0.05) ? '\uD83D\uDCA7' : '';
-    var probStr = prob > 0 ? (drop + prob + '%') : '';
+    var probStr = prob > 0 ? (drop + prob + '<span class="ppct">%</span>') : '';
     var mmStr = fmtMm(mm);
 
     html += '<div class="hour' + (rain ? ' rain' : '') + '" title="' + w.l + '">' +
