@@ -521,6 +521,7 @@ function buildWeather10(){
   }).join('')+'</div></div>';
 }
 const PARTS=[['ночь','00','06'],['утро','06','12'],['день','12','18'],['вечер','18','24']];
+const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];
 function partIndices(day,h0,h1){
   const out=[];
   for(let i=0;i<D.time.length;i++){
