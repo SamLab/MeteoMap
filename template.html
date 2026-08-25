@@ -660,7 +660,7 @@ function buildWarnings(){
   const modelRisk=(c,i)=>{const v=D.models[c]?D.models[c].cape?.[i]:undefined;return v!==null&&v!==undefined&&v>1000&&!cinBlock(c,i);};
   const findRisk=()=>{for(let i=from;i<ts.length;i++){for(const c of codes){if(modelRisk(c,i))return i;}}return -1;};
   const maxCapeUnblocked=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m&&!cinBlock(c,i))m=v;}return m;};
-  const col=(icon,list,extra=[],precipMin)=>{
+  const col=(icon,list,extra=[],precipMin,emptyMsg='')=>{
     const s=findSrc(list,precipMin),c=findCon(list,precipMin);
     const conNow=sourceCountAt(curIdx,list,precipMin)>=2;
     let ce=-1;
@@ -691,11 +691,13 @@ function buildWarnings(){
       }
       const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
-    if(rows.length===0)rows.push('<div class="wr1">&nbsp;</div>');
+    if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
   };
   const ci=findRisk();
-  const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' риск грозы · CAPE '+num(maxCapeUnblocked(ci))+' Дж/кг</div>'];
+  const hasHail=()=>{for(let i=from;i<ts.length;i++){for(const c of codes){const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;if(v===96||v===99)return true;}}return false;};
+  const hail=hasHail();
+  const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' риск грозы'+(hail?' с градом':'')+' · CAPE '+num(maxCapeUnblocked(ci))+' Дж/кг</div>'];
   const gustInfo=i=>{let n=0,m=0;const lst=[];for(const c of codes){const v=D.models[c]?D.models[c].wind_gusts_10m?.[i]:undefined;if(v===null||v===undefined)continue;if(v>m)m=v;if(v>=GUST_MIN){n++;lst.push(names[c]);}}return {n,m,lst};};
   const findGust=minN=>{for(let i=from;i<ts.length;i++){if(gustInfo(i).n>=minN)return i;}return -1;};
   const gustRow=i=>{const g=gustInfo(i);return tstr(i)+' до '+num(g.m)+' м/с · '+((g.n===1)?g.lst.join(' и '):'по '+g.n+' моделям');};
@@ -703,8 +705,8 @@ function buildWarnings(){
   const g1=findGust(1),g2=findGust(2);
   if(g1>=0&&g1!==g2)gRows.push('<div class="wr1">'+gustRow(g1)+'</div>');
   if(g2>=0)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
-  if(gRows.length===0)gRows.push('<div class="wr1">&nbsp;</div>');
-  el.innerHTML='<div class="warn">'+col('🌧️',R,[],0.1)+col('⚡',S,capeRow)+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
+  if(gRows.length===0)gRows.push('<div class="wr1"><i>Порывистого ветра в ближайшие дни не ожидается</i></div>');
+  el.innerHTML='<div class="warn">'+col('🌧️',R,[],0.1,'Осадков в ближайшие дни не ожидается')+col('⚡',S,capeRow,undefined,'Гроз и града в ближайшие дни не ожидается')+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
 }
 
 // main chart

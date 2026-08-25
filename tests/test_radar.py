@@ -251,6 +251,21 @@ def test_warnings_do_not_duplicate_when_nearest_confirmed_coincide():
     assert "if(g1>=0&&g1!==g2)" in tpl
 
 
+def test_warnings_hail_in_thunderstorm_column():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "v===96||v===99" in tpl
+    assert "риск грозы'+(hail?' с градом':'')" in tpl
+
+
+def test_warnings_empty_messages():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "Осадков в ближайшие дни не ожидается" in tpl
+    assert "Гроз и града в ближайшие дни не ожидается" in tpl
+    assert "Порывистого ветра в ближайшие дни не ожидается" in tpl
+
+
 def test_precip_shows_hundredths_for_small_values():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
