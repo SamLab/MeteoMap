@@ -168,6 +168,8 @@ def test_detail_summary_column():
     assert '.hour.hsum .tmin{font-weight:400}' in tpl
     assert "' мм / '" in tpl
     assert "aggPart(day,'00','24','precipitation','sum')" in tpl
+    assert "aggPart(day,'00','24','cloud_cover','mean')" in tpl
+    assert ".hour.hsum .hcloud{" in tpl
     assert "RAIN_CODES.includes(D.weighted.weather_code?.[j])" in tpl
     assert "const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];" in tpl
     assert "' <span class=\"tmin\">/ '" in tpl

@@ -108,6 +108,7 @@ a{color:var(--accent)}
 .hour.hsum{width:104px;min-width:104px;background:var(--sel);text-align:left;padding-left:8px;border-right:1px solid var(--line)}
 .hour.hsum .ht{color:var(--text);font-weight:700;font-size:14px;line-height:1.25}
 .hour.hsum .he{min-height:24px}
+.hour.hsum .hcloud{font-size:12px;color:var(--muted)}
 .hour.hsum .htemp{font-weight:700;color:var(--text);font-size:14px;line-height:1.25}
 .hour.hsum .tmin{font-weight:400}
 .hour.hsun{width:auto;min-width:88px;background:var(--sel);text-align:left;padding-left:8px;display:flex;flex-direction:column;justify-content:center;gap:5px}
@@ -586,6 +587,7 @@ function buildWeatherDetail(){
     const tmax=aggPart(day,'00','24','temperature_2m','max');
     const psum=aggPart(day,'00','24','precipitation','sum');
     const ppmax=aggPart(day,'00','24','precipitation_probability','max');
+    const cloudMean=aggPart(day,'00','24','cloud_cover','mean');
     let rst=null,ren=null;
     for(let j=0;j<D.time.length;j++){
       const t=D.time[j];
@@ -599,6 +601,7 @@ function buildWeatherDetail(){
     const sumCol='<div class="hour hsum">'+
       '<div class="ht">'+DAY_NAMES[d.getDay()]+',<br>'+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="he"></div>'+
+      '<div class="hcloud">'+(cloudMean==null?'—':num(cloudMean)+'%')+'</div>'+
       '<div class="htemp">'+(tmax==null?'—':temp(tmax))+' <span class="tmin">/ '+(tmin==null?'—':temp(tmin))+'</span></div>'+
       '<div class="hwnd"></div>'+
       '<div class="hpp">'+(psum==null?'—':fmtP(psum)+' мм / '+(ppmax==null?'—':num(ppmax))+'%')+rainStr+'</div>'+
