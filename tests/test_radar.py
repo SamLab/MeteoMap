@@ -145,7 +145,8 @@ def test_hourstitle_rain_interval():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';" in tpl
-    assert "const timeStr=nowRain?'до '+en:(st===en?'в '+st:'с '+st+' до '+en);" in tpl
+    assert "const enLabel=enDay===today?enTime:" in tpl
+    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
@@ -366,7 +367,7 @@ def test_hours_title_has_rain_only():
         tpl = f.read()
     assert "parts.push('без дождя')" in tpl
     assert "const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';" in tpl
-    assert "const timeStr=nowRain?'до '+en:(st===en?'в '+st:'с '+st+' до '+en);" in tpl
+    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "'Остаток дня '" in tpl
     assert "tiMax" not in tpl
     assert "tiMin" not in tpl
