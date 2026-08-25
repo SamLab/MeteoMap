@@ -151,6 +151,14 @@ def test_hourstitle_rain_interval():
     assert "rainHour>=0?'Далее '" not in tpl
 
 
+def test_hourstitle_includes_current_hour_when_raining():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const ws=nowRain?start:rainHour;" in tpl
+    assert "const inWin=j=>j>=ws&&D.time[j]&&D.time[j].slice(0,10)===today;" in tpl
+    assert tpl.count("if(!inWin(j))continue;") >= 3
+
+
 def test_help_text_up_to_date():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

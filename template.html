@@ -427,24 +427,26 @@ function buildWeatherHours(){
     if(rainHour>=0)fromModels=true;
   }
   if(rainHour>=0){
+    const nowRain=(rainHour===hs)&&(hasRainAt(start)||modelRainCount(start)>=2);
+    const ws=nowRain?start:rainHour;
+    const inWin=j=>j>=ws&&D.time[j]&&D.time[j].slice(0,10)===today;
     let sumPr=0,maxPp=0;
-    for(let j=rainHour;j<=jLast;j++){
-      if(!isToday(j))continue;
+    for(let j=ws;j<=jLast;j++){
+      if(!inWin(j))continue;
       const p=w.precipitation?.[j];if(p!=null)sumPr+=p;
       const pp=w.precipitation_probability?.[j];if(pp!=null&&pp>maxPp)maxPp=pp;
     }
     let mCnt=0;
-    for(const c of codes){let has=false;for(let j=rainHour;j<=jLast;j++){if(!isToday(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)){has=true;break;}}if(has)mCnt++;}
+    for(const c of codes){let has=false;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)){has=true;break;}}if(has)mCnt++;}
     let jPeak=rainHour,peakPr=-1;
-    for(let j=rainHour;j<=jLast;j++){
-      if(!isToday(j))continue;
+    for(let j=ws;j<=jLast;j++){
+      if(!inWin(j))continue;
       const p=w.precipitation?.[j];
       if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
     }
     const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';
     const st=D.time[rainHour].slice(11,16);
     const en=D.time[jLast].slice(11,16);
-    const nowRain=(rainHour===hs)&&(hasRainAt(start)||modelRainCount(start)>=2);
     const timeStr=nowRain?'до '+en:(st===en?'в '+st:'с '+st+' до '+en);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     parts.push(fromModels?'Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
