@@ -163,16 +163,21 @@ def test_detail_summary_column():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert '<div class="hour hsum">' in tpl
-    assert "DAY_NAMES[d.getDay()]+', '+d.getDate()+' '+MONTH_NAMES[d.getMonth()]" in tpl
+    assert "DAY_NAMES[d.getDay()]+',<br>'" in tpl
+    assert ".hour.hsum{width:" in tpl
+    assert '.hour.hsum .tmin{font-weight:400}' in tpl
     assert "' мм / '" in tpl
     assert "aggPart(day,'00','24','precipitation','sum')" in tpl
-    assert ".hour.hsum .he{min-height:" in tpl
-    assert ".hour.hsum .htemp{font-weight:700" in tpl
+    assert "RAIN_CODES.includes(D.weighted.weather_code?.[j])" in tpl
+    assert "' с '+rst+' до '+ren" in tpl
+    assert '<div class="hour hsun">' in tpl
+    assert '<div class="sunl">Долгота' in tpl
+    assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
     i_hours = tpl.index('<div class="hours">')
-    i_sun = tpl.index('<div class="dsun">Восход: ')
-    assert i_sun > i_hours
+    i_suncol = tpl.index("'<div class=\"hour hsun\">'")
+    assert i_hours < i_suncol
 
 
 def test_help_text_up_to_date():
