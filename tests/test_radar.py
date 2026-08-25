@@ -170,14 +170,12 @@ def test_detail_summary_column():
     assert "aggPart(day,'00','24','precipitation','sum')" in tpl
     assert "RAIN_CODES.includes(D.weighted.weather_code?.[j])" in tpl
     assert "' с '+rst+' до '+ren" in tpl
-    assert '<div class="hour hsun">' in tpl
+    assert "'<div class=\"hour hsun\">'" in tpl
     assert '<div class="sunl">Долгота' in tpl
+    assert "+sunCol+'</div>'" in tpl
     assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
-    i_hours = tpl.index('<div class="hours">')
-    i_suncol = tpl.index("'<div class=\"hour hsun\">'")
-    assert i_hours < i_suncol
 
 
 def test_help_text_up_to_date():
