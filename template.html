@@ -638,7 +638,7 @@ function buildWarnings(){
   const S=[95,96,99];
   const GUST_MIN=15;
   const findSrc=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>0)return i;}return -1;};
-  const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=2)return i;}return -1;};
+  const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(R.includes(wc[i]))return i;}return -1;};
   const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16)+'</span>';};
   const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmtP(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
   const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
@@ -674,9 +674,9 @@ function buildWarnings(){
       return DAY_NAMES_SHORT[ed.getDay()]+' '+ed.getDate()+' '+eTime;
     };
     const s=findSrc(list,precipMin),c=findCon(list,precipMin);
-    const conNow=sourceCountAt(curIdx,list,precipMin)>=2;
+    const conNow=R.includes(wc[curIdx]);
     let ce=-1;
-    if(conNow){ce=curIdx;for(let k=curIdx+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;ce=k;}}
+    if(conNow){ce=curIdx;for(let k=curIdx+1;k<ts.length;k++){if(!R.includes(wc[k]))break;ce=k;}}
     const conOngoing=conNow&&c>=0&&ce>=c;
     const rows=[];
     const curN=sourceCountAt(curIdx,list,precipMin);
@@ -697,7 +697,7 @@ function buildWarnings(){
         cLbl='Идёт'+(eh?' до '+eh:'');
         wv=wet(curIdx);
       }else{
-        let cE=c;for(let k=c+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;cE=k;}
+        let cE=c;for(let k=c+1;k<ts.length;k++){if(!R.includes(wc[k]))break;cE=k;}
         const dc=new Date(ts[c]);const dayC='<span class="tlu">'+DAY_NAMES_SHORT[dc.getDay()]+' '+dc.getDate()+'</span>';
         cLbl=cE>c?(dayC+' с '+ts[c].slice(11,16)+' до '+ts[cE].slice(11,16)):tstr(c);
       }
