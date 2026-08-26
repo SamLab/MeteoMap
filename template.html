@@ -679,7 +679,7 @@ function buildWarnings(){
     const conOngoing=conNow&&c>=0&&ce>=c;
     const rows=[];
     const curN=sourceCountAt(curIdx,list,precipMin);
-    if(!conOngoing&&curN>0&&(curIdx<from)){
+    if(!conOngoing&&curN>=2&&(curIdx<from)){
       let rainEnd=curIdx;for(let ri=curIdx+1;ri<ts.length;ri++){if(sourceCountAt(ri,list,precipMin)<=0)break;rainEnd=ri;}
       const endH=rainEnd>curIdx?endLabel(ts[rainEnd]):'';
       const sL=sourceList(curIdx,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');
