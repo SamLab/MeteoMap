@@ -74,6 +74,60 @@ def test_verify_models_tolerates_archive_failure():
     }
 
 
+def _hist_wide(code, start_date, end_date, variables):
+    if code == "broken":
+        raise RuntimeError("model unavailable")
+    return {
+        "hourly": {
+            "time": ["2026-07-01T00:00", "2026-07-02T00:00"],
+            "temperature_2m": [1.0, 3.0],
+            "precipitation": [0.0, 0.0],
+            "wind_speed_10m": [3.0, 4.0],
+        }
+    }
+
+
+def _arch_wide(start_date, end_date, variables):
+    return {
+        "hourly": {
+            "time": ["2026-07-01T00:00", "2026-07-02T00:00"],
+            "temperature_2m": [0.0, 0.0],
+            "precipitation": [0.0, 0.0],
+            "wind_speed_10m": [2.0, 2.0],
+        }
+    }
+
+
+def test_verify_windows_single_fetch_per_model():
+    variables = ["temperature_2m", "precipitation", "wind_speed_10m"]
+    calls = []
+
+    def _hist(code, start_date, end_date, variables):
+        calls.append((code, start_date, end_date))
+        return _hist_wide(code, start_date, end_date, variables)
+
+    windows = {
+        "7d": ("2026-07-01", "2026-07-01"),
+        "30d": ("2026-07-01", "2026-07-10"),
+    }
+    result = meteo.verify_windows(
+        ["a", "broken"], variables, windows,
+        fetch_hist=_hist, fetch_arch=_arch_wide,
+    )
+    # один вызов истории на модель на самом широком окне
+    assert calls == [("a", "2026-07-01", "2026-07-10"),
+                     ("broken", "2026-07-01", "2026-07-10")]
+    # 7d: только 1 июля (температура |1-0|=1; ветер |3-2|=1)
+    assert result["7d"]["a"]["temperature_2m"] == 1.0
+    assert result["7d"]["a"]["wind_speed_10m"] == 1.0
+    # 30d: обе точки (температура (|1-0|+|3-0|)/2=2; ветер (|3-2|+|4-2|)/2=1.5)
+    assert result["30d"]["a"]["temperature_2m"] == 2.0
+    assert result["30d"]["a"]["wind_speed_10m"] == 1.5
+    # сломанная модель опущена в обоих окнах
+    assert "broken" not in result["7d"]
+    assert "broken" not in result["30d"]
+
+
 def test_verify_models_parallel_skips_failing_models():
     variables = ["temperature_2m"]
     calls = []

@@ -188,9 +188,19 @@ ENDPOINTS = {
 }
 
 
+_HTTP_SESSION = None
+
+
+def _request_get(url, params=None, timeout=None, headers=None):
+    global _HTTP_SESSION
+    if _HTTP_SESSION is None:
+        _HTTP_SESSION = requests.Session()
+    return _HTTP_SESSION.get(url, params=params, timeout=timeout, headers=headers)
+
+
 def request_with_retry(url, params, timeout, get=None, max_retries=2,
                        base_delay=5.0):
-    get = get or requests.get
+    get = get or _request_get
     for attempt in range(max_retries + 1):
         try:
             resp = get(url, params=params, timeout=timeout)
@@ -333,7 +343,7 @@ def fetch_yr(lat=None, lon=None):
         lat = LOCATIONS[0]["lat"]
     if lon is None:
         lon = LOCATIONS[0]["lon"]
-    resp = requests.get(
+    resp = _request_get(
         YR_URL,
         params={"lat": lat, "lon": lon},
         headers={"User-Agent": "MeteoMap/1.0 (https://samlab.github.io/MeteoMap)"},
@@ -797,7 +807,7 @@ EXTERNAL_MODELS = [
 ]
 
 
-def fetch_external_providers(providers, locations, max_workers=5):
+def fetch_external_providers(providers, locations, max_workers=10):
     """Параллельно грузит строки внешних провайдеров по всем городам.
     Возвращает {code: {slug: rows}}."""
     def _fetch(code, name, fetch_fn, loc):
@@ -996,6 +1006,68 @@ def compute_mae(predicted, actual):
     if not pairs:
         return None
     return sum(abs(p - a) for p, a in pairs) / len(pairs)
+
+
+def verify_windows(model_codes, variables, windows, fetch_hist=None, fetch_arch=None):
+    """Верификация нескольких окон одним проходом к history API.
+    windows: dict {label: (start_date, end_date)}. Запрашивается самое широкое
+    окно; MAE для каждого окна считается по подмассиву точек этого окна."""
+    fetch_hist = fetch_hist or fetch_historical_model
+    fetch_arch = fetch_arch or fetch_archive
+    labels = list(windows)
+    all_starts = [windows[k][0] for k in labels]
+    all_ends = [windows[k][1] for k in labels]
+    widest = (min(all_starts), max(all_ends))
+    try:
+        actual_raw = normalize_model_response(
+            fetch_arch(widest[0], widest[1], variables), variables
+        )
+    except Exception as exc:
+        print(f"[warn] verify archive: {exc}")
+        return {k: {code: {v: None for v in variables} for code in model_codes}
+                for k in labels}
+    actual_times = actual_raw["time"]
+    actual = actual_raw["data"]
+
+    def window_mask(start_date, end_date):
+        return [i for i, t in enumerate(actual_times)
+                if start_date <= t[:10] <= end_date]
+
+    masks = {k: window_mask(*windows[k]) for k in labels}
+
+    hist_raw = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        future_by_code = {
+            code: ex.submit(fetch_hist, code, widest[0], widest[1], variables)
+            for code in model_codes
+        }
+    for code in model_codes:
+        try:
+            resp = future_by_code[code].result()
+        except Exception as exc:
+            print(f"[warn] verify {code}: {exc}")
+            continue
+        hist_raw[code] = normalize_model_response(resp, variables)
+
+    result = {k: {} for k in labels}
+    for code, model in hist_raw.items():
+        m_idx = {t: i for i, t in enumerate(model["time"])}
+        for k in labels:
+            pidx, aidx = [], []
+            for i in masks[k]:
+                t = actual_times[i]
+                mi = m_idx.get(t)
+                if mi is not None:
+                    pidx.append(mi)
+                    aidx.append(i)
+            result[k][code] = {
+                v: compute_mae(
+                    [model["data"][v][i] for i in pidx],
+                    [actual[v][i] for i in aidx],
+                )
+                for v in variables
+            }
+    return result
 
 
 def verify_models(model_codes, variables, start_date, end_date,
@@ -1215,13 +1287,11 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
         print(f"[warn] no model data for {loc['name']}")
         return None
 
-    verification = {}
-    for days in (7, 30):
-        start, end = date_window(days)
-        verification[f"{days}d"] = verify_models(
-            model_codes, VERIFICATION_VARIABLES, start, end,
-            fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
-        )
+    verification = verify_windows(
+        model_codes, VERIFICATION_VARIABLES,
+        {"7d": date_window(7), "30d": date_window(30)},
+        fetch_hist=_city_hist(loc), fetch_arch=_city_arch(loc),
+    )
     if external_enabled:
         for code, _name, _fn, *_ in EXTERNAL_MODELS:
             verification["7d"][code] = {v: None for v in VERIFICATION_VARIABLES}

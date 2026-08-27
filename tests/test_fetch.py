@@ -119,9 +119,10 @@ def test_build_city_payload_with_external(monkeypatch):
         "owm": {loc["slug"]: [{"utc": utc_dt, "temperature_2m": 9.0}]},
     }
     monkeypatch.setattr(
-        meteo, "verify_models",
+        meteo, "verify_windows",
         lambda *a, **k: {
-            "ecmwf_ifs025": {v: 1.0 for v in meteo.VERIFICATION_VARIABLES},
+            "7d": {"ecmwf_ifs025": {v: 1.0 for v in meteo.VERIFICATION_VARIABLES}},
+            "30d": {"ecmwf_ifs025": {v: 1.0 for v in meteo.VERIFICATION_VARIABLES}},
         },
     )
     p = meteo.build_city_payload(loc, raw, external_rows, "2026-08-07T00:00:00+03:00", True)

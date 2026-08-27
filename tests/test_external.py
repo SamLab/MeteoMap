@@ -77,7 +77,7 @@ def test_fetch_owm_parses_three_hourly(monkeypatch):
             },
         ]})
 
-    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    monkeypatch.setattr(meteo, "_request_get", fake_get)
     rows = meteo.fetch_owm(57.63, 39.87, api_key="test")
     assert captured["url"] == meteo.OWM_URL
     assert captured["params"]["appid"] == "test"
@@ -118,7 +118,7 @@ def test_fetch_vc_parses_hourly(monkeypatch):
             ]},
         ]})
 
-    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    monkeypatch.setattr(meteo, "_request_get", fake_get)
     rows = meteo.fetch_vc(57.63, 39.87, api_key="test")
     assert captured["params"]["key"] == "test"
     assert captured["params"]["unitGroup"] == "metric"
@@ -164,7 +164,7 @@ def test_fetch_mb_parses_hourly(monkeypatch):
             "windspeed": [5.0], "winddirection": [180],
         }})
 
-    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    monkeypatch.setattr(meteo, "_request_get", fake_get)
     rows = meteo.fetch_mb(57.63, 39.87, api_key="test")
     assert captured["url"] == meteo.MB_URL
     assert captured["params"]["apikey"] == "test"
@@ -208,7 +208,7 @@ def test_fetch_wwo_parses_string_weathercode(monkeypatch):
             ]},
         ]}})
 
-    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    monkeypatch.setattr(meteo, "_request_get", fake_get)
     rows = meteo.fetch_wwo(57.63, 39.87, api_key="test")
     assert rows[0]["weather_code"] == 80
     assert rows[0]["precipitation_probability"] == 30
@@ -356,6 +356,6 @@ def test_env_key_fallback(monkeypatch):
         return _FakeResponse({"list": []})
 
     monkeypatch.setenv("OPENWEATHER_KEY", "env-key")
-    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    monkeypatch.setattr(meteo, "_request_get", fake_get)
     assert meteo.fetch_owm(57.63, 39.87, api_key=None) == []
     assert captured["params"]["appid"] == "env-key"
