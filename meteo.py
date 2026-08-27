@@ -625,6 +625,10 @@ def fetch_wwo(lat=None, lon=None, api_key=None):
             gust_kph = h.get("WindGustKmph")
             pressure = h.get("pressure")
             wwo_code = h.get("weatherCode")
+            try:
+                wmo_code = WWO_WMO.get(int(wwo_code)) if wwo_code is not None else None
+            except (TypeError, ValueError):
+                wmo_code = None
             rows.append({
                 "utc": dt,
                 "temperature_2m": _float(h.get("tempC")),
@@ -633,7 +637,7 @@ def fetch_wwo(lat=None, lon=None, api_key=None):
                 "relative_humidity_2m": _float(h.get("humidity")),
                 "precipitation": _float(h.get("precipMM")),
                 "precipitation_probability": _float(h.get("chanceofrain")),
-                "weather_code": WWO_WMO.get(wwo_code) if wwo_code is not None else None,
+                "weather_code": wmo_code,
                 "pressure_msl": round(float(pressure) * HPA_TO_MMHG, 1)
                 if pressure is not None else None,
                 "cloud_cover": _float(h.get("cloudcover")),

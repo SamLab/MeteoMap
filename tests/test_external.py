@@ -191,6 +191,36 @@ def test_fetch_mb_requires_key(monkeypatch, capsys):
     assert "METEOBLUE_KEY" in capsys.readouterr().out
 
 
+def test_fetch_wwo_parses_string_weathercode(monkeypatch):
+    captured = {}
+
+    def fake_get(url, params, timeout):
+        captured["url"] = url
+        captured["params"] = params
+        return _FakeResponse({"data": {"weather": [
+            {"date": "2026-08-28", "hourly": [
+                {"time": "500", "tempC": "18", "FeelsLikeC": "17",
+                 "humidity": "70", "precipMM": "0.2", "chanceofrain": "30",
+                 "weatherCode": "176", "pressure": "1013",
+                 "cloudcover": "60", "windspeedKmph": "10",
+                 "WindGustKmph": "20", "winddirDegree": "180",
+                 "visibility": "10"},
+            ]},
+        ]}})
+
+    monkeypatch.setattr(meteo.requests, "get", fake_get)
+    rows = meteo.fetch_wwo(57.63, 39.87, api_key="test")
+    assert rows[0]["weather_code"] == 80
+    assert rows[0]["precipitation_probability"] == 30
+    assert rows[0]["precipitation"] == 0.2
+
+
+def test_fetch_wwo_requires_key(monkeypatch, capsys):
+    monkeypatch.delenv("WWO_KEY", raising=False)
+    assert meteo.fetch_wwo(57.63, 39.87) == []
+    assert "WWO_KEY" in capsys.readouterr().out
+
+
 _ROW = {"utc": datetime(2026, 8, 24, 12, 0, tzinfo=timezone.utc),
         "temperature_2m": 20.0}
 
