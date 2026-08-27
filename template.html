@@ -505,7 +505,8 @@ function buildWeather10(){
   const span=(isFinite(lo)&&isFinite(hi)&&hi>lo)?hi-lo:0;
   const TOP=16,BTM=135-16,SCALE=(isFinite(span)&&span>0)?(BTM-TOP)/span:0;
   const yT=t=>t==null?BTM:(isFinite(span)&&span>0)?BTM-SCALE*(t-lo):(TOP+BTM)/2;
-  document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
+  document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map((x,di)=>{
+    const day=dt[di];
     const y1=yT(x.tmax),y2=yT(x.tmin);
     const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
     const pR=x.pr!=null?Math.max(0,Math.round(x.pr/50*100)):0;
@@ -521,7 +522,7 @@ function buildWeather10(){
       '<div class="d10mm">'+(x.pr==null?'—':fmtP(x.pr))+'мм / '+(x.pp==null?'—':num(x.pp))+'%</div>'+
       '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('облака '+num(x.cl)+'%'))+'</div>'+
       '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
-      '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
+      '<div class="d10day"><b>'+relDayLabel(day,x.d)+'</b></div>'+
       '</div>';
   }).join('')+'</div></div>';
 }
@@ -601,8 +602,10 @@ function buildWeatherDetail(){
       }
     }
     const rainStr=rst===null?'':(rst===ren?('<div>в '+rst+'</div>'):('<div>с '+rst+' до '+ren+'</div>'));
+    const dayHd=relDayLabel(day,d);
+    const dayHd2=(dayHd==='Сегодня'||dayHd==='Завтра'||dayHd==='Послезавтра')?dayHd:(DAY_NAMES[d.getDay()]+',<br>'+d.getDate()+' '+MONTH_NAMES[d.getMonth()]);
     const sumCol='<div class="hour hsum">'+
-      '<div class="ht">'+DAY_NAMES[d.getDay()]+',<br>'+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
+      '<div class="ht">'+dayHd2+'</div>'+
       '<div class="he"></div>'+
       '<div class="htemp">'+(tmax==null?'—':temp(tmax))+' <span class="tmin">/ '+(tmin==null?'—':temp(tmin))+'</span></div>'+
       '<div class="hwnd"></div>'+
@@ -618,6 +621,19 @@ function buildWeatherDetail(){
 }
 
 const DAY_NAMES_SHORT=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+function relDay(dayStr){
+  const d0=nowLocal.slice(0,10),d1=dayStr.slice(0,10);
+  const diff=Math.round((new Date(d1)-new Date(d0))/86400000);
+  if(diff===0)return 'Сегодня';
+  if(diff===1)return 'Завтра';
+  if(diff===2)return 'Послезавтра';
+  const d=new Date(d1);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate();
+}
+function relDayLabel(dayStr,d){
+  const r=relDay(dayStr);
+  if(r==='Сегодня'||r==='Завтра'||r==='Послезавтра')return r;
+  return DOW_S[d.getDay()]+' '+d.getDate();
+}
 function sourceCountAt(i,list,precipMin){
   let n=0;
   for(const c of codes){
@@ -639,7 +655,7 @@ function buildWarnings(){
   const GUST_MIN=15;
   const findSrc=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>0)return i;}return -1;};
   const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=2)return i;}return -1;};
-  const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate()+' в '+ts[i].slice(11,16)+'</span>';};
+  const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+relDay(ts[i].slice(0,10))+' в '+ts[i].slice(11,16)+'</span>';};
   const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmtP(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
   const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
   const sourceList=(i,list,pm)=>codes.filter(c=>{
@@ -671,7 +687,7 @@ function buildWarnings(){
       const eDay=tsStr.slice(0,10);
       const eTime=tsStr.slice(11,16);
       if(eDay===today||eDay===startDay)return eTime;
-      return DAY_NAMES_SHORT[ed.getDay()]+' '+ed.getDate()+' '+eTime;
+      return relDay(tsStr)+' '+eTime;
     };
     const s=findSrc(list,precipMin),c=findCon(list,precipMin);
     const conNow=sourceCountAt(curIdx,list,precipMin)>=2;
@@ -687,7 +703,7 @@ function buildWarnings(){
       rows.push('<div class="wr1">Идёт'+(endH?' до '+endH:'')+' · '+srcWet(curIdx,list,precipMin)+' · '+sLabel+'</div>');
     }
     if(s>=0&&s!==c){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<=0)break;sE=k;}
-      const ds=new Date(ts[s]);const dayS='<span class="tlu">'+DAY_NAMES_SHORT[ds.getDay()]+' '+ds.getDate()+'</span>';
+      const ds=new Date(ts[s]);const dayS='<span class="tlu">'+relDay(ts[s].slice(0,10))+'</span>';
       const sLbl=sE>s?(dayS+' с '+ts[s].slice(11,16)+' до '+endLabel(ts[sE],ts[s].slice(0,10))):tstr(s);
       const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+sLbl+srcWet(s,list,precipMin)+' · '+sLabel+'</div>');}
     if(c>=0){
@@ -698,7 +714,7 @@ function buildWarnings(){
         wv=wet(curIdx);
       }else{
         let cE=c;for(let k=c+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;cE=k;}
-        const dc=new Date(ts[c]);const dayC='<span class="tlu">'+DAY_NAMES_SHORT[dc.getDay()]+' '+dc.getDate()+'</span>';
+        const dc=new Date(ts[c]);const dayC='<span class="tlu">'+relDay(ts[c].slice(0,10))+'</span>';
         cLbl=cE>c?(dayC+' с '+ts[c].slice(11,16)+' до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
       }
       const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
