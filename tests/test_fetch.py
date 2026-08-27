@@ -12,7 +12,12 @@ def test_model_order():
     idx = [codes.index(c) for c in wanted]
     assert idx == sorted(idx)
     ext = [c for c, _n, _fn, *_ in meteo.EXTERNAL_MODELS]
-    assert ext == [meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE, meteo.WWO_CODE, meteo.XW_CODE, meteo.TW_CODE]
+    assert ext == [meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE, meteo.WWO_CODE, meteo.XW_CODE, meteo.TW_CODE, meteo.TT_CODE]
+
+
+def test_aigfs_model_registered():
+    codes = [c for c, _n, _e in meteo.FORECAST_MODELS]
+    assert "ncep_aigfs025" in codes
 
 
 def test_daily_variables_include_dominant_wind_direction():

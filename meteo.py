@@ -28,6 +28,7 @@ FORECAST_MODELS = [
     ("cma_grapes_global", "CMA GRAPES", "forecast"),
     ("meteofrance_arpege_world025", "Météo-France", "forecast"),
     ("ecmwf_aifs025", "ECMWF AIFS", "forecast"),
+    ("ncep_aigfs025", "NOAA AIGFS", "forecast"),
 ]
 
 HOURLY_VARIABLES = [
@@ -175,6 +176,37 @@ MB_WMO = {
     34: 71,
     35: 67,
 }
+
+TT_URL = "https://www.7timer.info/bin/api.pl"
+TT_CODE = "7timer"
+TT_NAME = "7Timer"
+
+# 7Timer civil weather type -> WMO (www.7timer.info/doc.php)
+TT_WMO = {
+    "clearday": 0, "clearnight": 0,
+    "pcloudyday": 2, "pcloudynight": 2,
+    "mcloudyday": 3, "mcloudynight": 3,
+    "cloudyday": 3, "cloudynight": 3,
+    "humidday": 45, "humidnight": 45,
+    "lightrainday": 61, "lightrainnight": 61,
+    "oshowerday": 80, "oshowernight": 80,
+    "ishowerday": 80, "ishowernight": 80,
+    "lightsnowday": 71, "lightsnownight": 71,
+    "rainday": 63, "rainnight": 63,
+    "snowday": 73, "snownight": 73,
+    "rainsnowday": 66, "rainsnownight": 66,
+    "tsday": 95, "tsnight": 95,
+    "tsrainday": 95, "tsrainnight": 95,
+}
+
+# 7Timer categorical scales -> физические значения
+TT_WIND = {1: 0.2, 2: 2.0, 3: 5.7, 4: 9.4, 5: 14.0, 6: 21.0, 7: 28.5, 8: 35.0}
+TT_CLOUD = {1: 5.0, 2: 12.5, 3: 25.0, 4: 37.5, 5: 50.0,
+            6: 62.5, 7: 75.0, 8: 87.5, 9: 97.0}
+TT_PREC = {0: 0.0, 1: 0.12, 2: 0.6, 3: 2.5, 4: 7.0, 5: 13.0,
+           6: 23.0, 7: 40.0, 8: 62.5, 9: 80.0}
+TT_DIR = {"N": 0, "NE": 45, "E": 90, "SE": 135, "S": 180,
+          "SW": 225, "W": 270, "NW": 315}
 
 
 import requests
@@ -796,6 +828,52 @@ def fetch_tomorrow(lat=None, lon=None, api_key=None):
     return rows
 
 
+def fetch_7timer(lat=None, lon=None):
+    """7Timer (без ключа) 3-часовой прогноз -> строки YR-подобного вида."""
+    if lat is None:
+        lat = LOCATIONS[0]["lat"]
+    if lon is None:
+        lon = LOCATIONS[0]["lon"]
+    resp = _request_get(
+        TT_URL,
+        params={"lon": lon, "lat": lat, "product": "civil", "output": "json"},
+        timeout=20,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    init = data.get("init")
+    if not init:
+        return []
+    try:
+        init_dt = datetime.strptime(init, "%Y%m%d%H").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return []
+    rows = []
+    for tp in data.get("dataseries", []):
+        hours = tp.get("timepoint")
+        if hours is None:
+            continue
+        dt = init_dt + timedelta(hours=hours)
+        rh_parsed = _float(str(tp.get("rh2m", "")).rstrip("%"))
+        wind = tp.get("wind10m") or {}
+        prec_type = tp.get("prec_type")
+        prec_amount = tp.get("prec_amount", 0)
+        precipitation = TT_PREC.get(prec_amount)
+        if precipitating := prec_type not in (None, "none"):
+            precipitation = TT_PREC.get(prec_amount, 0.0)
+        rows.append({
+            "utc": dt,
+            "temperature_2m": _float(tp.get("temp2m")),
+            "relative_humidity_2m": rh_parsed,
+            "precipitation": precipitation if precipitating else 0.0,
+            "weather_code": TT_WMO.get(tp.get("weather")),
+            "cloud_cover": TT_CLOUD.get(tp.get("cloudcover")),
+            "wind_speed_10m": TT_WIND.get(wind.get("speed")),
+            "wind_direction_10m": TT_DIR.get(wind.get("direction")),
+        })
+    return rows
+
+
 _EXT = ["yaroslavl", "tsedenevo"]
 EXTERNAL_MODELS = [
     (OWM_CODE, OWM_NAME, fetch_owm, _EXT),
@@ -804,6 +882,7 @@ EXTERNAL_MODELS = [
     (WWO_CODE, WWO_NAME, fetch_wwo, _EXT),
     (XW_CODE, XW_NAME, fetch_xw, _EXT),
     (TW_CODE, TW_NAME, fetch_tomorrow, _EXT),
+    (TT_CODE, TT_NAME, fetch_7timer, _EXT),
 ]
 
 
@@ -925,7 +1004,7 @@ def weather_code_consensus(codes):
     return max(top, key=lambda c: (WEATHER_PRIORITY.get(c, 0), c))
 
 
-_EXTERNAL_LOW = {OWM_CODE, VC_CODE, MB_CODE, WWO_CODE, TW_CODE}
+_EXTERNAL_LOW = {OWM_CODE, VC_CODE, MB_CODE, WWO_CODE, TW_CODE, TT_CODE}
 _EXTERNAL_MED = {XW_CODE}
 
 def make_weights(mae_by_model, variable):
@@ -1230,6 +1309,8 @@ def render(template, payload):
         attribs.append('<a href="https://www.visualcrossing.com/">Visual Crossing</a>')
     if MB_CODE in codes:
         attribs.append('<a href="https://www.meteoblue.com/">Meteoblue</a>')
+    if TT_CODE in codes:
+        attribs.append('<a href="https://www.7timer.info/">7Timer</a>')
     html = html.replace("__ATTRIBUTION__", " · ".join(attribs))
     return html
 

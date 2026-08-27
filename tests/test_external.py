@@ -325,7 +325,7 @@ def test_render_attribution_includes_external_sources():
     payload = {
         "location": meteo.LOCATIONS[0],
         "model_codes": ["a", meteo.OWM_CODE,
-                        meteo.VC_CODE, meteo.MB_CODE],
+                        meteo.VC_CODE, meteo.MB_CODE, meteo.TT_CODE],
         "generated_at": "2026-08-06T12:00:00+03:00",
     }
     html = meteo.render("__ATTRIBUTION__", payload)
@@ -334,6 +334,7 @@ def test_render_attribution_includes_external_sources():
     assert "weatherapi.com" not in html
     assert "visualcrossing.com" in html
     assert "meteoblue.com" in html
+    assert "7timer.info" in html
 
 
 def test_render_attribution_omits_absent_sources():
@@ -359,3 +360,91 @@ def test_env_key_fallback(monkeypatch):
     monkeypatch.setattr(meteo, "_request_get", fake_get)
     assert meteo.fetch_owm(57.63, 39.87, api_key=None) == []
     assert captured["params"]["appid"] == "env-key"
+
+
+def test_7timer_wmo_mapping():
+    assert meteo.TT_WMO["clearday"] == 0
+    assert meteo.TT_WMO["clearnight"] == 0
+    assert meteo.TT_WMO["pcloudyday"] == 2
+    assert meteo.TT_WMO["cloudynight"] == 3
+    assert meteo.TT_WMO["humidday"] == 45
+    assert meteo.TT_WMO["lightrainday"] == 61
+    assert meteo.TT_WMO["rainday"] == 63
+    assert meteo.TT_WMO["lightsnowday"] == 71
+    assert meteo.TT_WMO["snowday"] == 73
+    assert meteo.TT_WMO["tsday"] == 95
+    assert meteo.TT_WMO["tsrainnight"] == 95
+
+
+def test_7timer_scales():
+    assert meteo.TT_WIND[2] == 2.0
+    assert meteo.TT_WIND[6] == 21.0
+    assert meteo.TT_CLOUD[1] == 5.0
+    assert meteo.TT_CLOUD[9] == 97.0
+    assert meteo.TT_PREC[0] == 0.0
+    assert meteo.TT_PREC[3] == 2.5
+    assert meteo.TT_DIR["NW"] == 315
+    assert meteo.TT_DIR["N"] == 0
+
+
+def test_fetch_7timer_parses_dataseries(monkeypatch):
+    captured = {}
+
+    def fake_get(url, params, timeout):
+        captured["url"] = url
+        captured["params"] = params
+        return _FakeResponse({
+            "product": "civil",
+            "init": "2026082712",
+            "dataseries": [
+                {
+                    "timepoint": 3,
+                    "cloudcover": 6,
+                    "lifted_index": 6,
+                    "prec_type": "none",
+                    "prec_amount": 1,
+                    "temp2m": 14,
+                    "rh2m": "71%",
+                    "wind10m": {"direction": "NW", "speed": 2},
+                    "weather": "mcloudyday",
+                },
+                {
+                    "timepoint": 6,
+                    "cloudcover": 2,
+                    "prec_type": "rain",
+                    "prec_amount": 3,
+                    "temp2m": 10,
+                    "rh2m": "90%",
+                    "wind10m": {"direction": "N", "speed": 3},
+                    "weather": "rainday",
+                },
+            ],
+        })
+
+    monkeypatch.setattr(meteo, "_request_get", fake_get)
+    rows = meteo.fetch_7timer(57.63, 39.87)
+    assert len(rows) == 2
+    r0 = rows[0]
+    assert r0["utc"].hour == 15
+    assert r0["temperature_2m"] == 14
+    assert r0["relative_humidity_2m"] == 71
+    assert r0["cloud_cover"] == meteo.TT_CLOUD[6]
+    assert r0["wind_direction_10m"] == 315
+    assert r0["wind_speed_10m"] == meteo.TT_WIND[2]
+    assert r0["weather_code"] == 3
+    assert r0["precipitation"] == 0.0
+    r1 = rows[1]
+    assert r1["utc"].hour == 18
+    assert r1["precipitation"] == 2.5
+    assert r1["weather_code"] == 63
+
+
+def test_7timer_in_external_models():
+    codes = [c for c, _n, _f, *_ in meteo.EXTERNAL_MODELS]
+    assert meteo.TT_CODE in codes
+    entry = [e for e in meteo.EXTERNAL_MODELS if e[0] == meteo.TT_CODE][0]
+    assert set(entry[3]) == set(meteo._EXT)
+
+
+def test_7timer_is_external_low_weight():
+    assert meteo.TT_CODE in meteo._EXTERNAL_LOW
