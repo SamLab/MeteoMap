@@ -4,8 +4,9 @@ import meteo
 def test_model_order():
     codes = [c for c, _n, _e in meteo.FORECAST_MODELS]
     wanted = [
-        "ecmwf_ifs025", "google_weathernext2_ensemble", "ncep_aigfs025",
-        "ncep_gefs_seamless", "ncep_gfs_seamless", "jma_gsm", "gem_global",
+        "ecmwf_ifs025", "google_weathernext2_ensemble",
+        "ncep_gefs_seamless", "ncep_aigfs025", "ncep_gfs_seamless",
+        "jma_gsm", "gem_global",
         "dwd_icon_global",
         "ukmo_global_deterministic_10km", "cma_grapes_global",
         "meteofrance_arpege_world025",
