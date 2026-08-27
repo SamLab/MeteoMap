@@ -940,6 +940,31 @@ def make_weights(mae_by_model, variable):
     return {code: w / total for code, w in inv.items()}
 
 
+def force_min_weight(weights, code):
+    """Вес `code` приравнивается к минимальному среди остальных моделей."""
+    others = [w for c, w in weights.items() if c != code]
+    if code not in weights or not others:
+        return weights
+    low = min(others)
+    if weights[code] > low:
+        weights[code] = low
+    return weights
+
+
+def build_precip_weights(weights_by_var):
+    """Веса для осадков: WWO занижается до минимума в количестве и вероятности.
+    Вероятность осадков не верифицируется отдельно — берём те же веса, что и для количества."""
+    result = dict(weights_by_var)
+    precip = result.get("precipitation")
+    if precip:
+        result.setdefault("precipitation_probability", dict(precip))
+    for v in ("precipitation", "precipitation_probability"):
+        w = result.get(v)
+        if w and WWO_CODE in w:
+            result[v] = force_min_weight(dict(w), WWO_CODE)
+    return result
+
+
 def weighted_consensus(values, weights):
     pairs = [
         (v, w) for v, w in zip(values, weights)
@@ -1205,6 +1230,7 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
         v: make_weights(verification["7d"], v)
         for v in VERIFICATION_VARIABLES
     }
+    weights_by_var = build_precip_weights(weights_by_var)
 
     grid = next(iter(hourly_by_model.values()))["time"]
     city_codes = list(model_codes)

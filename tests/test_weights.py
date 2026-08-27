@@ -45,3 +45,45 @@ def test_weighted_consensus_all_none():
 
 def test_weighted_consensus_zero_weight_total():
     assert meteo.weighted_consensus([1.0, 2.0], [0.0, 0.0]) is None
+
+
+def test_force_min_weight_sets_lowest():
+    w = {"a": 0.5, "b": 0.3, "c": 0.2}
+    out = meteo.force_min_weight(dict(w), "a")
+    assert out["a"] == 0.2
+    assert out["b"] == 0.3
+
+
+def test_force_min_weight_keeps_equal_minimum():
+    # их минимальные совпадают — вес не меняется
+    w = {"a": 0.2, "b": 0.3}
+    out = meteo.force_min_weight(dict(w), "a")
+    assert out["a"] == 0.2
+
+
+def test_force_min_weight_missing_code_noop():
+    w = {"a": 0.5, "b": 0.5}
+    assert meteo.force_min_weight(dict(w), "zz") == w
+
+
+def test_build_precip_weights_wwo_minimal_in_both():
+    base = {
+        "temperature_2m": {"a": 0.6, "b": 0.4, "wwo": 0.3},
+        "precipitation": {"a": 0.7, "b": 0.2, "wwo": 0.9},
+    }
+    out = meteo.build_precip_weights(base)
+    # вероятность берёт веса количества, WWO занижен до минимума
+    assert out["precipitation_probability"]["wwo"] == 0.2
+    assert out["precipitation_probability"]["a"] == 0.7
+    assert out["precipitation_probability"]["b"] == 0.2
+    # количество тоже форсируется
+    assert out["precipitation"]["wwo"] == 0.2
+    # остальные переменные не тронуты
+    assert out["temperature_2m"] == base["temperature_2m"]
+
+
+def test_build_precip_weights_no_precip_key():
+    base = {"temperature_2m": {"a": 0.5, "b": 0.5}}
+    out = meteo.build_precip_weights(base)
+    assert "precipitation" not in out
+    assert "precipitation_probability" not in out
