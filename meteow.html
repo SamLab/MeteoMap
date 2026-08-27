@@ -110,16 +110,6 @@ var WMO = {
 };
 
 var DOW = ['\u0412\u0441','\u041F\u043D','\u0412\u0442','\u0421\u0440','\u0427\u0442','\u041F\u0442','\u0421\u0431'];
-function relDayLabel(dayStr, d){
-  var t = new Date();
-  var d0 = t.toISOString().slice(0,10);
-  var d1 = dayStr.slice(0,10);
-  var diff = Math.round((new Date(d1) - new Date(d0)) / 86400000);
-  if (diff === 0) return 'Сегодня';
-  if (diff === 1) return 'Завтра';
-  if (diff === 2) return 'Послезавтра';
-  return DOW[d.getDay()] + ' ' + d.getDate();
-}
 
 var DEFAULT_CITY = 'tsedenevo';
 var DEFAULT_HOURS = 14;
@@ -278,7 +268,7 @@ function render(data){
     var pp = daily.precipitation_probability_max ? daily.precipitation_probability_max[di] : null;
     var cl = daily.cloud_cover_mean ? daily.cloud_cover_mean[di] : null;
     var ws = daily.wind_speed_10m_max ? daily.wind_speed_10m_max[di] : null;
-    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,we:w2.e,d:d,d10:dateStr});
+    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,we:w2.e,d:d});
   }
 
   var lo = Infinity, hi = -Infinity;
@@ -309,7 +299,7 @@ function render(data){
       '<div class="d10mm">' + (x.pr==null?'\u2014':Math.round(x.pr*10)/10) + '\u043C\u043C</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
       '<div class="d10wind">' + (x.ws==null?'\u2014':num(x.ws) + ' \u043C/\u0441') + '</div>' +
-      '<div class="d10day"><b>' + relDayLabel(x.d10, x.d) + '</b></div>' +
+      '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
   d10strip.innerHTML = html10;

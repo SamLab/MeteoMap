@@ -17,8 +17,6 @@ header .meta{color:var(--muted);font-size:12px}
 .tabs{display:flex;gap:8px;margin-bottom:8px;flex:none}
 .tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
 .tabs button.active{color:var(--text);background:var(--accent);border-color:var(--accent)}
-.tabs button.spinning{animation:spin 0.8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
 .citysel{cursor:pointer;border-bottom:1px dashed var(--accent)}
 .citymenu{display:none;position:absolute;z-index:50;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none;padding:4px 0;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 .citymenu.open{display:block}
@@ -305,8 +303,7 @@ const hourLabel=(v)=>D.time[v].slice(11,16);
 // tabs
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   if(b.dataset.tab==='refresh'){
-    b.classList.add('spinning');
-    loadCity(D.location.slug,true).finally(()=>b.classList.remove('spinning'));
+    location.reload();
     return;
   }
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
@@ -466,7 +463,7 @@ function buildWeatherHours(){
     const enTs=D.time[jLast];
     const enDay=enTs.slice(0,10);
     const enTime=enTs.slice(11,16);
-    const enLabel=enDay===today?enTime:DAY_NAMES_SHORT[new Date(enTs).getDay()]+' '+new Date(enTs).getDate()+' '+enTime;
+    const enLabel=enDay===today?enTime:relDay(enTs)+' '+enTime;
     const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     parts.push(fromModels?'Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
@@ -512,8 +509,7 @@ function buildWeather10(){
   const span=(isFinite(lo)&&isFinite(hi)&&hi>lo)?hi-lo:0;
   const TOP=16,BTM=135-16,SCALE=(isFinite(span)&&span>0)?(BTM-TOP)/span:0;
   const yT=t=>t==null?BTM:(isFinite(span)&&span>0)?BTM-SCALE*(t-lo):(TOP+BTM)/2;
-  document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map((x,di)=>{
-    const day=dt[di];
+  document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
     const y1=yT(x.tmax),y2=yT(x.tmin);
     const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
     const pR=x.pr!=null?Math.max(0,Math.round(x.pr/50*100)):0;
@@ -529,7 +525,7 @@ function buildWeather10(){
       '<div class="d10mm">'+(x.pr==null?'—':fmtP(x.pr))+'мм / '+(x.pp==null?'—':num(x.pp))+'%</div>'+
       '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('облака '+num(x.cl)+'%'))+'</div>'+
       '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
-      '<div class="d10day"><b>'+relDayLabel(day,x.d)+'</b></div>'+
+      '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
   }).join('')+'</div></div>';
 }
@@ -609,10 +605,8 @@ function buildWeatherDetail(){
       }
     }
     const rainStr=rst===null?'':(rst===ren?('<div>в '+rst+'</div>'):('<div>с '+rst+' до '+ren+'</div>'));
-    const dayHd=relDayLabel(day,d);
-    const dayHd2=(dayHd==='Сегодня'||dayHd==='Завтра'||dayHd==='Послезавтра')?dayHd:(DAY_NAMES[d.getDay()]+',<br>'+d.getDate()+' '+MONTH_NAMES[d.getMonth()]);
     const sumCol='<div class="hour hsum">'+
-      '<div class="ht">'+dayHd2+'</div>'+
+      '<div class="ht">'+DAY_NAMES[d.getDay()]+',<br>'+d.getDate()+' '+MONTH_NAMES[d.getMonth()]+'</div>'+
       '<div class="he"></div>'+
       '<div class="htemp">'+(tmax==null?'—':temp(tmax))+' <span class="tmin">/ '+(tmin==null?'—':temp(tmin))+'</span></div>'+
       '<div class="hwnd"></div>'+
@@ -635,11 +629,6 @@ function relDay(dayStr){
   if(diff===1)return 'Завтра';
   if(diff===2)return 'Послезавтра';
   const d=new Date(d1);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate();
-}
-function relDayLabel(dayStr,d){
-  const r=relDay(dayStr);
-  if(r==='Сегодня'||r==='Завтра'||r==='Послезавтра')return r;
-  return DOW_S[d.getDay()]+' '+d.getDate();
 }
 function sourceCountAt(i,list,precipMin){
   let n=0;
