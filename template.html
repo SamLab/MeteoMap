@@ -17,6 +17,8 @@ header .meta{color:var(--muted);font-size:12px}
 .tabs{display:flex;gap:8px;margin-bottom:8px;flex:none}
 .tabs button{background:var(--card);color:var(--muted);border:1px solid var(--line);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
 .tabs button.active{color:var(--text);background:var(--accent);border-color:var(--accent)}
+.tabs button.spinning{animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .citysel{cursor:pointer;border-bottom:1px dashed var(--accent)}
 .citymenu{display:none;position:absolute;z-index:50;background:var(--card);border:1px solid var(--line);border-radius:8px;list-style:none;padding:4px 0;box-shadow:0 4px 14px rgba(0,0,0,.12)}
 .citymenu.open{display:block}
@@ -160,6 +162,7 @@ a{color:var(--accent)}
   <button data-tab="compare">Часы</button>
   <button data-tab="forecast">Графики</button>
   <button data-tab="accuracy">Точность</button>
+  <button data-tab="refresh" title="Обновить данные">&#8635;</button>
   <button data-tab="help" title="Справка">?</button>
 </div>
 <div id="tab-weather" class="panel active">
@@ -301,6 +304,11 @@ const hourLabel=(v)=>D.time[v].slice(11,16);
 
 // tabs
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  if(b.dataset.tab==='refresh'){
+    b.classList.add('spinning');
+    loadCity(D.location.slug,true).finally(()=>b.classList.remove('spinning'));
+    return;
+  }
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   ['weather','forecast','radar','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
