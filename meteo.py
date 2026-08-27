@@ -19,6 +19,7 @@ FORECAST_DAYS = 16
 FORECAST_MODELS = [
     ("ecmwf_ifs025", "ECMWF IFS", "forecast"),
     ("google_weathernext2_ensemble", "Google AI", "ensemble"),
+    ("ncep_aigfs025", "NOAA AIGFS", "forecast"),
     ("ncep_gefs_seamless", "NOAA GEFS", "ensemble"),
     ("ncep_gfs_seamless", "NOAA GFS", "forecast"),
     ("jma_gsm", "JMA GSM", "forecast"),
@@ -28,7 +29,6 @@ FORECAST_MODELS = [
     ("cma_grapes_global", "CMA GRAPES", "forecast"),
     ("meteofrance_arpege_world025", "Météo-France", "forecast"),
     ("ecmwf_aifs025", "ECMWF AIFS", "forecast"),
-    ("ncep_aigfs025", "NOAA AIGFS", "forecast"),
 ]
 
 HOURLY_VARIABLES = [
@@ -876,13 +876,13 @@ def fetch_7timer(lat=None, lon=None):
 
 _EXT = ["yaroslavl", "tsedenevo"]
 EXTERNAL_MODELS = [
+    (TT_CODE, TT_NAME, fetch_7timer, _EXT),
     (OWM_CODE, OWM_NAME, fetch_owm, _EXT),
     (VC_CODE, VC_NAME, fetch_vc, _EXT),
     (MB_CODE, MB_NAME, fetch_mb_cached, ["tsedenevo"]),
     (WWO_CODE, WWO_NAME, fetch_wwo, _EXT),
     (XW_CODE, XW_NAME, fetch_xw, _EXT),
     (TW_CODE, TW_NAME, fetch_tomorrow, _EXT),
-    (TT_CODE, TT_NAME, fetch_7timer, _EXT),
 ]
 
 

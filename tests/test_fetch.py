@@ -4,15 +4,16 @@ import meteo
 def test_model_order():
     codes = [c for c, _n, _e in meteo.FORECAST_MODELS]
     wanted = [
-        "ecmwf_ifs025", "google_weathernext2_ensemble", "ncep_gefs_seamless",
-        "ncep_gfs_seamless", "jma_gsm", "gem_global", "dwd_icon_global",
+        "ecmwf_ifs025", "google_weathernext2_ensemble", "ncep_aigfs025",
+        "ncep_gefs_seamless", "ncep_gfs_seamless", "jma_gsm", "gem_global",
+        "dwd_icon_global",
         "ukmo_global_deterministic_10km", "cma_grapes_global",
         "meteofrance_arpege_world025",
     ]
     idx = [codes.index(c) for c in wanted]
     assert idx == sorted(idx)
     ext = [c for c, _n, _fn, *_ in meteo.EXTERNAL_MODELS]
-    assert ext == [meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE, meteo.WWO_CODE, meteo.XW_CODE, meteo.TW_CODE, meteo.TT_CODE]
+    assert ext == [meteo.TT_CODE, meteo.OWM_CODE, meteo.VC_CODE, meteo.MB_CODE, meteo.WWO_CODE, meteo.XW_CODE, meteo.TW_CODE]
 
 
 def test_aigfs_model_registered():
