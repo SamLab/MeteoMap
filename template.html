@@ -654,6 +654,16 @@ function buildWarnings(){
   const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+relDay(ts[i].slice(0,10))+' в '+ts[i].slice(11,16)+'</span>';};
   const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmtP(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
   const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
+  const wetSpan=(a,b)=>{
+    let pr=0, pp=0;
+    for(let k=a;k<=b;k++){
+      const p=D.weighted.precipitation?.[k];
+      if(typeof p==='number')pr+=p;
+      const q=D.weighted.precipitation_probability?.[k];
+      if(typeof q==='number'&&q>pp)pp=q;
+    }
+    return wetVal(pr>0?pr:0, pp>0?pp:undefined);
+  };
   const sourceList=(i,list,pm)=>codes.filter(c=>{
     const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;
     const pr=D.models[c]?D.models[c].precipitation?.[i]:undefined;
@@ -696,22 +706,23 @@ function buildWarnings(){
       let rainEnd=curIdx;for(let ri=curIdx+1;ri<ts.length;ri++){if(sourceCountAt(ri,list,precipMin)<2)break;rainEnd=ri;}
       const endH=rainEnd>curIdx?endLabel(ts[rainEnd]):'';
       const sL=sourceList(curIdx,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');
-      rows.push('<div class="wr1">Вероятен'+(endH?' до '+endH:'')+' · '+srcWet(curIdx,list,precipMin)+' · '+sLabel+'</div>');
+      rows.push('<div class="wr1">Вероятен'+(endH?' до '+endH:'')+' · '+wetSpan(curIdx,rainEnd)+' · '+sLabel+'</div>');
     }
     if(s>=0&&s!==c){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<=0)break;sE=k;}
       const ds=new Date(ts[s]);const dayS='<span class="tlu">'+relDay(ts[s].slice(0,10))+'</span>';
       const sLbl=sE>s?(dayS+' с '+ts[s].slice(11,16)+' до '+endLabel(ts[sE],ts[s].slice(0,10))):tstr(s);
-      const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+sLbl+srcWet(s,list,precipMin)+' · '+sLabel+'</div>');}
+      const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+' · '+sLabel+'</div>');}
     if(c>=0){
-      let cLbl,wv=wet(c);
+      let cLbl,wv;
       if(conOngoing){
         const eh=ce>curIdx?endLabel(ts[ce]):'';
         cLbl='Идёт'+(eh?' до '+eh:'');
-        wv=wet(curIdx);
+        wv=wetSpan(curIdx,ce);
       }else{
         let cE=c;for(let k=c+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;cE=k;}
         const dc=new Date(ts[c]);const dayC='<span class="tlu">'+relDay(ts[c].slice(0,10))+'</span>';
         cLbl=cE>c?(dayC+' с '+ts[c].slice(11,16)+' до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
+        wv=wetSpan(c,cE);
       }
       const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
