@@ -696,7 +696,7 @@ function buildWarnings(){
       let rainEnd=curIdx;for(let ri=curIdx+1;ri<ts.length;ri++){if(sourceCountAt(ri,list,precipMin)<2)break;rainEnd=ri;}
       const endH=rainEnd>curIdx?endLabel(ts[rainEnd]):'';
       const sL=sourceList(curIdx,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');
-      rows.push('<div class="wr1">Идёт'+(endH?' до '+endH:'')+' · '+srcWet(curIdx,list,precipMin)+' · '+sLabel+'</div>');
+      rows.push('<div class="wr1">Вероятен'+(endH?' до '+endH:'')+' · '+srcWet(curIdx,list,precipMin)+' · '+sLabel+'</div>');
     }
     if(s>=0&&s!==c){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<=0)break;sE=k;}
       const ds=new Date(ts[s]);const dayS='<span class="tlu">'+relDay(ts[s].slice(0,10))+'</span>';
