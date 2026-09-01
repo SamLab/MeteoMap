@@ -145,7 +145,7 @@ def test_hourstitle_rain_interval():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const rainType=wcode(w.weather_code?.[jPeak])[0]||'Дождь';" in tpl
-    assert "const enLabel=enDay===today?enTime:" in tpl
+    assert "const enLabel=cutAtMidnight?'полуночи':(enDay===today?enTime:" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl

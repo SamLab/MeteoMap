@@ -463,7 +463,9 @@ function buildWeatherHours(){
     const enTs=D.time[jLast];
     const enDay=enTs.slice(0,10);
     const enTime=enTs.slice(11,16);
-    const enLabel=enDay===today?enTime:relDay(enTs)+' '+enTime;
+    const endsToday=isToday(jLast);
+    const cutAtMidnight=endsToday&&(jLast+1>=D.time.length||!isToday(jLast+1));
+    const enLabel=cutAtMidnight?'полуночи':(enDay===today?enTime:relDay(enTs)+' '+enTime);
     const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     parts.push(fromModels?'Подтвержденного сегодня дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
