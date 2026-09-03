@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Собирает radar.html: инлайнит Leaflet 1.6.0 из tools/leaflet.js."""
+"""Собирает radar.html и nowcast.html: инлайнит Leaflet 1.6.0, CSS и палитру
+из tools/ в HTML-шаблоны (radar_template.html, nowcast_template.html)."""
 
 import os
 import sys
@@ -9,35 +10,48 @@ ROOT = os.path.dirname(HERE)
 LEAFLET = os.path.join(ROOT, "tools", "leaflet.js")
 LEAFLET_CSS = os.path.join(ROOT, "tools", "leaflet.css")
 PALETTE = os.path.join(ROOT, "tools", "palette.js")
-TEMPLATE = os.path.join(ROOT, "radar_template.html")
-OUT = os.path.join(ROOT, "radar.html")
+
+TARGETS = {
+    "radar": (os.path.join(ROOT, "radar_template.html"),
+              os.path.join(ROOT, "radar.html")),
+    "nowcast": (os.path.join(ROOT, "nowcast_template.html"),
+                os.path.join(ROOT, "nowcast.html")),
+}
+
+MARKERS = ("/*__LEAFLET__*/", "/*__LEAFLET_CSS__*/", "/*__PALETTE__*/")
 
 
-def build():
-    for name, path, marker in (
-        ("leaflet", LEAFLET, "/*__LEAFLET__*/"),
-        ("leaflet.css", LEAFLET_CSS, "/*__LEAFLET_CSS__*/"),
-        ("palette", PALETTE, "/*__PALETTE__*/"),
-    ):
-        if not os.path.isfile(path):
-            sys.exit(f"error: {name} not found: {path}")
-    with open(LEAFLET, encoding="utf-8", errors="replace") as f:
-        leaflet = f.read()
-    with open(LEAFLET_CSS, encoding="utf-8", errors="replace") as f:
-        leaflet_css = f.read()
-    with open(PALETTE, encoding="utf-8", errors="replace") as f:
-        palette = f.read()
-    with open(TEMPLATE, encoding="utf-8") as f:
-        template = f.read()
-    for marker in ("/*__LEAFLET__*/", "/*__LEAFLET_CSS__*/", "/*__PALETTE__*/"):
-        assert marker in template, f"placeholder missing in template: {marker}"
-    html = template.replace("/*__LEAFLET__*/", leaflet)
-    html = html.replace("/*__LEAFLET_CSS__*/", leaflet_css)
-    html = html.replace("/*__PALETTE__*/", palette)
-    with open(OUT, "w", encoding="utf-8") as f:
-        f.write(html)
-    print(f"[ok] radar.html written ({os.path.getsize(OUT)} bytes)")
+def _read(p):
+    with open(p, encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
+def build(name=None):
+    for p in (LEAFLET, LEAFLET_CSS, PALETTE):
+        if not os.path.isfile(p):
+            sys.exit(f"error: missing {p}")
+    assets = {
+        "/*__LEAFLET__*/": _read(LEAFLET),
+        "/*__LEAFLET_CSS__*/": _read(LEAFLET_CSS),
+        "/*__PALETTE__*/": _read(PALETTE),
+    }
+    targets = {name: TARGETS[name]} if name else TARGETS
+    for n, (tpl, out) in targets.items():
+        if not os.path.isfile(tpl):
+            sys.exit(f"error: template not found: {tpl}")
+        template = _read(tpl)
+        for marker in MARKERS:
+            assert marker in template, f"placeholder missing in {tpl}: {marker}"
+        html = template
+        for marker, content in assets.items():
+            html = html.replace(marker, content)
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"[ok] {out} written ({os.path.getsize(out)} bytes)")
 
 
 if __name__ == "__main__":
-    build()
+    if len(sys.argv) > 1:
+        build(sys.argv[1])
+    else:
+        build()
