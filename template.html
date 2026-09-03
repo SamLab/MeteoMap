@@ -30,6 +30,9 @@ header .meta{color:var(--muted);font-size:12px}
 #tab-radar.active{overflow:hidden}
 #tab-radar{min-height:0}
 #radar-frame{width:100%;height:100%;border:0;display:block}
+#tab-satellite.active{overflow:hidden}
+#tab-satellite{min-height:0}
+#satellite-frame{width:100%;height:100%;border:0;display:block}
 #tab-weather .card{flex:none}
 .help{line-height:1.55;font-size:13px}
 .help h2{font-size:16px;margin:0 0 6px}
@@ -157,6 +160,7 @@ a{color:var(--accent)}
 <div class="tabs">
   <button class="active" data-tab="weather">Погода</button>
   <button data-tab="radar">Радар</button>
+  <button data-tab="satellite">Спутник</button>
   <button data-tab="compare">Часы</button>
   <button data-tab="forecast">Графики</button>
   <button data-tab="accuracy">Точность</button>
@@ -172,6 +176,9 @@ a{color:var(--accent)}
 </div>
 <div id="tab-radar" class="panel">
   <iframe id="radar-frame" title="Радар осадков"></iframe>
+</div>
+<div id="tab-satellite" class="panel">
+  <iframe id="satellite-frame" title="Спутник"></iframe>
 </div>
 <div id="tab-compare" class="panel">
   <div class="card">
@@ -308,10 +315,14 @@ document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',
   }
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
-  ['weather','forecast','radar','compare','accuracy','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
+  ['weather','forecast','radar','compare','accuracy','satellite','help'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',b.dataset.tab===t));
   if(b.dataset.tab==='radar'){
     const f=document.getElementById('radar-frame');
     if(f&&f.dataset.radarSrc&&f.dataset.radarSrc!==f.dataset.loadedSrc){f.src=f.dataset.radarSrc;f.dataset.loadedSrc=f.dataset.radarSrc;}
+  }
+  if(b.dataset.tab==='satellite'){
+    const f=document.getElementById('satellite-frame');
+    if(f&&f.dataset.sputnikSrc&&f.dataset.sputnikSrc!==f.dataset.loadedSputnik){f.src=f.dataset.sputnikSrc;f.dataset.loadedSputnik=f.dataset.sputnikSrc;}
   }
   if(b.dataset.tab==='forecast'&&typeof mainChart!=='undefined'&&mainChart)setTimeout(()=>mainChart.resize(),0);
 }));
@@ -965,6 +976,7 @@ function renderAll(){
   }
   buildConditions(); buildWeatherNow(); buildWeatherHours();
   updateRadarFrame();
+  updateSputnikFrame();
   buildWeather10(); buildWeatherDetail(); buildWarnings();
   document.getElementById('varsel').innerHTML='';
   buildVarSel('varsel',setVar);
@@ -986,6 +998,15 @@ function updateRadarFrame(){
   if(f.dataset.radarSrc===url)return;
   f.dataset.radarSrc=url;
   const tab=document.getElementById('tab-radar');
+  if(tab&&tab.classList.contains('active'))f.src=url;
+}
+function updateSputnikFrame(){
+  const f=document.getElementById('satellite-frame');
+  if(!f||!D.location)return;
+  const url='nowcast.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=8';
+  if(f.dataset.sputnikSrc===url)return;
+  f.dataset.sputnikSrc=url;
+  const tab=document.getElementById('tab-satellite');
   if(tab&&tab.classList.contains('active'))f.src=url;
 }
 async function loadCity(slug,silent){

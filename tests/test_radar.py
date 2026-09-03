@@ -481,3 +481,13 @@ def test_widget_precip_font_and_ppct():
             w = f.read()
         assert '<span class="ppct">%</span>' in w, fname
         assert ".ppct{font-size:.5em}" in w, fname
+
+
+def test_index_has_sputnik_tab_and_iframe():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert 'data-tab="satellite"' in tpl
+    assert '<button data-tab="satellite">Спутник</button>' in tpl
+    assert 'id="satellite-frame"' in tpl
+    assert "updateSputnikFrame()" in tpl
+    assert "'satellite'" in tpl
