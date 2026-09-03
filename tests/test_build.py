@@ -22,6 +22,15 @@ def test_build_script_defines_nowcast_output():
     assert "nowcast.html" in s
 
 
+def test_nowcast_template_has_tile_retry():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    assert "MAX_TILE_ATTEMPTS" in s
+    assert "TILE_RETRY_MS" in s
+    assert "img.onerror" in s
+    assert "loadRaw(url,cb,attempt+1)" in s
+
+
 def test_builder_produces_nowcast_html():
     if HERE not in sys.path:
         sys.path.insert(0, HERE)

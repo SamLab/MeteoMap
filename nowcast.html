@@ -800,8 +800,11 @@ var PAL=(function(){
   function clearStatus(){elStatus.classList.remove('show');}
 
   var cache={};
-  function loadRaw(url,cb){
+  var MAX_TILE_ATTEMPTS=3;
+  var TILE_RETRY_MS=1000;
+  function loadRaw(url,cb,attempt){
     if(cache[url]){cb(cache[url]);return;}
+    attempt=attempt||0;
     var img=new Image();
     img.crossOrigin='anonymous';
     img.onload=function(){
@@ -813,7 +816,11 @@ var PAL=(function(){
         cache[url]=a;cb(a);
       }catch(e){cb(null);}
     };
-    img.onerror=function(){cb(null);};
+    // ГМЦ может отдавать 429/5xx при нагрузке — повторяем тайл с задержкой
+    img.onerror=function(){
+      if(attempt<MAX_TILE_ATTEMPTS){setTimeout(function(){loadRaw(url,cb,attempt+1);},TILE_RETRY_MS);}
+      else{cb(null);}
+    };
     img.src=url;
   }
 
