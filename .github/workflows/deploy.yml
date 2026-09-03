@@ -54,7 +54,7 @@ jobs:
           ENABLE_EXTERNAL: "1"
         run: python meteo.py
 
-      - name: Build radar page
+      - name: Build radar and nowcast pages
         run: python tools/build_radar.py
 
       - name: Prepare pages artifact
@@ -62,6 +62,7 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp radar.html _site/
+          cp nowcast.html _site/
           cp meteo.html _site/
           cp meteow.html _site/
           cp -r data _site/
