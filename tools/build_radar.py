@@ -26,7 +26,14 @@ def _read(p):
         return f.read()
 
 
+def _read_strict(p):
+    with open(p, encoding="utf-8") as f:
+        return f.read()
+
+
 def build(name=None):
+    if name is not None and name not in TARGETS:
+        sys.exit(f"error: unknown target: {name} (choose from {', '.join(TARGETS)})")
     for p in (LEAFLET, LEAFLET_CSS, PALETTE):
         if not os.path.isfile(p):
             sys.exit(f"error: missing {p}")
@@ -39,7 +46,7 @@ def build(name=None):
     for n, (tpl, out) in targets.items():
         if not os.path.isfile(tpl):
             sys.exit(f"error: template not found: {tpl}")
-        template = _read(tpl)
+        template = _read_strict(tpl)
         for marker in MARKERS:
             assert marker in template, f"placeholder missing in {tpl}: {marker}"
         html = template
