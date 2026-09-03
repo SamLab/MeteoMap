@@ -107,7 +107,7 @@ def parse_capabilities_times(xml):
 
 def tile_path(z, x, y):
     """Путь сегмента тайла: `{z}0{x}0{y}` (конкатенация)."""
-    return "{}{}0{}0{}".format(z, 0, x, 0, y)
+    return "{}0{}0{}".format(z, x, y)
 
 
 def tile_url(z, x, y, inidt):
