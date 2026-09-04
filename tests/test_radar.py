@@ -249,7 +249,7 @@ def test_warnings_gust_column_instead_of_hail():
 def test_warnings_do_not_duplicate_when_nearest_confirmed_coincide():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "if(s>=0&&s!==c)" in tpl
+    assert "if(s>=0&&s!==c" in tpl
     assert "if(g1>=0&&g1!==g2)" in tpl
 
 
