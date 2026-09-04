@@ -54,3 +54,11 @@ def test_nowcast_template_has_gibs_cloud_layer():
     assert "gibsLayer" in s
     assert "earthdata.nasa.gov" in s
     assert "maxNativeZoom" in s
+
+
+def test_nowcast_template_has_cloud_timelabel():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    assert 'id="ctime"' in s
+    assert "mskLabel" in s
+    assert "MSK · den (Terra)" in s
