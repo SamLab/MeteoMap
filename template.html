@@ -206,10 +206,10 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — текущие условия и параметры по консенсусу; в скобках — средняя за день, ↑/↓ — максимум и минимум за сегодня с временем. На телефоне видны 4 основных параметра, на ПК — 10.</li>
       <li><b>По часам</b> — ближайшие 48 часов; заливка — дождь. Подсчёт дождя: код погоды из «дождевых» (есть) → осадки ≥ 0.1 мм (нет кода) → вероятность осадков &gt; 33% (нет кода и осадков).</li>
-      <li><b>Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по двум и более. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «Идёт до …» с консенсусными значениями; для будущих периодов — «Вс 23 в 08:00» при одном часе или «Вс 23 с 08:00 до 10:00» при нескольких. Гроза: риск при CAPE &gt; 1000 Дж/кг и CIN не ≤ −50 Дж/кг (не блокирует).</li>
+      <li><b>Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по двум и более. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «Идёт до …» с консенсусными значениями; для будущих периодов — «Вс 23 в 08ч» при одном часе или «Вс 23 с 08ч до 10ч» при нескольких. Гроза: риск при CAPE &gt; 1000 Дж/кг и CIN не ≤ −50 Дж/кг (не блокирует).</li>
       <li><b>На 16 дней</b> — день, погода, температура, осадки, облачность.</li>
       <li><b>Подробно на 16 дней</b> — почасовый прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Восход/закат и долгота дня.</li>
-      <li>Заголовок «По часам» — сводка по дождю на остаток дня: тип и интервал по консенсусу, либо «Подтвержденного дождя нет, но по N моделям вероятны Осадки …». Если дождь идёт сейчас — начало не указывается («до 15:00»).</li>
+      <li>Заголовок «По часам» — сводка по дождю на остаток дня: тип и интервал по консенсусу, либо «Подтвержденного дождя нет, но по N моделям вероятны Осадки …». Если дождь идёт сейчас — начало не указывается («до 15ч»).</li>
     </ul>
     <h2>Графики</h2>
     <ul>
@@ -480,10 +480,10 @@ function buildWeatherHours(){
     }
     const jPeakCode=w.weather_code?.[jPeak];
     const rainType=(rainCodes.includes(jPeakCode)&&wcode(jPeakCode)[0])?wcode(jPeakCode)[0]:'Дождь';
-    const st=D.time[rainHour].slice(11,16);
+    const st=D.time[rainHour].slice(11,13)+'ч';
     const enTs=D.time[jLast];
     const enDay=enTs.slice(0,10);
-    const enTime=enTs.slice(11,16);
+    const enTime=enTs.slice(11,13)+'ч';
     const endsToday=isToday(jLast);
     const cutAtMidnight=endsToday&&(jLast+1>=D.time.length||!isToday(jLast+1));
     const enLabel=cutAtMidnight?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);
@@ -504,7 +504,7 @@ function buildWeatherHours(){
       const ws=w.wind_speed_10m?.[j];
       const wd=w.wind_direction_10m?.[j];
       const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
-      return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,16)+'</div>'+
+      return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,13)+'ч</div>'+
         '<div class="he">'+we+'</div><div class="hcloud">'+(w.cloud_cover?.[j]==null?'':num(w.cloud_cover[j])+'%')+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
         '<div class="hwnd">'+(ws==null?'':arrow+' '+num(ws)+' м/с')+'</div>'+
         '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div>'+
@@ -599,7 +599,7 @@ function buildWeatherDetail(){
     }
     const blocks=[];
     for(let h=0;h<24;h+=2){
-      const hh=String(h).padStart(2,'0')+':00';
+      const hh=String(h).padStart(2,'0')+'ч';
       const j=D.time.findIndex(t=>t.slice(0,10)===day&&t.slice(11,13)===hh.slice(0,2));
       if(j<0)continue;
       const [wtext,we]=wcode(w.weather_code?.[j]);
@@ -623,8 +623,8 @@ function buildWeatherDetail(){
       const t=D.time[j];
       if(!t||t.slice(0,10)!==day)continue;
       if(RAIN_CODES.includes(D.weighted.weather_code?.[j])){
-        if(rst===null)rst=t.slice(11,16);
-        ren=t.slice(11,16);
+        if(rst===null)rst=t.slice(11,13)+'ч';
+        ren=t.slice(11,13)+'ч';
       }
     }
     const rainStr=rst===null?'':(rst===ren?('<div>в '+rst+'</div>'):('<div>с '+rst+' до '+ren+'</div>'));
@@ -679,7 +679,7 @@ function buildWarnings(){
   const conAt=(i)=>D.weighted.weather_code?.[i]!=null&&rainCodesLocal.includes(Number(D.weighted.weather_code[i]));
   const isConfirmed=(i,list,pm)=>list===R?conAt(i):sourceCountAt(i,list,pm)>=2;
   const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(isConfirmed(i,list,pm))return i;}return -1;};
-  const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+relDay(ts[i].slice(0,10))+' в '+ts[i].slice(11,16)+'</span>';};
+  const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+relDay(ts[i].slice(0,10))+' в '+ts[i].slice(11,13)+'ч</span>';};
   const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmtP(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
   const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
   const wetSpan=(a,b)=>{
@@ -719,7 +719,7 @@ function buildWarnings(){
     const endLabel=(tsStr,startDay)=>{
       const ed=new Date(tsStr);
       const eDay=tsStr.slice(0,10);
-      const eTime=tsStr.slice(11,16);
+      const eTime=tsStr.slice(11,13)+'ч';
       if(eDay===today||eDay===startDay)return eTime;
       return relDay(tsStr)+' '+eTime;
     };
@@ -739,7 +739,7 @@ function buildWarnings(){
     }
     if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<=0)break;sE=k;}
       const ds=new Date(ts[s]);const dayS='<span class="tlu">'+relDay(ts[s].slice(0,10))+'</span>';
-      const sLbl=sE>s?(dayS+' с '+ts[s].slice(11,16)+' до '+endLabel(ts[sE],ts[s].slice(0,10))):tstr(s);
+      const sLbl=sE>s?(dayS+' с '+ts[s].slice(11,13)+'ч до '+endLabel(ts[sE],ts[s].slice(0,10))):tstr(s);
       const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+' · '+sLabel+'</div>');}
     if(c>=0){
       let cLbl,wv;
@@ -750,7 +750,7 @@ function buildWarnings(){
       }else{
         let cE=c;for(let k=c+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;cE=k;}
         const dc=new Date(ts[c]);const dayC='<span class="tlu">'+relDay(ts[c].slice(0,10))+'</span>';
-        cLbl=cE>c?(dayC+' с '+ts[c].slice(11,16)+' до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
+        cLbl=cE>c?(dayC+' с '+ts[c].slice(11,13)+'ч до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
         wv=wetSpan(c,cE);
       }
       const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
