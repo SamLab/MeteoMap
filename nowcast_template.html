@@ -9,18 +9,7 @@
 html,body{height:100%}
 body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;overflow:hidden}
 #map{position:absolute;inset:0;background:#acacac}
-#timeline{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:#fff;border-top:1px solid #d8d8d8;padding:10px 14px;display:flex;align-items:center;gap:14px}
-#play{width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:0 2px 2px rgba(85,85,85,.4);color:#42434b;font-size:16px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;border:0}
-#play:hover{background:#f2f2f2}
-#segwrap{flex:1;position:relative;height:10px;cursor:pointer}
-#segs{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;gap:1px}
-#segs div{flex:1;position:relative;cursor:pointer}
-#segs div:after{content:'';display:block;position:absolute;background-color:#42434b;opacity:.35;left:0;right:0;top:0;bottom:0;border-radius:2px}
-#segs div.on:after{opacity:1}
-#segs div:first-child:after{border-radius:9px 2px 2px 9px}
-#segs div:last-child:after{border-radius:2px 9px 9px 2px}
-#time{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#415fad;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
-#sattimeline{position:absolute;left:0;right:0;bottom:70px;z-index:1000;background:#fff;border-top:1px solid #d8d8d8;padding:8px 14px;display:flex;align-items:center;gap:14px;box-shadow:0 -1px 3px rgba(0,0,0,.15)}
+#sattimeline{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:#fff;border-top:1px solid #d8d8d8;padding:8px 14px;display:flex;align-items:center;gap:14px;box-shadow:0 -1px 3px rgba(0,0,0,.15)}
 #sattimeline.hidden{display:none}
 #satplay{width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 2px 2px rgba(85,85,85,.4);color:#42434b;font-size:14px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;border:0}
 #satplay:hover{background:#f2f2f2}
@@ -32,18 +21,11 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #satsegs div:first-child:after{border-radius:9px 2px 2px 9px}
 #satsegs div:last-child:after{border-radius:2px 9px 9px 2px}
 #sattime{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#4a6d5a;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
-#legend{position:absolute;bottom:142px;left:50%;transform:translateX(-50%);z-index:1000;width:260px;height:20px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-radius:20px;box-shadow:0 0 2px #000;background:linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2)}
-#legend span{font-size:11px;color:#fff;text-shadow:0 0 4px #000;font-weight:600;white-space:nowrap}
 #status{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#fff;border:1px solid #d8d8d8;color:#42434b;border-radius:8px;padding:6px 14px;font-size:12px;display:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #status.show{display:block}
 #ltoggle{position:absolute;top:10px;right:10px;z-index:1000;background:#42434b;color:#fff;border:0;border-radius:18px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px}
 #ltoggle.on{background:#f29b17;color:#fff}
 #ltoggle .ltdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
-#ctoggle{position:absolute;top:54px;right:10px;z-index:1000;background:#42434b;color:#fff;border:0;border-radius:18px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px}
-#ctoggle.on{background:#f29b17;color:#fff}
-#ctoggle .ltdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
-#ctoggle.on .ltdot{background:#fff}
-#ctoggle #ctime{font-size:10px;opacity:.85;font-weight:400;white-space:nowrap}
 /*__LEAFLET_CSS__*/
 .leaflet-container{background:#acacac}
 .leaflet-bar a,.leaflet-bar a:hover{background-color:#42434b;width:35px;height:35px;line-height:35px;text-align:center;text-decoration:none;color:#fff;margin-bottom:10px;border-radius:50%;font-size:28px}
@@ -69,13 +51,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 <div id="map"></div>
 <div id="status"></div>
 <button id="ltoggle" title="Молнии: свежие — светло-голубые, постарше — тёмно-голубые"><span class="ltdot"></span>Молнии</button>
-<button id="ctoggle" title="Спутниковая облачность: живые снимки Sat24 (каждый ~15 мин, центр Россия); при недоступности — дневной снимок NASA GIBS"><span class="ltdot"></span>Облачность<span id="ctime"></span></button>
-<div id="legend"><span>Слабо</span><span>Умеренно</span><span>Сильно</span><span>Очень сильно</span></div>
-<div id="timeline">
-  <button id="play" title="Воспроизвести">▶</button>
-  <div id="segwrap"><div id="segs"></div></div>
-  <span id="time">—</span>
-</div>
 <div id="sattimeline" class="hidden">
   <button id="satplay" title="Воспроизвести историю спутника (последние ~6 ч)">▶</button>
   <div id="satsegwrap"><div id="satsegs"></div></div>
@@ -190,8 +165,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     var p=d.split('-');
     return p[2]+'.'+p[1]+' MSK · den (Terra)';
   }
-  var elCt=document.getElementById('ctoggle');
-  var cloudOn=true;
   var cloudLayer=null;
   var gibsLayer=null;
   var sat24Layer=null;
@@ -208,7 +181,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     pickGIBSDate(function(ds){
       if(!ds)return;
       gibsDate=ds;
-      document.getElementById('ctime').textContent=' · '+mskLabel(ds);
+      elSatTime.textContent=mskLabel(ds);
       sat24Layer=L.tileLayer(GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/{y}/{x}.jpg',{
         minZoom:3,maxZoom:10,minNativeZoom:9,maxNativeZoom:9,zIndex:900,opacity:0.9,
         attribution:'Спутник: <a href="https://earthdata.nasa.gov/">NASA GIBS</a>'
@@ -233,7 +206,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
       map.addLayer(sat24Layer);
     }
     cloudLayer=sat24Layer;
-    document.getElementById('ctime').textContent=' · '+sat24Label(t);
     updateSatSegs();
   }
   function renderSatSegs(){
@@ -316,21 +288,8 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
       showSatFrame(satFrames.length-1);
     });
   }
-  function showCloudLayer(){
-    if(cloudLayer){map.addLayer(cloudLayer);if(!satAltUsed&&satFrames.length)showSatTimeline();return;}
-    loadCloud();
-  }
-  function hideCloudLayer(){
-    if(cloudLayer)map.removeLayer(cloudLayer);
-    hideSatTimeline();
-  }
-  elCt.classList.add('on');
-  showCloudLayer();
-  elCt.addEventListener('click',function(){
-    cloudOn=!cloudOn;
-    if(cloudOn){elCt.classList.add('on');showCloudLayer();}
-    else{elCt.classList.remove('on');hideCloudLayer();}
-  });
+  // Спутниковая облачность всегда включена (без кнопки-переключателя)
+  loadCloud();
 
   map.createPane('lightning-0');
   map.createPane('lightning-1');
@@ -375,179 +334,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   });
   map.addLayer(new LabelsLayer());
 
-  // Наукастинг ГМЦ: capabilities (см. tools/nowcast.py:parse_capabilities_times)
-  var CAP_URL='https://meteoinfo.ru/hmc-output/nowcast3/nowcast.php';
-  // Разбор времён из <Extent name="time">...</Extent> (ISO8601 UTC, разделитель ,)
-  function parseTimes(xml){
-    var m=new RegExp('<Extent name="time"[^>]*>(.*?)</Extent>','s').exec(xml||'');
-    if(!m)return [];
-    return m[1].trim().split(',').map(function(s){return s.trim();}).filter(Boolean);
-  }
-  // URL тайла: путь = {z}+'0'+{x}+'0'+{y} (см. tools/nowcast.py:tile_url)
-  function tileURL(z,x,y,inidt){
-    var path=z+'0'+x+'0'+y;
-    return 'https://meteoinfo.ru/res/nowcast/'+path+'/ncgi.php?tnz='+z+'&tnx='+x+'&tny='+y+'&inidt='+encodeURIComponent(inidt);
-  }
-  function fmtUTC(iso){
-    var d=new Date(iso);
-    if(isNaN(d))return iso;
-    var p=function(n){return (n<10?'0':'')+n;};
-    return p(d.getDate())+'.'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes())+' UTC';
-  }
 
-  var frames=[],idx=0,playing=false,timer=null,overlay=null,cur=null;
-  var elPlay=document.getElementById('play');
-  var elTime=document.getElementById('time');
-  var elSegs=document.getElementById('segs');
-  var elStatus=document.getElementById('status');
-
-  function setStatus(t){elStatus.textContent=t;elStatus.classList.add('show');}
-  function clearStatus(){elStatus.classList.remove('show');}
-
-  var cache={};
-  var MAX_TILE_ATTEMPTS=3;
-  var TILE_RETRY_MS=1000;
-  function loadRaw(url,cb,attempt){
-    if(cache[url]){cb(cache[url]);return;}
-    attempt=attempt||0;
-    var img=new Image();
-    img.crossOrigin='anonymous';
-    img.onload=function(){
-      try{
-        var c=document.createElement('canvas');c.width=256;c.height=256;
-        var ctx=c.getContext('2d');ctx.drawImage(img,0,0);
-        var id=ctx.getImageData(0,0,256,256);
-        var d=id.data,a=new Uint8Array(d);
-        cache[url]=a;cb(a);
-      }catch(e){cb(null);}
-    };
-    // ГМЦ может отдавать 429/5xx при нагрузке — повторяем тайл с задержкой
-    img.onerror=function(){
-      if(attempt<MAX_TILE_ATTEMPTS){setTimeout(function(){loadRaw(url,cb,attempt+1);},TILE_RETRY_MS);}
-      else{cb(null);}
-    };
-    img.src=url;
-  }
-
-  // Прямой 1:1 рендер: каждый пиксель читает R-канал тайла того же зума.
-  function renderTile(coords){
-    var tile=document.createElement('canvas');
-    tile.width=256;tile.height=256;
-    var url=tileURL(coords.z,coords.x,coords.y,cur.time);
-    loadRaw(url,function(raw){
-      if(!raw){tile.complete=false;return;}
-      try{
-        var out=new Uint8ClampedArray(256*256*4);
-        for(var i=0;i<256;i++)for(var j=0;j<256;j++){
-          var r=raw[(i*256+j)*4];
-          if(r>2){
-            var ii=Math.round(r/255*(PAL.length-4));
-            if(ii<0)ii=0;
-            if(ii>PAL.length-4)ii=PAL.length-4;
-            var oi=(i*256+j)*4;
-            out[oi]=PAL[ii];out[oi+1]=PAL[ii+1];out[oi+2]=PAL[ii+2];out[oi+3]=PAL[ii+3];
-          }
-        }
-        tile.getContext('2d').putImageData(new ImageData(out,256,256),0,0);
-        tile.complete=true;
-      }catch(e){tile.complete=false;}
-    });
-    return tile;
-  }
-
-  var NowcastLayer=L.GridLayer.extend({
-    options:{minZoom:3,maxZoom:10,opacity:0.9,attribution:'Наукастинг: <a href="https://meteoinfo.ru/nowcasting">Гидрометцентр</a>'},
-    createTile:function(coords,done){
-      var tile=renderTile(coords);
-      setTimeout(function poll(){
-        if(tile.complete===true){done(null,tile);}
-        else if(tile.complete===false){done(new Error('tile error'),tile);}
-        else{setTimeout(poll,30);}
-      },0);
-      return tile;
-    }
-  });
-
-  function renderSegs(){
-    elSegs.innerHTML='';
-    frames.forEach(function(f,i){
-      var d=document.createElement('div');
-      d.title=fmtUTC(f.time);
-      d.addEventListener('click',function(){showFrame(i);});
-      elSegs.appendChild(d);
-    });
-    elSegs.childNodes.forEach(function(c,j){c.classList.toggle('on',j===idx);});
-  }
-
-  function showFrame(i){
-    if(!frames.length)return;
-    i=Math.max(0,Math.min(frames.length-1,i));
-    idx=i;cur=frames[i];
-    if(overlay){overlay.redraw();}
-    else{overlay=new NowcastLayer({}).addTo(map);}
-    elTime.textContent=fmtUTC(cur.time);
-    if(elSegs.children.length===frames.length){
-      for(var j=0;j<elSegs.children.length;j++)elSegs.children[j].classList.toggle('on',j===i);
-    }
-  }
-
-  function togglePlay(){
-    if(!frames.length)return;
-    playing=!playing;
-    elPlay.textContent=playing?'⏸':'▶';
-    elPlay.classList.toggle('playing',playing);
-    if(playing){
-      if(idx>=frames.length-1)showFrame(0);
-      timer=setInterval(function step(){
-        if(idx+1<frames.length){showFrame(idx+1);}
-        else{playing=false;elPlay.textContent='▶';elPlay.classList.remove('playing');clearInterval(timer);timer=null;}
-      },600);
-    }else{clearInterval(timer);timer=null;}
-  }
-
-  elPlay.addEventListener('click',togglePlay);
-  elSegs.addEventListener('click',function(e){
-    var t=e.target;
-    while(t&&t!==elSegs&&t.parentNode!==elSegs)t=t.parentNode;
-    if(t&&t!==elSegs&&t.parentNode===elSegs){
-      if(playing){playing=false;elPlay.textContent='▶';elPlay.classList.remove('playing');clearInterval(timer);timer=null;}
-      showFrame(Array.prototype.indexOf.call(elSegs.children,t));
-    }
-  });
-
-  var loading=false;
-  function load(){
-    if(loading)return;
-    loading=true;
-    setStatus('Загрузка…');
-    var ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-    var tid=ctrl?setTimeout(function(){ctrl.abort();},15000):null;
-    fetch(CAP_URL+'?t='+Math.floor(Date.now()/1e3),{cache:'no-store',signal:ctrl?ctrl.signal:undefined})
-      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
-      .then(function(txt){
-        if(tid)clearTimeout(tid);
-        var times=parseTimes(txt);
-        var last=times.length?times[times.length-1]:null;
-        if(!times.length||!last){throw new Error('нет кадров');}
-        frames=times.map(function(t){
-          return {time:t,current:t===last};
-        });
-        if(overlay){map.removeLayer(overlay);overlay=null;}
-        renderSegs();
-        showFrame(frames.length-1);
-        clearStatus();
-        loading=false;
-      })
-      .catch(function(e){
-        if(tid)clearTimeout(tid);
-        loading=false;
-        setStatus('Наукастинг недоступен: '+e.message);
-        setTimeout(load,30000);
-      });
-  }
-
-  load();
-  setInterval(load,5*60*1000); // автообновление кадров раз в 5 минут
 })();
 </script>
 </body>

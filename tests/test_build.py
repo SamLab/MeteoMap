@@ -22,15 +22,6 @@ def test_build_script_defines_nowcast_output():
     assert "nowcast.html" in s
 
 
-def test_nowcast_template_has_tile_retry():
-    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
-        s = f.read()
-    assert "MAX_TILE_ATTEMPTS" in s
-    assert "TILE_RETRY_MS" in s
-    assert "img.onerror" in s
-    assert "loadRaw(url,cb,attempt+1)" in s
-
-
 def test_builder_produces_nowcast_html():
     if HERE not in sys.path:
         sys.path.insert(0, HERE)
@@ -40,9 +31,8 @@ def test_builder_produces_nowcast_html():
     assert os.path.isfile(NOWCAST_OUTPUT), "nowcast.html not written"
     with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
         html = f.read()
-    assert "function parseTimes" in html
-    assert "ncgi.php" in html
-    assert "/res/nowcast/" in html
+    assert "satellite-world" in html
+    assert "imn-rust-lb.infoplaza.io" in html
     for marker in ("/*__LEAFLET__*/", "/*__LEAFLET_CSS__*/", "/*__PALETTE__*/"):
         assert marker not in html, f"leftover placeholder {marker} in nowcast.html"
 
@@ -50,18 +40,39 @@ def test_builder_produces_nowcast_html():
 def test_nowcast_template_has_gibs_cloud_layer():
     with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
         s = f.read()
-    assert 'id="ctoggle"' in s
     assert "gibsLayer" in s
     assert "earthdata.nasa.gov" in s
     assert "maxNativeZoom" in s
 
 
-def test_nowcast_template_has_cloud_timelabel():
+def test_nowcast_template_cloud_shown_in_msk():
     with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
         s = f.read()
-    assert 'id="ctime"' in s
-    assert "mskLabel" in s
-    assert "MSK · den (Terra)" in s
+    assert "sat24Label" in s
+    assert "' MSK'" in s
+    assert 'id="sattime"' in s
+    assert "elSatTime" in s
+
+
+def test_nowcast_template_has_no_nowcast():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    # Наукастинг ГМЦ и радарная полоса/легенда/кнопка удалены
+    for m in ("ncgi.php", "/res/nowcast/", "parseTimes", "CAP_URL", "tileURL",
+              'id="segs"', 'id="play"', 'id="legend"', 'id="ctoggle"',
+              "renderSegs", "showFrame", "NowcastLayer", "MAX_TILE_ATTEMPTS"):
+        assert m not in s, f"запрещённый маркер присутствует: {m}"
+
+
+def test_nowcast_template_cloud_always_shown():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    # Облачность включается сразу и без кнопки-переключателя
+    assert "loadCloud()" in s
+    assert "sat24Layer" in s
+    assert 'id="sattimeline"' in s
+    assert 'id="ctoggle"' not in s
+    assert "cloudOn" not in s
 
 
 def test_nowcast_template_has_sat24_cloud_layer():
@@ -91,17 +102,19 @@ def test_builder_produces_sat24_cloud_in_output():
     assert "satellite-world" in html
     assert "imn-rust-lb.infoplaza.io" in html
     assert "sat24Layer" in html
+    # В собранном файле тоже нет наукастинга/кнопки/полосы радара
+    for m in ("ncgi.php", "parseTimes", 'id="ctoggle"', "renderSegs", "showFrame"):
+        assert m not in html, f"запрещённый маркер в output: {m}"
 
 
 def test_nowcast_template_has_sat24_rewind():
     with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
         s = f.read()
-    # Отдельная полоса перемотки спутника (не конфликтует с радарной #segs/#play)
+    # Полоса перемотки спутника (история ~6 ч, слайдер + play)
     assert 'id="sattimeline"' in s
     assert 'id="satplay"' in s
     assert 'id="satsegs"' in s
     assert 'id="sattime"' in s
-    # История ~6 ч: построение списка, рендер сегментов, показ выбранного кадра, play
     assert "SAT24_MINUTES_BACK" in s
     assert "buildSatHistory" in s
     assert "renderSatSegs" in s
