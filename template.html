@@ -673,7 +673,12 @@ function buildWarnings(){
   const S=[95,96,99];
   const GUST_MIN=15;
   const findSrc=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>0)return i;}return -1;};
-  const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=2)return i;}return -1;};
+  // �ᨬ���� �� ���: ��还� ��ᮩ��� - ���������� �������� (D.weighted.weather_code)
+  // ��� ������ (��᭣��/���) - ���������� ��� ��� 2+ �ᢥ�� (W �ᯭ� SAPCE/CIN)
+  const rainCodesLocal=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  const conAt=(i)=>D.weighted.weather_code?.[i]!=null&&rainCodesLocal.includes(Number(D.weighted.weather_code[i]));
+  const isConfirmed=(i,list,pm)=>list===R?conAt(i):sourceCountAt(i,list,pm)>=2;
+  const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(isConfirmed(i,list,pm))return i;}return -1;};
   const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+relDay(ts[i].slice(0,10))+' в '+ts[i].slice(11,16)+'</span>';};
   const wetVal=(pr,pp)=>((pr===null||pr===undefined||pr===0)?'':' на '+fmtP(pr)+'мм')+(pp===null||pp===undefined?'':' с '+num(pp)+'%');
   const wet=i=>wetVal(D.weighted.precipitation?.[i],D.weighted.precipitation_probability?.[i]);
@@ -719,9 +724,9 @@ function buildWarnings(){
       return relDay(tsStr)+' '+eTime;
     };
     const s=findSrc(list,precipMin),c=findCon(list,precipMin);
-    const conNow=sourceCountAt(curIdx,list,precipMin)>=2;
+    const conNow=isConfirmed(curIdx,list,precipMin);
     let ce=-1;
-    if(conNow){ce=curIdx;for(let k=curIdx+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;ce=k;}}
+    if(conNow){ce=curIdx;for(let k=curIdx+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;ce=k;}}
     const conOngoing=conNow&&c>=0&&ce>=c;
     const rows=[];
     const curN=sourceCountAt(curIdx,list,precipMin);
@@ -742,7 +747,7 @@ function buildWarnings(){
         cLbl=ongoingWord+(eh?' до '+eh:'');
         wv=wetSpan(curIdx,ce);
       }else{
-        let cE=c;for(let k=c+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;cE=k;}
+        let cE=c;for(let k=c+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;cE=k;}
         const dc=new Date(ts[c]);const dayC='<span class="tlu">'+relDay(ts[c].slice(0,10))+'</span>';
         cLbl=cE>c?(dayC+' с '+ts[c].slice(11,16)+' до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
         wv=wetSpan(c,cE);
