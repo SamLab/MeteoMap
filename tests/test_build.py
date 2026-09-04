@@ -62,3 +62,31 @@ def test_nowcast_template_has_cloud_timelabel():
     assert 'id="ctime"' in s
     assert "mskLabel" in s
     assert "MSK · den (Terra)" in s
+
+
+def test_nowcast_template_has_sat24_cloud_layer():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    # Живой слой облачности Sat24 (Infoplaza tile CDN, кадры раз в 15 мин)
+    assert "satellite-world" in s
+    assert "imn-rust-lb.infoplaza.io" in s
+    assert "SAT24_BASE" in s
+    assert "sat24Layer" in s
+    assert "L.imageOverlay" in s
+    # Автоподбор свежего timestamp (перебор 15-мин шагов)
+    assert "pickSat24Time" in s
+    # Фолбэк на NASA GIBS при недоступности Sat24
+    assert "sat24Fallback" in s
+
+
+def test_builder_produces_sat24_cloud_in_output():
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from tools import build_radar
+
+    build_radar.build("nowcast")
+    with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
+        html = f.read()
+    assert "satellite-world" in html
+    assert "imn-rust-lb.infoplaza.io" in html
+    assert "sat24Layer" in html

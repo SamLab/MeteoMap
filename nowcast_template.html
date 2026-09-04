@@ -57,7 +57,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 <div id="map"></div>
 <div id="status"></div>
 <button id="ltoggle" title="Молнии: свежие — светло-голубые, постарше — тёмно-голубые"><span class="ltdot"></span>Молнии</button>
-<button id="ctoggle" title="Спутниковая облачность NASA GIBS (дневной снимок MODIS Terra, ~13:30 МСК)"><span class="ltdot"></span>Облачность<span id="ctime"></span></button>
+<button id="ctoggle" title="Спутниковая облачность: живые снимки Sat24 (каждый ~15 мин, центр Россия); при недоступности — дневной снимок NASA GIBS"><span class="ltdot"></span>Облачность<span id="ctime"></span></button>
 <div id="legend"><span>Слабо</span><span>Умеренно</span><span>Сильно</span><span>Очень сильно</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
@@ -85,8 +85,15 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     tms:true,minZoom:3,maxZoom:10,zIndex:998
   }).addTo(map);
 
-  // Слой спутниковой облачности NASA GIBS (MODIS TrueColor). Тайлы только на z=9;
-  // maxNativeZoom:9/minNativeZoom:9 заставляют Leaflet подгружать z9 и масштабировать под зум карты.
+  // ---- Облачность: живой слой Sat24 (кадры раз в 15 мин, окно «Ярославль + соседи»)
+  //      с автоматическим фолбэком на NASA GIBS (дневной MODIS), если Sat24 недоступен. ----
+  var SAT24_BASE='https://imn-rust-lb.infoplaza.io/v4/nowcast/tiles/';
+  var SAT24_PRODUCT='satellite-world';
+  var SAT24_ZOOM=7;
+  // Окно «Ярославль + соседние регионы» (долгота/широта, град.): Москва, Тверь, Владимир,
+  // Иваново, Кострома, Вологда, Ярославль, Нижний Новгород и др.
+  var SAT24_WEST=28,SAT24_EAST=56,SAT24_SOUTH=48,SAT24_NORTH=64;
+  // ---- NASA GIBS (фолбэк) ----
   var GIBS_BASE='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
   var GIBS_PRODUCT='MODIS_Terra_CorrectedReflectance_TrueColor';
   var gibsDate=null;
@@ -110,25 +117,99 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
       });
     })();
   }
+  // ---- Web Mercator: координаты тайл-индекса и обратно ----
+  function wmTileXY(lat,lng,z){
+    var n=Math.pow(2,z);
+    var x=(lng+180)/360*n;
+    var latr=lat*Math.PI/180;
+    var y=(0.5-Math.log(Math.tan(latr)+1/Math.cos(latr))/(2*Math.PI))*n;
+    return {x:Math.floor(x),y:Math.floor(y)};
+  }
+  function wmTileBounds(box,z){
+    var n=Math.pow(2,z);
+    var west=box.x1/n*360-180;
+    var east=(box.x2+1)/n*360-180;
+    var north=Math.atan(Math.sinh(Math.PI*(1-2*box.y1/n)))*180/Math.PI;
+    var south=Math.atan(Math.sinh(Math.PI*(1-2*(box.y2+1)/n)))*180/Math.PI;
+    return [[south,west],[north,east]];
+  }
+  var sat24Box=(function(){
+    var nw=wmTileXY(SAT24_NORTH,SAT24_WEST,SAT24_ZOOM);
+    var se=wmTileXY(SAT24_SOUTH,SAT24_EAST,SAT24_ZOOM);
+    return {x1:nw.x,y1:nw.y,x2:se.x,y2:se.y};
+  })();
+  function sat24URL(ts){
+    return SAT24_BASE+SAT24_PRODUCT+'/'+ts+'/'+SAT24_ZOOM+'/'+sat24Box.y1+'/'+sat24Box.x1+'/'+sat24Box.y2+'/'+sat24Box.x2+'?outputtype=jpeg';
+  }
+  function pad2(n){return (n<10?'0':'')+n;}
+  // ---- авто-подбор свежего timestamp (шаг 15 мин, назад до 2 ч) ----
+  function probeSat24(ts,cb){
+    var img=new Image();
+    img.onload=function(){cb(true);};
+    img.onerror=function(){cb(false);};
+    img.src=sat24URL(ts);
+  }
+  function pickSat24Time(cb){
+    var now=new Date();
+    var base=now.getTime()-30*60000; // учёт задержки появления кадров (~30-45 мин)
+    var back=0;
+    (function attempt(){
+      if(back>120){cb(null);return;}
+      var d=new Date(base-back*60000);
+      var ts=''+d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+pad2(d.getUTCHours())+pad2(Math.floor(d.getUTCMinutes()/15)*15);
+      probeSat24(ts,function(ok){
+        if(ok){cb(ts);}else{back+=15;attempt();}
+      });
+    })();
+  }
+  function sat24Label(ts){
+    // ts = YYYYMMDDHHMM (UTC); MSK = UTC+3
+    var y=+ts.slice(0,4),mo=+ts.slice(4,6),da=+ts.slice(6,8),hh=+ts.slice(8,10),mm=+ts.slice(10,12);
+    var utc=new Date(Date.UTC(y,mo-1,da,hh,mm));
+    var msk=new Date(utc.getTime()+3*3600*1000);
+    return pad2(msk.getUTCDate())+'.'+pad2(msk.getUTCMonth()+1)+' '+pad2(msk.getUTCHours())+':'+pad2(msk.getUTCMinutes())+' MSK';
+  }
+  function mskLabel(d){
+    var p=d.split('-');
+    return p[2]+'.'+p[1]+' MSK · den (Terra)';
+  }
   var elCt=document.getElementById('ctoggle');
   var cloudOn=true;
+  var cloudLayer=null;
   var gibsLayer=null;
-  function showCloudLayer(){
-    if(gibsLayer){map.addLayer(gibsLayer);return;}
+  var sat24Layer=null;
+  function sat24Fallback(){
     pickGIBSDate(function(ds){
       if(!ds)return;
-      function mskLabel(d){
-        var p=d.split('-');
-        return p[2]+'.'+p[1]+' MSK · den (Terra)';
-      }
+      gibsDate=ds;
       document.getElementById('ctime').textContent=' · '+mskLabel(ds);
-      gibsLayer=L.tileLayer(GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/{y}/{x}.jpg',{
+      sat24Layer=L.tileLayer(GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/{y}/{x}.jpg',{
         minZoom:3,maxZoom:10,minNativeZoom:9,maxNativeZoom:9,zIndex:900,opacity:0.9,
         attribution:'Спутник: <a href="https://earthdata.nasa.gov/">NASA GIBS</a>'
-      }).addTo(map);
+      });
+      map.addLayer(sat24Layer);
+      cloudLayer=sat24Layer;
     });
   }
-  function hideCloudLayer(){if(gibsLayer)map.removeLayer(gibsLayer);}
+  function showSat24(ts){
+    sat24Layer=L.imageOverlay(sat24URL(ts)+'&t='+Date.now(),wmTileBounds(sat24Box,SAT24_ZOOM),{
+      zIndex:900,opacity:0.9,
+      attribution:'Спутник (15 мин): <a href="https://www.sat24.com/">Sat24</a>'
+    });
+    map.addLayer(sat24Layer);
+    cloudLayer=sat24Layer;
+    document.getElementById('ctime').textContent=' · '+sat24Label(ts);
+  }
+  function loadCloud(){
+    pickSat24Time(function(ts){
+      if(ts){showSat24(ts);}else{sat24Fallback();}
+    });
+  }
+  function showCloudLayer(){
+    if(cloudLayer){map.addLayer(cloudLayer);return;}
+    loadCloud();
+  }
+  function hideCloudLayer(){if(cloudLayer)map.removeLayer(cloudLayer);}
   elCt.classList.add('on');
   showCloudLayer();
   elCt.addEventListener('click',function(){
