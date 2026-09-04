@@ -31,6 +31,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #ctoggle.on{background:#f29b17;color:#fff}
 #ctoggle .ltdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
 #ctoggle.on .ltdot{background:#fff}
+#ctoggle #ctime{font-size:10px;opacity:.85;font-weight:400;white-space:nowrap}
 /* required styles */
 
 .leaflet-pane,
@@ -696,7 +697,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <div id="map"></div>
 <div id="status"></div>
 <button id="ltoggle" title="Молнии: свежие — светло-голубые, постарше — тёмно-голубые"><span class="ltdot"></span>Молнии</button>
-<button id="ctoggle" title="Спутниковая облачность NASA GIBS (дневной снимок)"><span class="ltdot"></span>Облачность</button>
+<button id="ctoggle" title="Спутниковая облачность NASA GIBS (дневной снимок MODIS Terra, ~13:30 МСК)"><span class="ltdot"></span>Облачность<span id="ctime"></span></button>
 <div id="legend"><span>Слабо</span><span>Умеренно</span><span>Сильно</span><span>Очень сильно</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
@@ -764,6 +765,11 @@ var PAL=(function(){
     if(gibsLayer){map.addLayer(gibsLayer);return;}
     pickGIBSDate(function(ds){
       if(!ds)return;
+      function mskLabel(d){
+        var p=d.split('-');
+        return p[2]+'.'+p[1]+' MSK · den (Terra)';
+      }
+      document.getElementById('ctime').textContent=' · '+mskLabel(ds);
       gibsLayer=L.tileLayer(GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/{y}/{x}.jpg',{
         minZoom:3,maxZoom:10,minNativeZoom:9,maxNativeZoom:9,zIndex:900,opacity:0.9,
         attribution:'Спутник: <a href="https://earthdata.nasa.gov/">NASA GIBS</a>'
