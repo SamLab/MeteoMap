@@ -56,7 +56,7 @@ def test_nowcast_template_cloud_shown_in_msk():
 def test_nowcast_template_has_default_zoom():
     with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
         s = f.read()
-    assert "zoom||'5'" in s or "zoom||5" in s or "parseInt(params.get('zoom')||'5'" in s
+    assert "zoom||'3'" in s or "zoom||3" in s or "parseInt(params.get('zoom')||'3'" in s
 
 
 def test_nowcast_template_has_no_nowcast():
