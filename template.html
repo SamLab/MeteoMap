@@ -1003,7 +1003,7 @@ function updateRadarFrame(){
 function updateSputnikFrame(){
   const f=document.getElementById('satellite-frame');
   if(!f||!D.location)return;
-  const url='nowcast.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=8';
+  const url='nowcast.html?lat='+D.location.lat+'&lon='+D.location.lon+'&zoom=3';
   if(f.dataset.sputnikSrc===url)return;
   f.dataset.sputnikSrc=url;
   const tab=document.getElementById('tab-satellite');
