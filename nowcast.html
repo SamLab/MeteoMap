@@ -729,9 +729,10 @@ var PAL=(function(){
   //      с автоматическим фолбэком на NASA GIBS (дневной MODIS), если Sat24 недоступен. ----
   var SAT24_BASE='https://imn-rust-lb.infoplaza.io/v4/nowcast/tiles/';
   var SAT24_PRODUCT='satellite-world';
-  var SAT24_ZOOM=5;
-  // Окно «Ярославль + соседние регионы» (долгота/широта, град.): Москва, Тверь, Владимир,
-  // Иваново, Кострома, Вологда, Ярославль, Нижний Новгород и др.
+  var SAT24_ZOOM=3;
+  // Окно покрытия (долгота/широта, град.) на zoom 3 — широкая территория
+  // европейской части России: Санкт-Петербург, Москва, Ярославль, Нижний
+  // Новгород, Казань, Екатеринбург и др.
   var SAT24_WEST=28,SAT24_EAST=56,SAT24_SOUTH=48,SAT24_NORTH=64;
   // ---- NASA GIBS (фолбэк) ----
   var GIBS_BASE='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
