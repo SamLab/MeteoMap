@@ -30,3 +30,15 @@ def tile_url(z, x, y, inidt):
         "tnz={}&tnx={}&tny={}&inidt={}".format(z, x, y, quote(inidt, safe=""))
     )
     return TILE_BASE + path + "/ncgi.php?" + q
+
+
+GIBS_BASE = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+GIBS_PRODUCT = "MODIS_Terra_CorrectedReflectance_TrueColor"
+GIBS_MATRIX = "GoogleMapsCompatible_Level9"
+
+
+def gibs_tile_url(x, y, date):
+    """URL тайла NASA GIBS. z фиксирован на 9 (250m); date — 'YYYY-MM-DD' (UTC)."""
+    return "{}{}/default/{}/{}/9/{}/{}.jpg".format(
+        GIBS_BASE, GIBS_PRODUCT, date, GIBS_MATRIX, y, x
+    )

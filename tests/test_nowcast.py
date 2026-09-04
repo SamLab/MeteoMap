@@ -37,3 +37,18 @@ def test_tile_url_builds_known_good():
         "https://meteoinfo.ru/res/nowcast/6039019/ncgi.php"
         "?tnz=6&tnx=39&tny=19&inidt=2026-09-03T10%3A00%3A00.000Z"
     )
+
+
+def test_gibs_constants():
+    assert "earthdata.nasa.gov" in nowcast.GIBS_BASE
+    assert nowcast.GIBS_PRODUCT == "MODIS_Terra_CorrectedReflectance_TrueColor"
+    assert nowcast.GIBS_MATRIX == "GoogleMapsCompatible_Level9"
+
+
+def test_gibs_tile_url_builds_known_good():
+    url = nowcast.gibs_tile_url(35, 22, "2026-09-03")
+    assert url == (
+        "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+        "MODIS_Terra_CorrectedReflectance_TrueColor/default/2026-09-03/"
+        "GoogleMapsCompatible_Level9/9/22/35.jpg"
+    )
