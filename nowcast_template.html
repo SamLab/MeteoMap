@@ -71,7 +71,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:8,fadeAnimation:false}).setView([lat,lon],zoom);
   setTimeout(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
-    map.setView([lat,lon],Math.max(3,Math.min(8,zoom)),{reset:true});
   },50);
 
   L.tileLayer('https://rainradar.ru/tiles?z={z}&x={x}&y={y}',{
@@ -192,60 +191,21 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
       cloudLayer=sat24Layer;
     });
   }
-  function satCanvasData(img){
-    var w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
-    if(!w||!h)return null;
-    var cv=document.createElement('canvas');cv.width=w;cv.height=h;
-    var ctx=cv.getContext('2d');
-    ctx.drawImage(img,0,0);
-    try{
-      var d=ctx.getImageData(0,0,w,h),p=d.data;
-      for(var k=0;k<p.length;k+=4){
-        var r=p[k],g=p[k+1],b=p[k+2];
-        // чёрный фон Sat24 -> прозрачный, облака (светлые пиксели) остаются
-        if(r<48&&g<48&&b<48)p[k+3]=0;
-      }
-      ctx.putImageData(d,0,0);
-    }catch(e){}
-    return cv.toDataURL('image/png');
-  }
-  function applySatFrame(t){
-    var url=sat24URL(t)+'&t='+Date.now();
-    var img=new Image();
-    img.crossOrigin='anonymous';
-    img.onload=function(){
-      var data=satCanvasData(img)||url;
-      if(sat24Layer){
-        try{sat24Layer.setUrl(data);}catch(e){}
-      }else{
-        sat24Layer=L.imageOverlay(data,wmTileBounds(sat24Box,SAT24_ZOOM),{
-          zIndex:900,opacity:1,
-          attribution:'���⭨� (15 ���): <a href="https://www.sat24.com/">Sat24</a>'
-        });
-        sat24Layer.addTo(map);
-      }
-      cloudLayer=sat24Layer;
-    };
-    img.onerror=function(){
-      if(!sat24Layer){
-        sat24Layer=L.imageOverlay(url,wmTileBounds(sat24Box,SAT24_ZOOM),{
-          zIndex:900,opacity:0.9,
-          attribution:'���⭨� (15 ���): <a href="https://www.sat24.com/">Sat24</a>'
-        });
-        sat24Layer.addTo(map);
-      }
-      cloudLayer=sat24Layer;
-      updateSatSegs();
-    };
-    img.src=url;
-  }
   function showSatFrame(i){
     if(!satFrames.length)return;
     i=Math.max(0,Math.min(satFrames.length-1,i));
     satIdx=i;
-    applySatFrame(satFrames[i]);
-    updateSatSegs();
-  }
+    var t=satFrames[i];
+    var url=sat24URL(t)+'&t='+Date.now();
+    if(sat24Layer){
+      try{sat24Layer.setUrl(url);}catch(e){}
+    }else{
+      sat24Layer=L.imageOverlay(url,wmTileBounds(sat24Box,SAT24_ZOOM),{
+        zIndex:900,opacity:0.9,
+        attribution:'Спутник (15 мин): <a href="https://www.sat24.com/">Sat24</a>'
+      });
+      map.addLayer(sat24Layer);
+    }
     cloudLayer=sat24Layer;
     updateSatSegs();
   }
