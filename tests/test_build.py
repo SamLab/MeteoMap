@@ -91,3 +91,37 @@ def test_builder_produces_sat24_cloud_in_output():
     assert "satellite-world" in html
     assert "imn-rust-lb.infoplaza.io" in html
     assert "sat24Layer" in html
+
+
+def test_nowcast_template_has_sat24_rewind():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    # Отдельная полоса перемотки спутника (не конфликтует с радарной #segs/#play)
+    assert 'id="sattimeline"' in s
+    assert 'id="satplay"' in s
+    assert 'id="satsegs"' in s
+    assert 'id="sattime"' in s
+    # История ~6 ч: построение списка, рендер сегментов, показ выбранного кадра, play
+    assert "SAT24_MINUTES_BACK" in s
+    assert "buildSatHistory" in s
+    assert "renderSatSegs" in s
+    assert "showSatFrame" in s
+    assert "toggleSatPlay" in s
+    assert "satFrames" in s
+
+
+def test_builder_produces_sat24_rewind_in_output():
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from tools import build_radar
+
+    build_radar.build("nowcast")
+    with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
+        html = f.read()
+    assert 'id="sattimeline"' in html
+    assert 'id="satplay"' in html
+    assert 'id="satsegs"' in html
+    assert "buildSatHistory" in html
+    assert "renderSatSegs" in html
+    assert "showSatFrame" in html
+    assert "toggleSatPlay" in html

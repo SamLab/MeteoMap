@@ -20,7 +20,19 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #segs div:first-child:after{border-radius:9px 2px 2px 9px}
 #segs div:last-child:after{border-radius:2px 9px 9px 2px}
 #time{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#415fad;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
-#legend{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);z-index:1000;width:260px;height:20px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-radius:20px;box-shadow:0 0 2px #000;background:linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2)}
+#sattimeline{position:absolute;left:0;right:0;bottom:70px;z-index:1000;background:#fff;border-top:1px solid #d8d8d8;padding:8px 14px;display:flex;align-items:center;gap:14px;box-shadow:0 -1px 3px rgba(0,0,0,.15)}
+#sattimeline.hidden{display:none}
+#satplay{width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 2px 2px rgba(85,85,85,.4);color:#42434b;font-size:14px;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;border:0}
+#satplay:hover{background:#f2f2f2}
+#satsegwrap{flex:1;position:relative;height:10px;cursor:pointer}
+#satsegs{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;gap:1px}
+#satsegs div{flex:1;position:relative;cursor:pointer}
+#satsegs div:after{content:'';display:block;position:absolute;background-color:#42434b;opacity:.35;left:0;right:0;top:0;bottom:0;border-radius:2px}
+#satsegs div.on:after{opacity:1}
+#satsegs div:first-child:after{border-radius:9px 2px 2px 9px}
+#satsegs div:last-child:after{border-radius:2px 9px 9px 2px}
+#sattime{font-size:12px;color:#fff;min-width:66px;text-align:center;padding:2px 8px;background-color:#4a6d5a;border-radius:10px;flex:none;font-variant-numeric:tabular-nums}
+#legend{position:absolute;bottom:142px;left:50%;transform:translateX(-50%);z-index:1000;width:260px;height:20px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;border-radius:20px;box-shadow:0 0 2px #000;background:linear-gradient(to right,#8889bd,#595a95,#454696,#36b343,#81c81e,#c2d11e,#ffd000,#f29b17,#e1782e,#d23a4b,#b3107c,#b80db2)}
 #legend span{font-size:11px;color:#fff;text-shadow:0 0 4px #000;font-weight:600;white-space:nowrap}
 #status{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:1000;background:#fff;border:1px solid #d8d8d8;color:#42434b;border-radius:8px;padding:6px 14px;font-size:12px;display:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #status.show{display:block}
@@ -63,6 +75,11 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   <button id="play" title="Воспроизвести">▶</button>
   <div id="segwrap"><div id="segs"></div></div>
   <span id="time">—</span>
+</div>
+<div id="sattimeline" class="hidden">
+  <button id="satplay" title="Воспроизвести историю спутника (последние ~6 ч)">▶</button>
+  <div id="satsegwrap"><div id="satsegs"></div></div>
+  <span id="sattime">—</span>
 </div>
 <script>
 /*__LEAFLET__*/
@@ -178,7 +195,16 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   var cloudLayer=null;
   var gibsLayer=null;
   var sat24Layer=null;
+  var satAltUsed=false; // true, если ушли в фолбэк GIBS (перемотка Sat24 недоступна)
+  var elSatTimeline=document.getElementById('sattimeline');
+  var elSatPlay=document.getElementById('satplay');
+  var elSatSegs=document.getElementById('satsegs');
+  var elSatTime=document.getElementById('sattime');
+  var satFrames=[],satIdx=0,satPlaying=false,satTimer=null;
+  var SAT24_MINUTES_BACK=360; // ~6 часов истории (шаг 15 мин)
   function sat24Fallback(){
+    satAltUsed=true;
+    hideSatTimeline();
     pickGIBSDate(function(ds){
       if(!ds)return;
       gibsDate=ds;
@@ -191,25 +217,113 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
       cloudLayer=sat24Layer;
     });
   }
-  function showSat24(ts){
-    sat24Layer=L.imageOverlay(sat24URL(ts)+'&t='+Date.now(),wmTileBounds(sat24Box,SAT24_ZOOM),{
-      zIndex:900,opacity:0.9,
-      attribution:'Спутник (15 мин): <a href="https://www.sat24.com/">Sat24</a>'
-    });
-    map.addLayer(sat24Layer);
+  function showSatFrame(i){
+    if(!satFrames.length)return;
+    i=Math.max(0,Math.min(satFrames.length-1,i));
+    satIdx=i;
+    var t=satFrames[i];
+    var url=sat24URL(t)+'&t='+Date.now();
+    if(sat24Layer){
+      try{sat24Layer.setUrl(url);}catch(e){}
+    }else{
+      sat24Layer=L.imageOverlay(url,wmTileBounds(sat24Box,SAT24_ZOOM),{
+        zIndex:900,opacity:0.9,
+        attribution:'Спутник (15 мин): <a href="https://www.sat24.com/">Sat24</a>'
+      });
+      map.addLayer(sat24Layer);
+    }
     cloudLayer=sat24Layer;
-    document.getElementById('ctime').textContent=' · '+sat24Label(ts);
+    document.getElementById('ctime').textContent=' · '+sat24Label(t);
+    updateSatSegs();
   }
+  function renderSatSegs(){
+    elSatSegs.innerHTML='';
+    satFrames.forEach(function(t,i){
+      var d=document.createElement('div');
+      d.title=sat24Label(t);
+      d.addEventListener('click',function(){showSatFrame(i);});
+      elSatSegs.appendChild(d);
+    });
+    updateSatSegs();
+  }
+  function updateSatSegs(){
+    for(var j=0;j<elSatSegs.children.length;j++)elSatSegs.children[j].classList.toggle('on',j===satIdx);
+    elSatTime.textContent=satIdx<satFrames.length?sat24Label(satFrames[satIdx]):'—';
+  }
+  function showSatTimeline(){elSatTimeline.classList.remove('hidden');}
+  function hideSatTimeline(){elSatTimeline.classList.add('hidden');}
+  function buildSatHistory(cb){
+    var now=new Date();
+    var base=now.getTime()-30*60000;
+    var seen={},list=[];
+    for(var m=0;m<=SAT24_MINUTES_BACK;m+=15){
+      var d=new Date(base-m*60000);
+      var ts=''+d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+pad2(d.getUTCHours())+pad2(Math.floor(d.getUTCMinutes()/15)*15);
+      if(!seen[ts]){seen[ts]=1;list.push(ts);}
+    }
+    list.sort();
+    var valid=[],pending=0,i=0;
+    function probe(t){
+      pending++;
+      var img=new Image();
+      img.onload=function(){valid.push(t);pending--;};
+      img.onerror=function(){pending--;};
+      img.src=sat24URL(t);
+    }
+    function pump(){
+      while(i<list.length&&pending<4){probe(list[i]);i++;}
+      if(i===list.length&&pending===0){cb(valid.sort());return true;}
+      return false;
+    }
+    var iv=setInterval(function(){if(pump())clearInterval(iv);},200);
+  }
+  function toggleSatPlay(){
+    if(!satFrames.length)return;
+    satPlaying=!satPlaying;
+    elSatPlay.textContent=satPlaying?'⏸':'▶';
+    if(satPlaying){
+      if(satIdx>=satFrames.length-1)showSatFrame(0);
+      satTimer=setInterval(function(){
+        if(satIdx+1<satFrames.length){showSatFrame(satIdx+1);}
+        else{satPlaying=false;elSatPlay.textContent='▶';clearInterval(satTimer);satTimer=null;}
+      },700);
+    }else{clearInterval(satTimer);satTimer=null;}
+  }
+  elSatPlay.addEventListener('click',toggleSatPlay);
+  elSatSegs.addEventListener('click',function(e){
+    var t=e.target;
+    while(t&&t!==elSatSegs&&t.parentNode!==elSatSegs)t=t.parentNode;
+    if(t&&t!==elSatSegs&&t.parentNode===elSatSegs){
+      if(satPlaying){satPlaying=false;elSatPlay.textContent='▶';clearInterval(satTimer);satTimer=null;}
+      showSatFrame(Array.prototype.indexOf.call(elSatSegs.children,t));
+    }
+  });
   function loadCloud(){
+    // быстро показываем свежий кадр (приоритет пользователя)
     pickSat24Time(function(ts){
-      if(ts){showSat24(ts);}else{sat24Fallback();}
+      if(ts&&!satAltUsed){
+        if(satFrames.length===0){satFrames=[ts];satIdx=0;showSatFrame(0);}
+      }else if(!ts&&!satAltUsed){sat24Fallback();}
+    });
+    // параллельно строим историю перемотки (~6 ч)
+    buildSatHistory(function(list){
+      if(!list.length){if(!satAltUsed)sat24Fallback();return;}
+      if(satAltUsed)return;
+      satFrames=list;
+      satIdx=satFrames.length-1;
+      showSatTimeline();
+      renderSatSegs();
+      showSatFrame(satFrames.length-1);
     });
   }
   function showCloudLayer(){
-    if(cloudLayer){map.addLayer(cloudLayer);return;}
+    if(cloudLayer){map.addLayer(cloudLayer);if(!satAltUsed&&satFrames.length)showSatTimeline();return;}
     loadCloud();
   }
-  function hideCloudLayer(){if(cloudLayer)map.removeLayer(cloudLayer);}
+  function hideCloudLayer(){
+    if(cloudLayer)map.removeLayer(cloudLayer);
+    hideSatTimeline();
+  }
   elCt.classList.add('on');
   showCloudLayer();
   elCt.addEventListener('click',function(){
