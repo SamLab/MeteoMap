@@ -27,6 +27,10 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #ltoggle{position:absolute;top:10px;right:10px;z-index:1000;background:#42434b;color:#fff;border:0;border-radius:18px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px}
 #ltoggle.on{background:#f29b17;color:#fff}
 #ltoggle .ltdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
+#ctoggle{position:absolute;top:54px;right:10px;z-index:1000;background:#42434b;color:#fff;border:0;border-radius:18px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px}
+#ctoggle.on{background:#f29b17;color:#fff}
+#ctoggle .ltdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
+#ctoggle.on .ltdot{background:#fff}
 /*__LEAFLET_CSS__*/
 .leaflet-container{background:#acacac}
 .leaflet-bar a,.leaflet-bar a:hover{background-color:#42434b;width:35px;height:35px;line-height:35px;text-align:center;text-decoration:none;color:#fff;margin-bottom:10px;border-radius:50%;font-size:28px}
@@ -52,6 +56,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 <div id="map"></div>
 <div id="status"></div>
 <button id="ltoggle" title="Молнии: свежие — светло-голубые, постарше — тёмно-голубые"><span class="ltdot"></span>Молнии</button>
+<button id="ctoggle" title="Спутниковая облачность NASA GIBS (дневной снимок)"><span class="ltdot"></span>Облачность</button>
 <div id="legend"><span>Слабо</span><span>Умеренно</span><span>Сильно</span><span>Очень сильно</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
@@ -78,6 +83,53 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   L.tileLayer('https://rainradar.ru/tiles?z={z}&x={x}&y={y}',{
     tms:true,minZoom:3,maxZoom:10,zIndex:998
   }).addTo(map);
+
+  // Слой спутниковой облачности NASA GIBS (MODIS TrueColor). Тайлы только на z=9;
+  // maxNativeZoom:9/minNativeZoom:9 заставляют Leaflet подгружать z9 и масштабировать под зум карты.
+  var GIBS_BASE='https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/';
+  var GIBS_PRODUCT='MODIS_Terra_CorrectedReflectance_TrueColor';
+  var gibsDate=null;
+  function probeDay(url,cb){
+    var img=new Image();img.crossOrigin='anonymous';
+    img.onload=function(){cb(true);};
+    img.onerror=function(){cb(false);};
+    img.src=url;
+  }
+  function pickGIBSDate(cb){
+    if(gibsDate){cb(gibsDate);return;}
+    var i=0;
+    (function next(){
+      if(i>=5){gibsDate=new Date().toISOString().slice(0,10);cb(gibsDate);return;}
+      var dd=new Date();dd.setUTCDate(dd.getUTCDate()-i);
+      var ds=dd.toISOString().slice(0,10);
+      var url=GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/0/0.jpg';
+      probeDay(url,function(ok){
+        if(ok){gibsDate=ds;cb(ds);}
+        else{i++;next();}
+      });
+    })();
+  }
+  var elCt=document.getElementById('ctoggle');
+  var cloudOn=true;
+  var gibsLayer=null;
+  function showCloudLayer(){
+    if(gibsLayer){map.addLayer(gibsLayer);return;}
+    pickGIBSDate(function(ds){
+      if(!ds)return;
+      gibsLayer=L.tileLayer(GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/{y}/{x}.jpg',{
+        minZoom:3,maxZoom:10,minNativeZoom:9,maxNativeZoom:9,zIndex:900,opacity:0.9,
+        attribution:'Спутник: <a href="https://earthdata.nasa.gov/">NASA GIBS</a>'
+      }).addTo(map);
+    });
+  }
+  function hideCloudLayer(){if(gibsLayer)map.removeLayer(gibsLayer);}
+  elCt.classList.add('on');
+  showCloudLayer();
+  elCt.addEventListener('click',function(){
+    cloudOn=!cloudOn;
+    if(cloudOn){elCt.classList.add('on');showCloudLayer();}
+    else{elCt.classList.remove('on');hideCloudLayer();}
+  });
 
   map.createPane('lightning-0');
   map.createPane('lightning-1');

@@ -45,3 +45,12 @@ def test_builder_produces_nowcast_html():
     assert "/res/nowcast/" in html
     for marker in ("/*__LEAFLET__*/", "/*__LEAFLET_CSS__*/", "/*__PALETTE__*/"):
         assert marker not in html, f"leftover placeholder {marker} in nowcast.html"
+
+
+def test_nowcast_template_has_gibs_cloud_layer():
+    with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
+        s = f.read()
+    assert 'id="ctoggle"' in s
+    assert "gibsLayer" in s
+    assert "earthdata.nasa.gov" in s
+    assert "maxNativeZoom" in s
