@@ -715,7 +715,7 @@ var PAL=(function(){
   var params=new URLSearchParams(location.search);
   var lat=parseFloat(params.get('lat'))||57.63;
   var lon=parseFloat(params.get('lon'))||39.87;
-  var zoom=parseInt(params.get('zoom')||'8',10);
+  var zoom=parseInt(params.get('zoom')||'5',10);
   var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:10,fadeAnimation:false}).setView([lat,lon],zoom);
   setTimeout(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
@@ -808,7 +808,7 @@ var PAL=(function(){
     var y=+ts.slice(0,4),mo=+ts.slice(4,6),da=+ts.slice(6,8),hh=+ts.slice(8,10),mm=+ts.slice(10,12);
     var utc=new Date(Date.UTC(y,mo-1,da,hh,mm));
     var msk=new Date(utc.getTime()+3*3600*1000);
-    return pad2(msk.getUTCDate())+'.'+pad2(msk.getUTCMonth()+1)+' '+pad2(msk.getUTCHours())+':'+pad2(msk.getUTCMinutes())+' MSK';
+    return pad2(msk.getUTCDate())+'.'+pad2(msk.getUTCMonth()+1)+' '+pad2(msk.getUTCHours())+':'+pad2(msk.getUTCMinutes());
   }
   function mskLabel(d){
     var p=d.split('-');
