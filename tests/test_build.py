@@ -71,6 +71,7 @@ def test_nowcast_template_has_sat24_cloud_layer():
     assert "satellite-world" in s
     assert "imn-rust-lb.infoplaza.io" in s
     assert "SAT24_BASE" in s
+    assert "SAT24_ZOOM=5" in s
     assert "sat24Layer" in s
     assert "L.imageOverlay" in s
     # Автоподбор свежего timestamp (перебор 15-мин шагов)
