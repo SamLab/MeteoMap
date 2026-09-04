@@ -716,7 +716,7 @@ var PAL=(function(){
   var lat=parseFloat(params.get('lat'))||57.63;
   var lon=parseFloat(params.get('lon'))||39.87;
   var zoom=parseInt(params.get('zoom')||'3',10);
-  var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:10,fadeAnimation:false}).setView([lat,lon],zoom);
+  var map=L.map('map',{zoomControl:true,minZoom:3,maxZoom:8,fadeAnimation:false}).setView([lat,lon],zoom);
   setTimeout(function(){
     if(map.getContainer().offsetWidth===0||map.getContainer().offsetHeight===0)map.invalidateSize();
   },50);
