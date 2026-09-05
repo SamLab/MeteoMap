@@ -141,11 +141,24 @@ def test_warnings_title_lists_nearest_confirmed():
     assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
 
 
+def test_hourstitle_rain_type_uses_window_start_code():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const jStartCode=w.weather_code?.[ws];" in tpl
+    assert "rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';" in tpl
+    assert "const jPeakCode=w.weather_code?.[jPeak];" not in tpl
+    assert "RainType' not in tpl"
+    assert "const enLabel=cutAtMidnight?'00ч':(enDay===today?enTime:" in tpl
+    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
+    assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
+    assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
+    assert "rainHour>=0?'Далее '" not in tpl
+
+
 def test_hourstitle_rain_interval():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "const jPeakCode=w.weather_code?.[jPeak];" in tpl
-    assert "rainType=(rainCodes.includes(jPeakCode)&&wcode(jPeakCode)[0])?wcode(jPeakCode)[0]:'Дождь';" in tpl
+    assert "const jStartCode=w.weather_code?.[ws];" in tpl
     assert "const enLabel=cutAtMidnight?'00ч':(enDay===today?enTime:" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
@@ -367,7 +380,7 @@ def test_hours_title_has_rain_only():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "parts.push('без дождя')" in tpl
-    assert "const rainType=(rainCodes.includes(jPeakCode)&&wcode(jPeakCode)[0])?wcode(jPeakCode)[0]:'Дождь';" in tpl
+    assert "const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "'Остаток дня '" in tpl
     assert "tiMax" not in tpl
@@ -481,6 +494,15 @@ def test_widget_precip_font_and_ppct():
             w = f.read()
         assert '<span class="ppct">%</span>' in w, fname
         assert ".ppct{font-size:.5em}" in w, fname
+
+
+def test_widget_rain_type_uses_current_hour_not_peak():
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;" in w, fname
+        assert "var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:" in w, fname
+        assert "data.weather_code[jPeak]" not in w, fname
 
 
 def test_index_has_sputnik_tab_and_iframe():

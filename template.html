@@ -478,8 +478,8 @@ function buildWeatherHours(){
       const p=w.precipitation?.[j];
       if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
     }
-    const jPeakCode=w.weather_code?.[jPeak];
-    const rainType=(rainCodes.includes(jPeakCode)&&wcode(jPeakCode)[0])?wcode(jPeakCode)[0]:'Дождь';
+    const jStartCode=w.weather_code?.[ws];
+    const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';
     const st=D.time[rainHour].slice(11,13)+'ч';
     const enTs=D.time[jLast];
     const enDay=enTs.slice(0,10);
