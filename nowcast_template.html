@@ -144,7 +144,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   }
   function pickSat24Time(cb){
     var now=new Date();
-    var base=now.getTime()-30*60000; // учёт задержки появления кадров (~30-45 мин)
+    var base=now.getTime(); // пробуем с самой свежей четверти и откатываемся назад, пока кадр не найдётся
     var back=0;
     (function attempt(){
       if(back>120){cb(null);return;}
@@ -227,7 +227,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   function hideSatTimeline(){elSatTimeline.classList.add('hidden');}
   function buildSatHistory(cb){
     var now=new Date();
-    var base=now.getTime()-30*60000;
+    var base=now.getTime();
     var seen={},list=[];
     for(var m=0;m<=SAT24_MINUTES_BACK;m+=15){
       var d=new Date(base-m*60000);
