@@ -77,10 +77,10 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     tms:true,minZoom:3,maxZoom:10,zIndex:998
   }).addTo(map);
 
-  // ---- Облачность: живой слой Sat24 (кадры раз в 15 мин, окно «Ярославль + соседи»)
+  // ---- Облачность: живой слой Sat24 (кадры раз в 5 мин, окно «Ярославль + соседи»)
   //      с автоматическим фолбэком на NASA GIBS (дневной MODIS), если Sat24 недоступен. ----
   var SAT24_BASE='https://imn-rust-lb.infoplaza.io/v4/nowcast/tiles/';
-  var SAT24_PRODUCT='satellite-world';
+  var SAT24_PRODUCT='satellite-europe'; // sat24.com использует satellite-europe (5-мин кадры); satellite-world отдаёт 404 на свежих ts
   var SAT24_ZOOM=4;
   // Окно покрытия (долгота/широта, град.) на zoom 3 — широкая территория
   // европейской части России: Санкт-Петербург, Москва, Ярославль, Нижний
@@ -144,14 +144,14 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   }
   function pickSat24Time(cb){
     var now=new Date();
-    var base=now.getTime(); // пробуем с самой свежей четверти и откатываемся назад, пока кадр не найдётся
+    var base=now.getTime(); // пробуем с самой свежей 5-минутки и откатываемся назад, пока кадр не найдётся
     var back=0;
     (function attempt(){
       if(back>120){cb(null);return;}
       var d=new Date(base-back*60000);
-      var ts=''+d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+pad2(d.getUTCHours())+pad2(Math.floor(d.getUTCMinutes()/15)*15);
+      var ts=''+d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+pad2(d.getUTCHours())+pad2(Math.floor(d.getUTCMinutes()/5)*5);
       probeSat24(ts,function(ok){
-        if(ok){cb(ts);}else{back+=15;attempt();}
+        if(ok){cb(ts);}else{back+=5;attempt();}
       });
     })();
   }
@@ -175,7 +175,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   var elSatSegs=document.getElementById('satsegs');
   var elSatTime=document.getElementById('sattime');
   var satFrames=[],satIdx=0,satPlaying=false,satTimer=null;
-  var SAT24_MINUTES_BACK=360; // ~6 часов истории (шаг 15 мин)
+  var SAT24_MINUTES_BACK=360; // ~6 часов истории (шаг 5 мин — sat24 публикует кадры каждые 5 минут)
   function sat24Fallback(){
     satAltUsed=true;
     hideSatTimeline();
@@ -202,7 +202,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     }else{
       sat24Layer=L.imageOverlay(url,wmTileBounds(sat24Box,SAT24_ZOOM),{
         zIndex:900,opacity:0.9,
-        attribution:'Спутник (15 мин): <a href="https://www.sat24.com/">Sat24</a>'
+        attribution:'Спутник (5 мин): <a href="https://www.sat24.com/">Sat24</a>'
       });
       map.addLayer(sat24Layer);
     }
@@ -229,9 +229,9 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     var now=new Date();
     var base=now.getTime();
     var seen={},list=[];
-    for(var m=0;m<=SAT24_MINUTES_BACK;m+=15){
+    for(var m=0;m<=SAT24_MINUTES_BACK;m+=5){
       var d=new Date(base-m*60000);
-      var ts=''+d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+pad2(d.getUTCHours())+pad2(Math.floor(d.getUTCMinutes()/15)*15);
+      var ts=''+d.getUTCFullYear()+pad2(d.getUTCMonth()+1)+pad2(d.getUTCDate())+pad2(d.getUTCHours())+pad2(Math.floor(d.getUTCMinutes()/5)*5);
       if(!seen[ts]){seen[ts]=1;list.push(ts);}
     }
     list.sort();

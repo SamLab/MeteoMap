@@ -31,7 +31,7 @@ def test_builder_produces_nowcast_html():
     assert os.path.isfile(NOWCAST_OUTPUT), "nowcast.html not written"
     with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
         html = f.read()
-    assert "satellite-world" in html
+    assert "satellite-europe" in html
     assert "imn-rust-lb.infoplaza.io" in html
     for marker in ("/*__LEAFLET__*/", "/*__LEAFLET_CSS__*/", "/*__PALETTE__*/"):
         assert marker not in html, f"leftover placeholder {marker} in nowcast.html"
@@ -84,7 +84,7 @@ def test_nowcast_template_has_sat24_cloud_layer():
     with open(NOWCAST_TEMPLATE, encoding="utf-8") as f:
         s = f.read()
     # Живой слой облачности Sat24 (Infoplaza tile CDN, кадры раз в 15 мин)
-    assert "satellite-world" in s
+    assert "satellite-europe" in s
     assert "imn-rust-lb.infoplaza.io" in s
     assert "SAT24_BASE" in s
     assert "SAT24_ZOOM=4" in s
@@ -104,7 +104,7 @@ def test_builder_produces_sat24_cloud_in_output():
     build_radar.build("nowcast")
     with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
         html = f.read()
-    assert "satellite-world" in html
+    assert "satellite-europe" in html
     assert "imn-rust-lb.infoplaza.io" in html
     assert "sat24Layer" in html
     # В собранном файле тоже нет наукастинга/кнопки/полосы радара
