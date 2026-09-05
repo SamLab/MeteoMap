@@ -303,9 +303,12 @@ def test_wcode_rain_icons_have_no_sun():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "🌦️" not in tpl
-    assert "61:['Дождь','🌧️']" in tpl
+    assert "61:['Небольшой дождь','🌧️']" in tpl
+    assert "63:['Дождь','🌧️']" in tpl
+    assert "65:['Сильный дождь','🌧️']" in tpl
     assert "80:['Ливень','🌧️']" in tpl
     assert "51:['Морось','🌧️']" in tpl
+    assert "61:['Дождь'" not in tpl
 
 
 def test_radar_play_runs_single_loop_to_current_hour():
