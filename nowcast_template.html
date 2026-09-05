@@ -135,7 +135,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     return SAT24_BASE+SAT24_PRODUCT+'/'+ts+'/'+SAT24_ZOOM+'/'+sat24Box.y1+'/'+sat24Box.x1+'/'+sat24Box.y2+'/'+sat24Box.x2+'?outputtype=jpeg';
   }
   function pad2(n){return (n<10?'0':'')+n;}
-  // ---- авто-подбор свежего timestamp (шаг 15 мин, назад до 2 ч) ----
+  // ---- авто-подбор свежего timestamp (шаг 5 мин, назад до 2 ч) ----
   function probeSat24(ts,cb){
     var img=new Image();
     img.onload=function(){cb(true);};
