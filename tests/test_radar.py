@@ -306,9 +306,34 @@ def test_wcode_rain_icons_have_no_sun():
     assert "61:['Небольшой дождь','🌧️']" in tpl
     assert "63:['Дождь','🌧️']" in tpl
     assert "65:['Сильный дождь','🌧️']" in tpl
-    assert "80:['Ливень','🌧️']" in tpl
-    assert "51:['Морось','🌧️']" in tpl
+    assert "80:['Небольшой ливень','🌧️']" in tpl
+    assert "51:['Небольшая морось','🌧️']" in tpl
     assert "61:['Дождь'" not in tpl
+
+
+def test_wmo_dictionary_is_canonical_everywhere():
+    canonical = {
+        1: "В основном ясно", 48: "Изморозь",
+        51: "Небольшая морось", 53: "Морось", 55: "Сильная морось",
+        56: "Ледяная морось", 57: "Ледяная морось",
+        61: "Небольшой дождь", 63: "Дождь", 65: "Сильный дождь",
+        66: "Ледяной дождь", 67: "Ледяной дождь",
+        71: "Небольшой снег", 73: "Снег", 75: "Сильный снег", 77: "Снежные зерна",
+        80: "Небольшой ливень", 81: "Ливень", 82: "Сильный ливень",
+        85: "Снегопад", 86: "Снегопад",
+        95: "Гроза", 96: "Гроза с градом", 99: "Гроза с градом",
+    }
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    for code, label in canonical.items():
+        assert "{}:['{}'".format(code, label) in tpl, "template.html code {}: {}".format(code, label)
+    for bad in ("['Морось','🌧️'],53:[", "['Ливень','🌧️'],81:[", "71:['Снег'", "75:['Снег'", "48:['Туман"):
+        assert bad not in tpl, "template.html simplified: " + bad
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        for code, label in canonical.items():
+            assert "l:'{}'".format(label) in w, "{} code {}: {}".format(fname, code, label)
 
 
 def test_radar_play_runs_single_loop_to_current_hour():
