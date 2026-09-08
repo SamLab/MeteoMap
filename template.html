@@ -563,7 +563,7 @@ function buildWeather16Title(){
     parts.push('Холоднее всего '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(coldT));
   }
   const th=document.getElementById('d10title');
-  if(th)th.textContent='На 16 дней — '+parts.join(' / ');
+  if(th)th.textContent='На 16 дней — '+parts.join(' — ');
 }
 
 function buildWeather10(){

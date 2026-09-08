@@ -229,6 +229,8 @@ def test_d10_title_line_over_days():
     assert "Ближайший дождь в " not in tpl
     assert "'Ближайший дождь '+dayLabel(d)" in tpl
     assert "hits[hits.length-1]<=curIdx" in tpl
+    assert "'На 16 дней — '+parts.join(' — ')" in tpl
+    assert "parts.join(' / ')" not in tpl
     assert "не ожидается" in tpl
     assert "Теплее всего" in tpl
     assert "Холоднее всего" in tpl
