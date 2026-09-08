@@ -620,7 +620,7 @@ def test_warnings_no_current_model_rain_row():
 def test_rain_model_count_requires_all_window_hours():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "let all=true;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;" in tpl
+    assert "let all=true;for(let j=rainHour;j<=jLast;j++){if(!inWin(j))continue;" in tpl
     assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;" in tpl
     assert "if(has)mCnt++" not in tpl
     assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'" in tpl
