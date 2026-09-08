@@ -153,6 +153,8 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
+    assert "'Сегодня — Подтвержденного дождя нет, но по '+" in tpl
+    assert "Сегодня подтвержденного дождя нет" not in tpl
 
 
 def test_hourstitle_rain_interval():
@@ -224,6 +226,9 @@ def test_d10_title_line_over_days():
     assert "d10title" in tpl and "buildWeather16Title" in tpl
     assert "На 16 дней — " in tpl or "'На 16 дней' +" in tpl or "'На 16 дней — '" in tpl
     assert "Ближайший дождь" in tpl
+    assert "Ближайший дождь в " not in tpl
+    assert "'Ближайший дождь '+dayLabel(d)" in tpl
+    assert "hits[hits.length-1]<=curIdx" in tpl
     assert "не ожидается" in tpl
     assert "Теплее всего" in tpl
     assert "Холоднее всего" in tpl

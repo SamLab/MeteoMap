@@ -489,7 +489,7 @@ function buildWeatherHours(){
     const enLabel=cutAtMidnight?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);
     const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
-    parts.push(fromModels?'Сегодня подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+    parts.push(fromModels?'Сегодня — Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
@@ -518,17 +518,18 @@ function buildWeather16Title(){
   const hourIdx=day=>{const o=[];for(let i=0;i<D.time.length;i++){if(D.time[i]&&D.time[i].slice(0,10)===day)o.push(i);}return o;};
   const dayLabel=d=>DOW_S[d.getDay()]+' '+d.getDate();
   const hh=t=>t.slice(11,13)+'ч';
+  const todayStr=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
   let rainDayI=-1,rainA=-1,rainB=-1;
   for(let di=0;di<dt.length;di++){
     const hhIdx=hourIdx(dt[di]);
     const hits=hhIdx.filter(i=>rainCodes.includes(D.weighted.weather_code?.[i]));
-    if(hits.length){rainDayI=di;rainA=hits[0];rainB=hits[hits.length-1];break;}
+    if(hits.length&&!((dt[di]===todayStr)&&hits[hits.length-1]<=curIdx)){rainDayI=di;rainA=hits[0];rainB=hits[hits.length-1];break;}
   }
   if(rainDayI>=0){
     const d=new Date(dt[rainDayI]);
     const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
     const rainNow=dt[rainDayI]===today&&rainCodes.includes(D.weighted.weather_code?.[curIdx]);
-    parts.push(rainNow?'Ближайший дождь до '+hh(D.time[rainB]):'Ближайший дождь в '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
+    parts.push(rainNow?'Ближайший дождь до '+hh(D.time[rainB]):'Ближайший дождь '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
   }else parts.push('Ближайший дождь: не ожидается');
   let hotI=-1,hotT=-Infinity,coldI=-1,coldT=Infinity;
   for(let di=0;di<dt.length;di++){
