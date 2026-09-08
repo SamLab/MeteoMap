@@ -215,6 +215,21 @@ def test_help_text_up_to_date():
     assert "<b>Сегодня</b> — ближайшие 48 часов по часам." not in tpl
 
 
+def test_d10_title_line_over_days():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert 'id="d10title"' in tpl
+    assert "d10title" in tpl and "buildWeather16Title" in tpl
+    assert "На 16 дней — " in tpl or "'На 16 дней' +" in tpl or "'На 16 дней — '" in tpl
+    assert "Ближайший дождь" in tpl
+    assert "не ожидается" in tpl
+    assert "Теплее всего" in tpl
+    assert "Холоднее всего" in tpl
+    assert "D.weighted.weather_code" in tpl
+    assert "D.daily.temperature_2m_max" in tpl
+    assert "D.daily.temperature_2m_min" in tpl
+
+
 def test_d10_wind_like_hourly():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

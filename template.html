@@ -171,7 +171,7 @@ a{color:var(--accent)}
   <div class="card"><h3 class="tstab" id="nowtitle">Сейчас</h3><div id="weather-now"></div></div>
   <div class="card"><h3 class="tstab" id="hourstitle">По часам</h3><div class="hours" id="weather-hours"></div></div>
   <div class="card"><h3 class="tstab">Предупреждения (ближайшее/подтвержденное)</h3><div id="warnings"></div></div>
-  <div class="card"><h3 class="tstab">На 16 дней</h3><div id="weather-10"></div></div>
+  <div class="card"><h3 class="tstab" id="d10title">На 16 дней</h3><div id="weather-10"></div></div>
   <div class="card"><h3 class="tstab">Подробно на 16 дней</h3><div id="weather-detail"></div></div>
 </div>
 <div id="tab-radar" class="panel">
@@ -511,6 +511,60 @@ function buildWeatherHours(){
         '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>';
     }).join('');
 }
+function buildWeather16Title(){
+  const dt=D.daily_time||[];
+  const parts=[];
+  const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  const hourIdx=day=>{const o=[];for(let i=0;i<D.time.length;i++){if(D.time[i]&&D.time[i].slice(0,10)===day)o.push(i);}return o;};
+  const dayLabel=d=>DOW_S[d.getDay()]+' '+d.getDate();
+  const hh=t=>t.slice(11,13)+'ч';
+  let rainDayI=-1,rainA=-1,rainB=-1;
+  for(let di=0;di<dt.length;di++){
+    const hhIdx=hourIdx(dt[di]);
+    const hits=hhIdx.filter(i=>rainCodes.includes(D.weighted.weather_code?.[i]));
+    if(hits.length){rainDayI=di;rainA=hits[0];rainB=hits[hits.length-1];break;}
+  }
+  if(rainDayI>=0){
+    const d=new Date(dt[rainDayI]);
+    const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
+    const rainNow=dt[rainDayI]===today&&rainCodes.includes(D.weighted.weather_code?.[curIdx]);
+    parts.push(rainNow?'Ближайший дождь до '+hh(D.time[rainB]):'Ближайший дождь в '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
+  }else parts.push('Ближайший дождь: не ожидается');
+  let hotI=-1,hotT=-Infinity,coldI=-1,coldT=Infinity;
+  for(let di=0;di<dt.length;di++){
+    const t=D.daily.temperature_2m_max?.[di];
+    if(t!=null&&t>hotT){hotT=t;hotI=di;}
+    const c=D.daily.temperature_2m_min?.[di];
+    if(c!=null&&c<coldT){coldT=c;coldI=di;}
+  }
+  const peakH=di=>{
+    const hhIdx=hourIdx(dt[di]);
+    if(!hhIdx.length)return null;
+    let pi=hhIdx[0],pv=D.weighted.temperature_2m?.[pi];
+    for(const i of hhIdx){const v=D.weighted.temperature_2m?.[i];if(v!=null&&(pv==null||v>pv)){pv=v;pi=i;}}
+    return pi;
+  };
+  const lowH=di=>{
+    const hhIdx=hourIdx(dt[di]);
+    if(!hhIdx.length)return null;
+    let pi=hhIdx[0],pv=D.weighted.temperature_2m?.[pi];
+    for(const i of hhIdx){const v=D.weighted.temperature_2m?.[i];if(v!=null&&(pv==null||v<pv)){pv=v;pi=i;}}
+    return pi;
+  };
+  if(hotI>=0){
+    const d=new Date(dt[hotI]);
+    const pi=peakH(hotI);
+    parts.push('Теплее всего '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(hotT));
+  }
+  if(coldI>=0){
+    const d=new Date(dt[coldI]);
+    const pi=lowH(coldI);
+    parts.push('Холоднее всего '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(coldT));
+  }
+  const th=document.getElementById('d10title');
+  if(th)th.textContent='На 16 дней — '+parts.join(' / ');
+}
+
 function buildWeather10(){
   const dt=D.daily_time||[];
   const arr=dt.map((day,di)=>{
@@ -551,6 +605,7 @@ function buildWeather10(){
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
   }).join('')+'</div></div>';
+  buildWeather16Title();
 }
 const PARTS=[['ночь','00','06'],['утро','06','12'],['день','12','18'],['вечер','18','24']];
 const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];
