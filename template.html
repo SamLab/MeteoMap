@@ -471,7 +471,7 @@ function buildWeatherHours(){
       const pp=w.precipitation_probability?.[j];if(pp!=null&&pp>maxPp)maxPp=pp;
     }
     let mCnt=0;
-    for(const c of codes){let has=false;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33))){has=true;break;}}if(has)mCnt++;}
+    for(const c of codes){let all=true;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}if(all)mCnt++;}
     let jPeak=rainHour,peakPr=-1;
     for(let j=ws;j<=jLast;j++){
       if(!inWin(j))continue;
@@ -719,6 +719,20 @@ function sourceCountAt(i,list,precipMin){
   }
   return n;
 }
+function rainModelAll(a,b){
+  let n=0;
+  for(const c of codes){
+    let all=true;
+    for(let j=a;j<=b;j++){
+      const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;
+      const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;
+      const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;
+      if(!(v!=null?RAIN_CODES.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}
+    }
+    if(all)n++;
+  }
+  return n;
+}
 function buildWarnings(){
   const el=document.getElementById('warnings');
   if(!el)return;
@@ -800,17 +814,20 @@ function buildWarnings(){
       const sL=sourceList(s,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+' · '+sLabel+'</div>');}
     if(c>=0){
       let cLbl,wv;
+      let c0=c,c1=c;
       if(conOngoing){
         const eh=ce>curIdx?endLabel(ts[ce]):'';
         cLbl=ongoingWord+(eh?' до '+eh:'');
         wv=wetSpan(curIdx,ce);
+        c0=curIdx;c1=ce;
       }else{
         let cE=c;for(let k=c+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;cE=k;}
         const dc=new Date(ts[c]);const dayC='<span class="tlu">'+relDay(ts[c].slice(0,10))+'</span>';
         cLbl=cE>c?(dayC+' с '+ts[c].slice(11,13)+'ч до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
         wv=wetSpan(c,cE);
+        c1=cE;
       }
-      const n=sourceCountAt(c,list,precipMin);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+      const n=rainModelAll(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';

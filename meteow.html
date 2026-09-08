@@ -177,11 +177,10 @@ function buildSummary(times, data, rawData, idx){
     if(pp!=null&&pp>maxPp)maxPp=pp;
   }
   var peakModels=0;
-  var seenModels={};
-  for(var j=rainHour;j<=jLast;j++){
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if((code?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))&&!seenModels[c])seenModels[c]=1;}
+  for(var c in rawData){var m=rawData[c];if(!m)continue;var all=true;
+    for(var j=rainHour;j<=jLast;j++){var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(!(code?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}
+    if(all)peakModels++;
   }
-  peakModels=Object.keys(seenModels).length;
   var jPeak=rainHour,peakPr=-1;
   for(var j=rainHour;j<=jLast;j++){
     var p=data.precipitation?data.precipitation[j]:0;
