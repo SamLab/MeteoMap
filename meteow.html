@@ -158,13 +158,13 @@ function buildSummary(times, data, rawData, idx){
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
     if(times[j].toDateString()!==todayStr) break;
-    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}
+    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
   var fromModels=false;
   if(rainHour<0){
     for(var j=idx;j<times.length;j++){
       if(times[j].toDateString()!==todayStr) break;
-      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}
+      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
     }
     if(rainHour>=0)fromModels=true;
   }

@@ -451,12 +451,12 @@ function buildWeatherHours(){
   let rainHour=-1,jLast=-1,fromModels=false;
   for(let j=0;j<D.time.length;j++){
     if(!isToday(j))continue;
-    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}
+    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
   if(rainHour<0){
     for(let j=0;j<D.time.length;j++){
       if(!isToday(j))continue;
-      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}
+      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
     }
     if(rainHour>=0)fromModels=true;
   }
@@ -800,14 +800,6 @@ function buildWarnings(){
     if(conNow){ce=curIdx;for(let k=curIdx+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;ce=k;}}
     const conOngoing=conNow&&c>=0&&ce>=c;
     const rows=[];
-    const curN=sourceCountAt(curIdx,list,precipMin);
-    if(!conOngoing&&curN>=minProb&&(curIdx<from)){
-      let rainEnd=curIdx;for(let ri=curIdx+1;ri<ts.length;ri++){if(sourceCountAt(ri,list,precipMin)<2)break;rainEnd=ri;}
-      const endH=rainEnd>curIdx?endLabel(ts[rainEnd]):'';
-      const sL=sourceList(curIdx,list,precipMin);const sLabel=sL.length>1?('по '+sL.length+' моделям'):sL.join(' и ');
-      const nowWord=endH?'Сейчас':'Текущий час';
-      rows.push('<div class="wr1">'+nowWord+(endH?' до '+endH:'')+' · '+wetSpan(curIdx,rainEnd)+' · '+sLabel+'</div>');
-    }
     if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<=0)break;sE=k;}
       const ds=new Date(ts[s]);const dayS='<span class="tlu">'+relDay(ts[s].slice(0,10))+'</span>';
       const sLbl=sE>s?(dayS+' с '+ts[s].slice(11,13)+'ч до '+endLabel(ts[sE],ts[s].slice(0,10))):tstr(s);
