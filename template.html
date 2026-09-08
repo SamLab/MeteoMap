@@ -1104,7 +1104,10 @@ function setupCitySel(){
 setupCitySel();
 const _uc=new URLSearchParams(location.search).get('city');
 if(_uc&&CITIES.some(c=>c.slug===_uc))loadCity(_uc); else renderAll();
-setInterval(()=>loadCity(D.location.slug,true),5*60*1000);
+(function scheduleAligned(fn, ms){
+  const t0=Date.now();
+  setTimeout(()=>{fn();scheduleAligned(fn,ms);},Math.ceil(t0/ms)*ms-t0);
+})(()=>loadCity(D.location.slug,true),5*60*1000);
 </script>
 </body>
 </html>

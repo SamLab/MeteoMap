@@ -99,7 +99,7 @@ var WMO = {
 
 var DEFAULT_CITY = 'tsedenevo';
 var DEFAULT_HOURS = 14;
-var REFRESH_MS = 15 * 60 * 1000;
+var REFRESH_MS = 5 * 60 * 1000;
 
 function getParam(name, def){
   var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
@@ -302,7 +302,13 @@ function fmtMm(v){
 }
 
 load();
-setInterval(load, REFRESH_MS);
+(function scheduleAligned(fn, ms){
+  var now = Date.now();
+  setTimeout(function(){
+    fn();
+    scheduleAligned(fn, ms);
+  }, Math.ceil(now / ms) * ms - now);
+})(load, REFRESH_MS);
 document.addEventListener('visibilitychange', function(){
   if (!document.hidden) load();
 });

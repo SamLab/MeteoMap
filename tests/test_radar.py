@@ -36,11 +36,23 @@ def test_index_autorefreshes_every_5_minutes():
         tpl = f.read()
     assert "async function loadCity(slug,silent)" in tpl
     assert "if(!silent)alert('Не удалось загрузить данные города: '+e.message)" in tpl
-    assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" in tpl
+    assert "function scheduleAligned(fn, ms)" in tpl
+    assert "})(()=>loadCity(D.location.slug,true),5*60*1000);" in tpl
+    assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" not in tpl
     html = meteo.render(tpl, _payload())
-    assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" in html
+    assert "})(()=>loadCity(D.location.slug,true),5*60*1000);" in html
+    assert "setInterval(()=>loadCity(D.location.slug,true),5*60*1000)" not in html
     assert "URLSearchParams(location.search).get('city')" in tpl
     assert "loadCity(_uc); else renderAll();" in tpl
+
+
+def test_widgets_refresh_aligned_every_5_minutes():
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "var REFRESH_MS = 5 * 60 * 1000;" in w, fname
+        assert "function scheduleAligned(fn, ms)" in w, fname
+        assert "setInterval(load, REFRESH_MS)" not in w, fname
 
 
 def test_hours_title_uses_remaining_today_window():
