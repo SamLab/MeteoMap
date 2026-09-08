@@ -456,7 +456,7 @@ function buildWeatherHours(){
   if(rainHour<0){
     for(let j=0;j<D.time.length;j++){
       if(!isToday(j))continue;
-      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+      if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
     }
     if(rainHour>=0)fromModels=true;
   }

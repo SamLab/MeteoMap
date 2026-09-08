@@ -164,7 +164,7 @@ function buildSummary(times, data, rawData, idx){
   if(rainHour<0){
     for(var j=idx;j<times.length;j++){
       if(times[j].toDateString()!==todayStr) break;
-      if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+      if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
     }
     if(rainHour>=0)fromModels=true;
   }

@@ -161,7 +161,7 @@ def test_hourstitle_interval_breaks_on_first_dry_hour():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
-    assert "if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
 
 
 def test_widget_interval_breaks_on_first_dry_hour():
@@ -169,7 +169,16 @@ def test_widget_interval_breaks_on_first_dry_hour():
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
         assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
-        assert "if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+
+
+def test_hourly_interval_continues_on_consensus_even_if_models_below_threshold():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
 
 
 def test_hourstitle_rain_interval():
