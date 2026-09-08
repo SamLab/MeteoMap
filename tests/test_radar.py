@@ -227,8 +227,8 @@ def test_detail_summary_column():
 def test_help_text_up_to_date():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с)" in tpl
-    assert "Ближайшее — по одной модели, подтверждённое (жирным) — по двум и более" in tpl
+    assert "Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с)" in tpl
+    assert "Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу" in tpl
     assert "час минимума/максимума дня по консенсусу" in tpl
     assert "Типы погоды" in tpl
     assert "51–57 — морось" in tpl
@@ -314,18 +314,24 @@ def test_warnings_do_not_duplicate_when_nearest_confirmed_coincide():
     assert "if(g1>=0&&g1!==g2)" in tpl
 
 
-def test_warnings_hail_in_thunderstorm_column():
+def test_warnings_frost_column_replaces_thunderstorm():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "v===96||v===99" in tpl
-    assert "риск грозы'+(hail?' с градом':'')" in tpl
+    assert "temperature_2m?.[i]" in tpl
+    assert "🥶" in tpl
+    assert "подтверждено" in tpl
+    assert "Заморозков в ближайшие дни не ожидается" in tpl
+    assert "v===96||v===99" not in tpl
+    assert "риск грозы" not in tpl
+    assert "findRisk" not in tpl
 
 
 def test_warnings_empty_messages():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "Осадков в ближайшие дни не ожидается" in tpl
-    assert "Гроз и града в ближайшие дни не ожидается" in tpl
+    assert "Заморозков в ближайшие дни не ожидается" in tpl
+    assert "Гроз и града в ближайшие дни не ожидается" not in tpl
     assert "Порывистого ветра в ближайшие дни не ожидается" in tpl
 
 

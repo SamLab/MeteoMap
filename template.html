@@ -206,10 +206,10 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — текущие условия и параметры по консенсусу; в скобках — средняя за день, ↑/↓ — максимум и минимум за сегодня с временем. На телефоне видны 4 основных параметра, на ПК — 10.</li>
       <li><b>По часам</b> — ближайшие 48 часов; заливка — дождь. Подсчёт дождя: код погоды из «дождевых» (есть) → осадки ≥ 0.1 мм (нет кода) → вероятность осадков &gt; 33% (нет кода и осадков).</li>
-      <li><b>Предупреждения</b> — дождь, гроза, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по двум и более. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «Идёт до …» с консенсусными значениями; для будущих периодов — «Вс 23 в 08ч» при одном часе или «Вс 23 с 08ч до 10ч» при нескольких. Гроза: риск при CAPE &gt; 1000 Дж/кг и CIN не ≤ −50 Дж/кг (не блокирует).</li>
+      <li><b>Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «Идёт до …» с консенсусными значениями; для будущих периодов — «Вс 23 в 08ч» при одном часе или «Вс 23 с 08ч до 10ч» при нескольких (интервал тянется непрерывно, пока в каждом следующем часу консенсус подтверждает дождь). Заморозки: первый час, где хотя бы одна модель на 0 °C или ниже, с интервалом до последнего непрерывного такого часа; «по N моделям» — максимум числа моделей за час в интервале. Подтверждённая строка — то же по консенсусу, жирным. Заморозков нет — «Заморозков в ближайшие дни не ожидается».</li>
       <li><b>На 16 дней</b> — день, погода, температура, осадки, облачность.</li>
       <li><b>Подробно на 16 дней</b> — почасовый прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Восход/закат и долгота дня.</li>
-      <li>Заголовок «По часам» — сводка по дождю на остаток дня: тип и интервал по консенсусу, либо «Подтвержденного дождя нет, но по N моделям вероятны Осадки …». Если дождь идёт сейчас — начало не указывается («до 15ч»).</li>
+      <li>Заголовок «По часам» — сводка по дождю на остаток дня: тип и интервал по консенсусу, либо «Подтвержденного дождя нет, но по N моделям вероятны Осадки …». Интервал тянется непрерывно: пока в каждом следующем часу консенсус или ≥ 2 модели дают дождь; при первом «сухом» часу — обрыв. Если дождь идёт сейчас — начало не указывается («до 15ч»).</li>
     </ul>
     <h2>Графики</h2>
     <ul>
@@ -741,7 +741,6 @@ function buildWarnings(){
   const futureIdx=ts.findIndex(t=>t>=nowMin);
   const from=futureIdx<0?curIdx:futureIdx;
   const R=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  const S=[95,96,99];
   const GUST_MIN=15;
   const findSrc=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>0)return i;}return -1;};
   // �ᨬ���� �� ���: ��还� ��ᮩ��� - ���������� �������� (D.weighted.weather_code)
@@ -780,11 +779,6 @@ function buildWarnings(){
     const m=D.models[best.c];
     return wetVal(best.pr,m?m.precipitation_probability?.[i]:null);
   };
-  const CIN_BLOCK=-50;
-  const cinBlock=(c,i)=>{let v=D.models[c]?D.models[c].convective_inhibition?.[i]:undefined;if(v===null||v===undefined)v=D.weighted.convective_inhibition?.[i];return v!==null&&v!==undefined&&v<=CIN_BLOCK;};
-  const modelRisk=(c,i)=>{const v=D.models[c]?D.models[c].cape?.[i]:undefined;return v!==null&&v!==undefined&&v>1000&&!cinBlock(c,i);};
-  const findRisk=()=>{for(let i=from;i<ts.length;i++){for(const c of codes){if(modelRisk(c,i))return i;}}return -1;};
-  const maxCapeUnblocked=i=>{let m=0;for(const c of codes){const v=D.models[c]?D.models[c].cape?.[i]:undefined;if(v!==null&&v!==undefined&&v>m&&!cinBlock(c,i))m=v;}return m;};
   const col=(icon,list,extra=[],precipMin,emptyMsg='',probWord='Вероятен',ongoingWord='Дождь',minProb=1)=>{
     const today=new Date().toISOString().slice(0,10);
     const endLabel=(tsStr,startDay)=>{
@@ -824,10 +818,17 @@ function buildWarnings(){
     if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
   };
-  const ci=findRisk();
-  const hasHail=()=>{for(let i=from;i<ts.length;i++){for(const c of codes){const v=D.models[c]?D.models[c].weather_code?.[i]:undefined;if(v===96||v===99)return true;}}return false;};
-  const hail=hasHail();
-  const capeRow=ci<0?[]:['<div class="wr3">'+tstr(ci)+' риск грозы'+(hail?' с градом':'')+' · CAPE '+num(maxCapeUnblocked(ci))+' Дж/кг</div>'];
+  const frostModelCount=i=>{let n=0;for(const c of codes){const t=D.models[c]?D.models[c].temperature_2m?.[i]:undefined;if(t!==null&&t!==undefined&&t<=0)n++;}return n;};
+  const frostRun=pred=>{let s=-1,e=-1;for(let i=from;i<ts.length;i++){if(pred(i)){if(s<0)s=i;e=i;}else if(s>=0)break;}return s<0?null:{s,e};};
+  const frostEndLabel=(i,startDay)=>{const eDay=ts[i].slice(0,10),eTime=ts[i].slice(11,13)+'ч';if(eDay===new Date().toISOString().slice(0,10)||eDay===startDay)return eTime;return relDay(ts[i])+' '+eTime;};
+  const frostLbl=(s,e)=>{const st=ts[s].slice(11,13)+'ч';const ds=ts[s].slice(0,10);if(e===s)return relDay(ds)+' в '+st;return relDay(ds)+' с '+st+' до '+frostEndLabel(e,ds);};
+  const tempMinModels=(s,e)=>{let m=null;for(let k=s;k<=e;k++){for(const c of codes){const t=D.models[c]?D.models[c].temperature_2m?.[k]:undefined;if(t!==null&&t!==undefined&&(m===null||t<m))m=t;}}return m;};
+  const fRows=[];
+  const frM=frostRun(i=>frostModelCount(i)>=1);
+  if(frM){let maxN=0;for(let k=frM.s;k<=frM.e;k++){const n=frostModelCount(k);if(n>maxN)maxN=n;}const t=tempMinModels(frM.s,frM.e);fRows.push('<div class="wr1">'+frostLbl(frM.s,frM.e)+' '+num(t)+'° · по '+maxN+' моделям</div>');}
+  const frC=frostRun(i=>{const t=D.weighted.temperature_2m?.[i];return t!==null&&t!==undefined&&t<=0;});
+  if(frC){let m=null;for(let k=frC.s;k<=frC.e;k++){const t=D.weighted.temperature_2m?.[k];if(t!==null&&t!==undefined&&(m===null||t<m))m=t;}fRows.push('<div class="wr2">'+frostLbl(frC.s,frC.e)+' '+num(m)+'° · подтверждено</div>');}
+  if(fRows.length===0)fRows.push('<div class="wr1"><i>Заморозков в ближайшие дни не ожидается</i></div>');
   const gustInfo=i=>{let n=0,m=0;const lst=[];for(const c of codes){const v=D.models[c]?D.models[c].wind_gusts_10m?.[i]:undefined;if(v===null||v===undefined)continue;if(v>m)m=v;if(v>=GUST_MIN){n++;lst.push(names[c]);}}return {n,m,lst};};
   const findGust=minN=>{for(let i=from;i<ts.length;i++){if(gustInfo(i).n>=minN)return i;}return -1;};
   const gustRow=i=>{const g=gustInfo(i);return tstr(i)+' до '+num(g.m)+' м/с · '+((g.n===1)?g.lst.join(' и '):'по '+g.n+' моделям');};
@@ -836,7 +837,7 @@ function buildWarnings(){
   if(g1>=0&&g1!==g2)gRows.push('<div class="wr1">'+gustRow(g1)+'</div>');
   if(g2>=0)gRows.push('<div class="wr2">'+gustRow(g2)+'</div>');
   if(gRows.length===0)gRows.push('<div class="wr1"><i>Порывистого ветра в ближайшие дни не ожидается</i></div>');
-  el.innerHTML='<div class="warn">'+col('🌧️',R,[],0.1,'Осадков в ближайшие дни не ожидается','Вероятен','Дождь',2)+col('⚡',S,capeRow,undefined,'Гроз и града в ближайшие дни не ожидается','Вероятна','Гроза')+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
+  el.innerHTML='<div class="warn">'+col('🌧️',R,[],0.1,'Осадков в ближайшие дни не ожидается','Вероятен','Дождь',2)+'<div class="wcol"><div class="wicon">🥶</div><div class="wrows">'+fRows.join('')+'</div></div>'+'<div class="wcol"><div class="wicon">💨</div><div class="wrows">'+gRows.join('')+'</div></div></div>';
 }
 
 // main chart
