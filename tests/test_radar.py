@@ -194,6 +194,8 @@ def test_detail_summary_column():
     assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
+    assert "const dayCode=aggWcode(day,'00','24');" in tpl
+    assert "'<div class=\"he\">'+wcode(dayCode)[1]+'</div>'" in tpl
 
 
 def test_help_text_up_to_date():
