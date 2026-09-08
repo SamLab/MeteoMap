@@ -471,7 +471,7 @@ function buildWeatherHours(){
       const pp=w.precipitation_probability?.[j];if(pp!=null&&pp>maxPp)maxPp=pp;
     }
     let mCnt=0;
-    for(const c of codes){let all=true;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}if(all)mCnt++;}
+    for(const c of codes){let all=true;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;}
     let jPeak=rainHour,peakPr=-1;
     for(let j=ws;j<=jLast;j++){
       if(!inWin(j))continue;

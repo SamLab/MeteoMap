@@ -557,11 +557,21 @@ def test_widget_rain_type_uses_current_hour_not_peak():
         assert "data.weather_code[jPeak]" not in w, fname
 
 
+def test_js_brace_balance_in_html_files():
+    for fname in ("template.html", "meteo.html", "meteow.html", "radar.html", "radar_template.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            content = f.read()
+        for script in re.findall(r"<script>(.*?)</script>", content, re.S):
+            assert script.count("{") == script.count("}"), fname + " braces"
+            assert script.count("(") == script.count(")"), fname + " parens"
+            assert script.count("[") == script.count("]"), fname + " brackets"
+
+
 def test_rain_model_count_requires_all_window_hours():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "let all=true;for(let j=ws;j<=jLast;j++){if(!inWin(j))continue;" in tpl
-    assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}if(all)mCnt++;" in tpl
+    assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;" in tpl
     assert "if(has)mCnt++" not in tpl
     assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
