@@ -148,7 +148,8 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';" in tpl
     assert "const jPeakCode=w.weather_code?.[jPeak];" not in tpl
     assert "RainType' not in tpl"
-    assert "const enLabel=cutAtMidnight?'00ч':(enDay===today?enTime:" in tpl
+    assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
+    assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
@@ -185,7 +186,8 @@ def test_hourstitle_rain_interval():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const jStartCode=w.weather_code?.[ws];" in tpl
-    assert "const enLabel=cutAtMidnight?'00ч':(enDay===today?enTime:" in tpl
+    assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
+    assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
@@ -287,6 +289,15 @@ def test_cmp_row_highlight_uses_consensus_not_model_extreme():
     assert "w>dayMx[day][1]" in tpl
     assert "w<dayMn[day][1]" in tpl
     assert "Math.max(...nums),mn=Math.min(...nums)" not in tpl
+
+
+def test_warnings_nearest_row_uses_two_model_threshold_and_first_dry_boundary():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" in tpl
+    assert "sourceList(s,list,precipMin)" not in tpl
+    assert "const sLabel='по '+rainModelAll(s,sE)+' моделям'" in tpl
+    assert "endLabel(ts[Math.min(sE+1,ts.length-1)]," in tpl
 
 
 def test_warnings_confirmed_requires_two_models():

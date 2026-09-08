@@ -226,8 +226,8 @@ function buildSummary(times, data, rawData, idx){
   var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;
   var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'Дождь';
   var st=pad2(times[rainHour].getHours())+'ч';
-  var cutAtMidnight=(jLast+1>=times.length)||(times[jLast+1].toDateString()!==todayStr);
-  var en=cutAtMidnight?'00ч':(pad2(times[jLast].getHours())+'ч');
+  var endIdx=Math.min(jLast+1,times.length-1);
+  var en=(times[endIdx].getHours()===0)?'00ч':(pad2(times[endIdx].getHours())+'ч');
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'в '+st:'с '+st+' до '+en);
   var cntStr=' ('+peakModels+'м)';
   var txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+Math.round(maxPp)+'%'+cntStr;
