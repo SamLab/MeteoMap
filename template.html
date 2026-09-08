@@ -555,12 +555,12 @@ function buildWeather16Title(){
   if(hotI>=0){
     const d=new Date(dt[hotI]);
     const pi=peakH(hotI);
-    parts.push('Теплее всего '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(hotT));
+    parts.push('Теплее '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(hotT));
   }
   if(coldI>=0){
     const d=new Date(dt[coldI]);
     const pi=lowH(coldI);
-    parts.push('Холоднее всего '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(coldT));
+    parts.push('Холоднее '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(coldT));
   }
   const th=document.getElementById('d10title');
   if(th)th.textContent='На 16 дней — '+parts.join(' — ');

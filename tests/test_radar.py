@@ -256,8 +256,8 @@ def test_d10_title_line_over_days():
     assert "'На 16 дней — '+parts.join(' — ')" in tpl
     assert "parts.join(' / ')" not in tpl
     assert "не ожидается" in tpl
-    assert "Теплее всего" in tpl
-    assert "Холоднее всего" in tpl
+    assert "Теплее " in tpl
+    assert "Холоднее " in tpl
     assert "D.weighted.weather_code" in tpl
     assert "D.daily.temperature_2m_max" in tpl
     assert "D.daily.temperature_2m_min" in tpl
