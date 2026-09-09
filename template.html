@@ -679,7 +679,8 @@ function buildWeather10(){
   const span=(isFinite(lo)&&isFinite(hi)&&hi>lo)?hi-lo:0;
   const TOP=16,BTM=135-16,SCALE=(isFinite(span)&&span>0)?(BTM-TOP)/span:0;
   const yT=t=>t==null?BTM:(isFinite(span)&&span>0)?BTM-SCALE*(t-lo):(TOP+BTM)/2;
-  document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
+  const w10=document.getElementById('weather-10');
+  w10.innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
     const y1=yT(x.tmax),y2=yT(x.tmin);
     return '<div class="d10col"><div class="d10tube">'+
       '<div class="d10tday" style="top:'+(y1-15)+'px">'+temp(x.tmax)+'</div>'+
@@ -691,6 +692,9 @@ function buildWeather10(){
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
   }).join('')+cloudRainSvgWrap(dt,null,yT)+'</div></div>';
+  const d10strip=w10.querySelector('.d10strip');
+  const d10svg=d10strip.querySelector('.d10svg');
+  if(d10svg)d10svg.style.width=d10strip.scrollWidth+'px';
   buildWeather16Title();
 }
 const PARTS=[['ночь','00','06'],['утро','06','12'],['день','12','18'],['вечер','18','24']];

@@ -591,6 +591,8 @@ def test_d10_unified_cloud_rain_graph():
     # дни разделены тонкой вертикальной линией
     assert ".d10col{flex:1;min-width:70px;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}" in tpl
     assert ".d10col:first-child{border-left:0}" in tpl
+    # заливка на всю ширину ленты даже при прокрутке на смартфоне
+    assert "if(d10svg)d10svg.style.width=d10strip.scrollWidth+'px';" in tpl
     # график ограничен высотой трубки (0.01мм / 0% строка полосы), не растягивается вниз до подписей дней
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:135px;overflow:hidden;pointer-events:none}" in tpl
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:100%" not in tpl
