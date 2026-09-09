@@ -234,7 +234,31 @@ def test_hourstitle_includes_current_hour_when_raining():
     assert tpl.count("if(!inWin(j))continue;") >= 3
 
 
-def test_detail_summary_column():
+def test_rain_intensity_helper_by_wmo_code():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const rainIntensity=" in tpl or "function rainIntensity(" in tpl
+    # слабый / средний / сильный маппинг на коды WMO
+    assert "weak=" in tpl and "51" in tpl and "61" in tpl and "71" in tpl
+    assert "55,65,75,82,86" in tpl or "55:'сильный'" in tpl or "55:['сильный'" in tpl
+    assert "средний" in tpl
+
+
+def test_hourly_shows_intensity_line_below_precip_only_when_rainy():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # строка интенсивности идёт после блока количества осадков hpp
+    assert 'class="hip"' in tpl
+    assert "rainIntensity(w.weather_code?.[j])" in tpl
+
+
+def test_now_shows_intensity_when_raining():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "rainIntensity(w.weather_code?.[curIdx])" in tpl
+
+
+
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert '<div class="hour hsum">' in tpl

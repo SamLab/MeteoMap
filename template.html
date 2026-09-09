@@ -108,6 +108,8 @@ a{color:var(--accent)}
 .hour .hwnd{font-size:11px;color:var(--muted);min-height:14px}
 .hour .hwnd .pwarrow{font-size:15px;line-height:1}
 .hour .hpp{color:#1976d2;font-size:11px;min-height:14px;line-height:1.15}
+.hour .hip{color:var(--muted);font-size:10px;min-height:12px;line-height:1.15}
+.wint{color:var(--muted);font-size:13px;font-weight:400}
 .hour.hsum{width:104px;min-width:104px;background:var(--sel);text-align:left;padding-left:8px;border-right:1px solid var(--line)}
 .hour.hsum .ht{color:var(--text);font-weight:700;font-size:14px;line-height:1.25}
 .hour.hsum .he{min-height:24px}
@@ -298,6 +300,11 @@ const WCODE={
  85:['Снегопад','🌨️'],86:['Снегопад','🌨️'],
  95:['Гроза','⚡'],96:['Гроза с градом','⚡'],99:['Гроза с градом','⚡']};
 const wcode=c=>WCODE[c]||['—',''];
+const rainIntensity=c=>{
+  const weak=[51,56,57,61,66,67,71,77,80,85];
+  const strong=[55,65,75,82,86];
+  return weak.includes(c)?'слабый':(strong.includes(c)?'сильный':([53,63,73,81].includes(c)?'средний':null));
+};
 const COMPASS=['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
 const COMPASS_FULL=['северный','северо-восточный','восточный','юго-восточный','южный','юго-западный','западный','северо-западный'];
 const rumbShort=deg=>deg==null?'—':COMPASS[Math.round(deg/45)%8];
@@ -373,6 +380,7 @@ function buildWeatherNow(){
   if(nt)nt.textContent='Сейчас '+(nowMsk().match(/\d{2}:\d{2}/)||['?'])[0]+', '+DAY_NAMES_SHORT[new Date(nowMsk()).getDay()]+' '+new Date(nowMsk()).getDate();
   const w=D.weighted;
   const [wtext,we]=wcode(w.weather_code?.[curIdx]);
+  const inx=rainIntensity(w.weather_code?.[curIdx]);
   const sr=(D.daily.sunrise?.[0]||'').slice(11,16)||'—';
   const ss=(D.daily.sunset?.[0]||'').slice(11,16)||'—';
   const wind=w.wind_speed_10m?.[curIdx];
@@ -430,7 +438,7 @@ function buildWeatherNow(){
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
     '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
-    '<div class="wcond">'+wtext+'</div></div>'+
+    '<div class="wcond">'+wtext+(inx&&wtext.indexOf(inx)<0?' <span class="wint">'+inx+'</span>':'')+'</div></div>'+
     '<div class="wdet"><table class="wnowtbl"><tr>'+cells.map((c,i)=>'<td class="wcol'+i+'">'+c.val+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' lab">'+c.lab+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' rng">'+c.mx+'</td>').join('')+'</tr>'+
@@ -502,11 +510,13 @@ function buildWeatherHours(){
       const pr=w.precipitation?.[j];
       const ws=w.wind_speed_10m?.[j];
       const wd=w.wind_direction_10m?.[j];
+      const in=rainIntensity(w.weather_code?.[j]);
       const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
       return '<div class="hour'+(nd?' nd':'')+'"><div class="ht">'+t.slice(11,13)+'ч</div>'+
         '<div class="he">'+we+'</div><div class="hcloud">'+(w.cloud_cover?.[j]==null?'':num(w.cloud_cover[j])+'%')+'</div><div class="htemp">'+temp(w.temperature_2m?.[j])+'</div>'+
         '<div class="hwnd">'+(ws==null?'':arrow+' '+num(ws)+' м/с')+'</div>'+
         '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div>'+
+        (in?'<div class="hip">'+in+'</div>':'')+
         '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>';
     }).join('');
 }
