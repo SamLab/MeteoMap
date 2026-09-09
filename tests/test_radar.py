@@ -613,6 +613,13 @@ def test_d10_unified_cloud_rain_graph():
     assert "hetSvg" not in tpl
     assert "cloudRainSvgWrap([day]" not in tpl
     assert ".hours{display:flex;overflow-x:auto;padding:4px 0}" in tpl
+    # температура-синусоида добавлена в «Подробно» отдельной строкой под часами каждого дня
+    assert "function detailTempSvg(day)" in tpl
+    assert 'class="hdp"' in tpl
+    assert ".hrow{margin:4px 0 2px}" in tpl
+    assert ".hdp{display:block;width:100%;height:32px;pointer-events:none}" in tpl
+    assert '<div class="hrow"><div class="hours">' in tpl
+    assert "detailTempSvg(day)" in tpl
 
 
 def test_radar_has_rainradar_base_above_precipitation():
@@ -830,4 +837,4 @@ def test_day_verdict_removed_completely():
     assert "verdictCol" not in tpl
     # блок «Сейчас» вернулся к таблице без вердикта; 16 дней — столбцы без вердикта
     assert "'<div class=\"wdet\"><table class=\"wnowtbl\"><tr>'" in tpl
-    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
+    assert "'<div class=\"hrow\"><div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
