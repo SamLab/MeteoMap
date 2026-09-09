@@ -664,6 +664,19 @@ def test_js_brace_balance_in_html_files():
             assert script.count("[") == script.count("]"), fname + " brackets"
 
 
+def test_no_reserved_js_keywords_as_identifiers():
+    reserved = ("in","class","new","for","if","else","return","typeof","function",
+                "do","while","switch","case","break","continue","delete","void",
+                "this","with","try","catch","throw","instanceof","of")
+    for fname in ("template.html", "meteo.html", "meteow.html", "radar.html", "radar_template.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            content = f.read()
+        for script in re.findall(r"<script>(.*?)</script>", content, re.S):
+            for kw in reserved:
+                assert not re.search(r"\b(const|let|var)\s+" + kw + r"\b", script), \
+                    fname + " reserved word used as identifier: " + kw
+
+
 def test_warnings_no_current_model_rain_row():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
