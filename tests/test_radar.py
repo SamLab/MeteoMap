@@ -764,10 +764,11 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert 'class="d10mm"' not in w
     assert 'class="d10cond"><span class="ic">' in w
     assert ".d10cond{font-size:14px" in w
-    # первый день в виджете — сегодня (не завтра), подпись «Сегодня/Завтра»
+    # первый день в виджете — сегодня (не завтра), подпись — день недели + число (без «Сегодня/Завтра»)
     assert "if (dateStr < todayStr) continue;" in w
     assert "dateStr <= todayStr" not in w
-    assert "relDay(x.ds)" in w
+    assert "relDay(x.ds)" not in w
+    assert "'<div class=\"d10day\"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>'" in w
     # точка часа — на сетке часа, а не в середине слота (пик 11ч читается в позиции 11ч)
     assert "var x = (di * 24 + h) / (N * 24) * 100;" in w
     assert "var x = (di * 24 + h) / (list.length * 24) * 100;" in w

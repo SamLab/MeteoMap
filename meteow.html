@@ -114,14 +114,6 @@ var WMO = {
 };
 
 var DOW = ['\u0412\u0441','\u041F\u043D','\u0412\u0442','\u0421\u0440','\u0427\u0442','\u041F\u0442','\u0421\u0431'];
-function relDay(dayStr){
-  var d0 = new Date();
-  var diff = Math.round((new Date(dayStr) - new Date(d0.getFullYear(), d0.getMonth(), d0.getDate())) / 86400000);
-  if (diff === 0) return '\u0421\u0435\u0433\u043E\u0434\u043D\u044F';
-  if (diff === 1) return '\u0417\u0430\u0432\u0442\u0440\u0430';
-  var d = new Date(dayStr);
-  return DOW[d.getDay()] + ' ' + d.getDate();
-}
 
 var DEFAULT_CITY = 'tsedenevo';
 var DEFAULT_HOURS = 14;
@@ -318,7 +310,7 @@ function render(data){
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
-      '<div class="d10day">' + relDay(x.ds) + '</div>' +
+      '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
   d10strip.innerHTML = html10 + cloudRainSvgW(arr, 56);
