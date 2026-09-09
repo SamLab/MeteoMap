@@ -275,7 +275,7 @@ def test_detail_summary_column():
     assert "'<div>с '+rst+' до '+ren+'</div>'" in tpl
     assert "'<div class=\"hour hsun\">'" in tpl
     assert '<div class="sunl">Долгота' in tpl
-    assert "+sunCol+verdictCol+'</div>'" in tpl
+    assert "+sunCol+'</div>'" in tpl
     assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
@@ -723,44 +723,14 @@ def test_index_has_sputnik_tab_and_iframe():
     assert "'satellite'" in tpl
 
 
-def test_day_verdict_has_phrase_rules():
+def test_day_verdict_removed_completely():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "function buildDayVerdict(" in tpl
-    assert "без осадков" in tpl
-    assert "ожидается дождь" in tpl
-    assert "'солнечно '" in tpl
-    assert "без прояснений" in tpl
-    assert "'тепло'" in tpl
-    assert "'ветрено'" in tpl
-
-
-def test_day_verdict_inserted_above_params_table():
-    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
-        tpl = f.read()
-    assert 'class="wadv"' in tpl
-    assert "buildDayVerdict(today)" in tpl
-    assert "'<div class=\"wdet\">'" in tpl
-    # wdet переведён в колонку, чтобы вердикт был над таблицей
-    assert ".wdet{display:flex;flex-direction:column" in tpl
-
-
-def test_day_verdict_starts_from_current_hour_for_today():
-    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
-        tpl = f.read()
-    # для сегодняшнего дня buildDayVerdict отсекает уже прошедшие часы (с curIdx)
-    assert "buildDayVerdict" in tpl
-    assert "curIdx" in tpl
-    # внутри функции индексы для сегодня берутся от curIdx
-    assert "i>=curIdx" in tpl or "splice(0,curIdx)" in tpl or "filter(i=>i>=curIdx)" in tpl
-
-
-def test_day_verdict_in_16day_detail_after_columns():
-    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
-        tpl = f.read()
-    # в блоке 16 дней строки вердикта добавляются после всех столбцов (после sunCol)
-    assert "hverdict" in tpl
-    assert "buildDayVerdict(day)" in tpl
-    assert "sunCol" in tpl
-    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol" in tpl or \
-           "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
+    # вердикт-предложения убраны: ни функции, ни вставок из «Сейчас», ни справа в 16 днях
+    assert "buildDayVerdict" not in tpl
+    assert "class=\"wadv\"" not in tpl
+    assert "hverdict" not in tpl
+    assert "verdictCol" not in tpl
+    # блок «Сейчас» вернулся к таблице без вердикта; 16 дней — столбцы без вердикта
+    assert "'<div class=\"wdet\"><table class=\"wnowtbl\"><tr>'" in tpl
+    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl

@@ -87,8 +87,7 @@ a{color:var(--accent)}
 .wbig{font-size:52px;font-weight:700}
 .wcond{font-size:17px;margin-top:2px}
 .wfeel{font-size:13px;color:var(--muted)}
-.wdet{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px}
-.wadv{font-size:14px;color:var(--text);max-width:420px;line-height:1.35}
+.wdet{display:flex;gap:18px;flex-wrap:wrap;font-size:12px}
 .wnowtbl{border-collapse:collapse}
 .wnowtbl td{padding:3px 14px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-size:12px}
 .wnowtbl tr:first-child td{font-size:13px;font-weight:600}
@@ -119,7 +118,6 @@ a{color:var(--accent)}
 .hour.hsun{width:auto;min-width:88px;background:var(--sel);text-align:left;padding-left:8px;display:flex;flex-direction:column;justify-content:center;gap:5px}
 .hour.hsun .sunl{font-size:10px;color:var(--muted)}
 .hour.hsun .sunv{font-size:12px;font-weight:600}
-.hour.hverdict{width:auto;min-width:240px;max-width:360px;background:var(--sel);text-align:left;padding:8px;font-size:11px;color:var(--text);line-height:1.35;white-space:normal;vertical-align:top;align-self:stretch}
 .warn{display:flex;gap:16px;flex-wrap:wrap;padding:4px 2px}
 .wcol{display:flex;gap:10px;min-width:220px;flex:1 1 230px}
 .wicon{font-size:26px;line-height:1;align-self:center}
@@ -440,7 +438,7 @@ function buildWeatherNow(){
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
     '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
     '<div class="wcond">'+wtext+(inx&&wtext.indexOf(inx)<0?' <span class="wint">'+inx+'</span>':'')+'</div></div>'+
-    '<div class="wdet">'+(today?('<div class="wadv">Сегодня '+buildDayVerdict(today)+'</div>'):'')+'<table class="wnowtbl"><tr>'+cells.map((c,i)=>'<td class="wcol'+i+'">'+c.val+'</td>').join('')+'</tr>'+
+    '<div class="wdet"><table class="wnowtbl"><tr>'+cells.map((c,i)=>'<td class="wcol'+i+'">'+c.val+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' lab">'+c.lab+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' rng">'+c.mx+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' rng">'+c.mn+'</td>').join('')+'</tr></table></div></div>';
@@ -649,51 +647,6 @@ function aggWcode(day,h0,h1){
   }
   return best;
 }
-function buildDayVerdict(dayStr){
-  let idxs=partIndices(dayStr,0,24);
-  const today=nowMsk().slice(0,10);
-  if(dayStr===today)idxs=idxs.filter(i=>i>=curIdx);
-  if(!idxs.length)return '';
-  const w=D.weighted;
-  const hasRainAt=j=>RAIN_CODES.includes(w.weather_code?.[j]);
-  const sunny=j=>!hasRainAt(j)&&(w.cloud_cover?.[j]==null||w.cloud_cover[j]<40);
-  function segsOf(pred){
-    const out=[];let s=-1;
-    for(let k=0;k<idxs.length;k++){
-      const j=idxs[k],on=pred(j);
-      if(on&&s<0)s=k;
-      if(!on&&s>=0){out.push([idxs[s],idxs[k-1]]);s=-1;}
-    }
-    if(s>=0)out.push([idxs[s],idxs[idxs.length-1]]);
-    return out;
-  }
-  const rainSegs=segsOf(hasRainAt);
-  const sunSegs=segsOf(sunny);
-  const hm=j=>D.time[j].slice(11,13)+'ч';
-  const parts=[];
-  if(rainSegs.length===0)parts.push('без осадков');
-  else if(rainSegs.length===1)parts.push('ожидается дождь с '+hm(rainSegs[0][0])+' до '+hm(rainSegs[0][1]));
-  else parts.push('ожидаются отдельные дожди');
-  function maxField(field){
-    let mx=-Infinity;
-    for(const j of idxs){const v=w[field]?.[j];if(v!=null&&v>mx)mx=v;}
-    return mx===-Infinity?null:mx;
-  }
-  const tmax=maxField('temperature_2m');
-  if(tmax!=null&&tmax>=26)parts.push('жарко');
-  else if(tmax!=null&&tmax>=18)parts.push('тепло');
-  else if(tmax!=null&&tmax<10)parts.push('прохладно');
-  const wmax=maxField('wind_speed_10m');
-  if(wmax!=null&&wmax>8)parts.push('ветрено');
-  if(sunSegs.length===0)parts.push('без прояснений');
-  else{
-    const ts=sunSegs.slice(0,2).map(s=>'с '+hm(s[0])+' до '+hm(s[1]));
-    parts.push('солнечно '+ts[0]+(ts[1]?' и '+ts[1]:''));
-  }
-  let v=parts[0];
-  for(let k=1;k<parts.length;k++)v+=(k===parts.length-1?' и ':', ')+parts[k];
-  return v;
-}
 function buildWeatherDetail(){
   const w=D.weighted;
   const dt=D.daily_time||[];
@@ -750,8 +703,7 @@ function buildWeatherDetail(){
       '<div class="sunl">Закат</div><div class="sunv">'+ss+'</div>'+
       '<div class="sunl">Долгота</div><div class="sunv">'+dl+'</div>'+
       '</div>';
-    const verdictCol='<div class="hour hverdict">'+buildDayVerdict(day)+'</div>';
-    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+verdictCol+'</div>';
+    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+'</div>';
   }).join('');
 }
 
