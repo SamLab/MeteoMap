@@ -650,7 +650,9 @@ function aggWcode(day,h0,h1){
   return best;
 }
 function buildDayVerdict(dayStr){
-  const idxs=partIndices(dayStr,0,24);
+  let idxs=partIndices(dayStr,0,24);
+  const today=nowMsk().slice(0,10);
+  if(dayStr===today)idxs=idxs.filter(i=>i>=curIdx);
   if(!idxs.length)return '';
   const w=D.weighted;
   const hasRainAt=j=>RAIN_CODES.includes(w.weather_code?.[j]);
@@ -672,11 +674,16 @@ function buildDayVerdict(dayStr){
   if(rainSegs.length===0)parts.push('без осадков');
   else if(rainSegs.length===1)parts.push('ожидается дождь с '+hm(rainSegs[0][0])+' до '+hm(rainSegs[0][1]));
   else parts.push('ожидаются отдельные дожди');
-  const tmax=aggPart(dayStr,0,24,'temperature_2m','max');
+  function maxField(field){
+    let mx=-Infinity;
+    for(const j of idxs){const v=w[field]?.[j];if(v!=null&&v>mx)mx=v;}
+    return mx===-Infinity?null:mx;
+  }
+  const tmax=maxField('temperature_2m');
   if(tmax!=null&&tmax>=26)parts.push('жарко');
   else if(tmax!=null&&tmax>=18)parts.push('тепло');
   else if(tmax!=null&&tmax<10)parts.push('прохладно');
-  const wmax=aggPart(dayStr,0,24,'wind_speed_10m','max');
+  const wmax=maxField('wind_speed_10m');
   if(wmax!=null&&wmax>8)parts.push('ветрено');
   if(sunSegs.length===0)parts.push('без прояснений');
   else{

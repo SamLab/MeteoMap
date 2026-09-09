@@ -745,6 +745,16 @@ def test_day_verdict_inserted_above_params_table():
     assert ".wdet{display:flex;flex-direction:column" in tpl
 
 
+def test_day_verdict_starts_from_current_hour_for_today():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # для сегодняшнего дня buildDayVerdict отсекает уже прошедшие часы (с curIdx)
+    assert "buildDayVerdict" in tpl
+    assert "curIdx" in tpl
+    # внутри функции индексы для сегодня берутся от curIdx
+    assert "i>=curIdx" in tpl or "splice(0,curIdx)" in tpl or "filter(i=>i>=curIdx)" in tpl
+
+
 def test_day_verdict_in_16day_detail_after_columns():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
