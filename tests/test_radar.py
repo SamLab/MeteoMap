@@ -55,6 +55,26 @@ def test_widgets_refresh_aligned_every_5_minutes():
         assert "setInterval(load, REFRESH_MS)" not in w, fname
 
 
+def test_data_cache_bust_via_version_token():
+    with open(os.path.join(HERE, "meteo.py"), encoding="utf-8") as f:
+        py = f.read()
+    assert '\"data\", \"version.json\"' in py or '"data"), "version.json"' in py or '"version.json"' in py
+
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "fetch('data/'+slug+'.json?v='+v" in tpl
+    assert "encodeURIComponent(D.generated_at||'')" in tpl
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "function dataUrl(base)" in w, fname
+        assert "dataUrl(relUrl())" in w, fname
+        assert "dataUrl(absUrl())" in w, fname
+        assert "fetch('data/version.json'" in w, fname
+        assert "__DATA_VERSION__" in w, fname
+
+
 def test_hours_title_uses_remaining_today_window():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

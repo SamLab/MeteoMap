@@ -1449,6 +1449,9 @@ def main():
         with open(os.path.join(here, "data", f"{slug}.json"), "w",
                   encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False))
+    with open(os.path.join(here, "data", "version.json"), "w",
+              encoding="utf-8") as f:
+        json.dump({"v": generated_at}, f)
     write_index(render(template, payload_by_city[LOCATIONS[0]["slug"]]))
     print(f"[ok] index.html + {len(payload_by_city)} city json written")
 

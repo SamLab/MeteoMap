@@ -1075,7 +1075,8 @@ function updateSputnikFrame(){
 }
 async function loadCity(slug,silent){
   try{
-    const r=await fetch('data/'+slug+'.json',{cache:'no-cache'});
+    const v=encodeURIComponent(D.generated_at||'');
+    const r=await fetch('data/'+slug+'.json?v='+v,{cache:'no-cache'});
     if(!r.ok)throw new Error('HTTP '+r.status);
     D=await r.json();
     renderAll();

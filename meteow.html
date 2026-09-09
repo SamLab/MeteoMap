@@ -134,17 +134,27 @@ cityEl.textContent = '\uD83C\uDF24';
 
 function relUrl(){ return 'data/' + city + '.json'; }
 function absUrl(){ return 'https://samlab.github.io/MeteoMap/data/' + city + '.json'; }
+function dataUrl(base){
+  return (window.__DATA_VERSION__ ? base + '?v=' + encodeURIComponent(window.__DATA_VERSION__) : base);
+}
 
 function load(){
-  fetch(relUrl(), {cache:'no-cache'})
+  function withToken(){
+    fetch(dataUrl(relUrl()), {cache:'no-cache'})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(render)
+      .catch(function(){
+        return fetch(dataUrl(absUrl()), {cache:'no-cache'})
+          .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+          .then(render)
+          .catch(showError);
+      });
+  }
+  if (window.__DATA_VERSION__) { withToken(); return; }
+  fetch('data/version.json', {cache:'no-cache'})
     .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-    .then(render)
-    .catch(function(){
-      return fetch(absUrl(), {cache:'no-cache'})
-        .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(render)
-        .catch(showError);
-    });
+    .then(function(d){ window.__DATA_VERSION__ = d && d.v ? d.v : ''; withToken(); })
+    .catch(withToken);
 }
 
 function buildSummary(times, data, rawData, idx){
