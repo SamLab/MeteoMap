@@ -554,6 +554,8 @@ def test_hour_ribbon_rain_bar():
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
     assert "class=\"hprc\"" in tpl
     assert "class=\"hcl\"" not in tpl
+    assert "const x=(hi)/hN*100;" in tpl
+    assert "(hi+0.5)" not in tpl
     assert "Math.min(100,Math.round(pr/5*100))" in tpl
 
 
@@ -598,6 +600,9 @@ def test_d10_unified_cloud_rain_graph():
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:100%" not in tpl
     # график позади колонок температуры (как раньше бар был первым ребёнком трубки)
     assert ".d10tube{height:135px;position:relative;z-index:1}" in tpl
+    # точка часа стоит на сетке часа (пик осадков в 11ч читается в позиции 11ч)
+    assert "const x=(di*24+h)/(N*24)*100;" in tpl
+    assert "(di*24+h+0.5)" not in tpl
     # осадки — по часовым мм (как в данных weighted.precipitation), верх = 10 мм/час
     assert "(1-Math.min(1,r/10))*135" in tpl
     assert "const r=D.weighted.precipitation?.[i];" in tpl
@@ -763,6 +768,11 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "if (dateStr < todayStr) continue;" in w
     assert "dateStr <= todayStr" not in w
     assert "relDay(x.ds)" in w
+    # точка часа — на сетке часа, а не в середине слота (пик 11ч читается в позиции 11ч)
+    assert "var x = (di * 24 + h) / (N * 24) * 100;" in w
+    assert "var x = (di * 24 + h) / (list.length * 24) * 100;" in w
+    assert "var x = h / cnt * 100;" in w
+    assert "(h + 0.5)" not in w
     # заливки облачности/осадков в почасовой части, как в 16 днях (SVG позади ячеек)
     assert ".strip{display:flex;gap:2px;padding:2px 0 4px;position:relative}" in w
     assert ".hobg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in w

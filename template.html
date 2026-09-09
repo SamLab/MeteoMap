@@ -526,7 +526,7 @@ function buildWeatherHours(){
     const j=start+hi;
     const c=w.cloud_cover?.[j];
     const r=w.precipitation?.[j];
-    const x=(hi+0.5)/hN*100;
+    const x=(hi)/hN*100;
     if(c!=null)cc.push(x.toFixed(2)+','+(c/100*100).toFixed(1));
     if(r!=null)pr.push(x.toFixed(2)+','+((1-Math.min(1,r/10))*100).toFixed(1));
   }
@@ -600,7 +600,7 @@ function cloudRainSvg(days){
       const h=+D.time[i].slice(11,13);
       const c=D.weighted.cloud_cover?.[i];
       const r=D.weighted.precipitation?.[i];
-      const x=(di*24+h+0.5)/(N*24)*100;
+      const x=(di*24+h)/(N*24)*100;
       if(c!=null)cc.push([x,c/100*135]);
       if(r!=null)pr.push([x,(1-Math.min(1,r/10))*135]);
     }
@@ -627,7 +627,7 @@ function tempLineSvg(days,yT){
       const h=+D.time[i].slice(11,13);
       const v=D.weighted.temperature_2m?.[i];
       if(v==null)continue;
-      const x=(di*24+h+0.5)/(N*24)*100;
+      const x=(di*24+h)/(N*24)*100;
       pts.push({x:x,y:yT(v),v:v});
     }
   }

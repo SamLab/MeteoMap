@@ -329,7 +329,7 @@ function render(data){
       var i = idx + h;
       var c = data.weighted.cloud_cover ? data.weighted.cloud_cover[i] : null;
       var r = data.weighted.precipitation ? data.weighted.precipitation[i] : null;
-      var x = (h + 0.5) / cnt * 100;
+      var x = h / cnt * 100;
       if (c != null) cc.push(x.toFixed(2) + ',' + (c / 100 * 100).toFixed(1));
       if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 10)) * 100).toFixed(1));
     }
@@ -350,7 +350,7 @@ function render(data){
         var h = t.getHours();
         var c = data.weighted.cloud_cover ? data.weighted.cloud_cover[j] : null;
         var r = data.weighted.precipitation ? data.weighted.precipitation[j] : null;
-        var x = (di * 24 + h + 0.5) / (N * 24) * 100;
+        var x = (di * 24 + h) / (N * 24) * 100;
         if (c != null) cc.push(x.toFixed(2) + ',' + (c / 100 * HGT).toFixed(1));
         if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 10)) * HGT).toFixed(1));
       }
@@ -372,7 +372,7 @@ function render(data){
         var v = data.weighted.temperature_2m ? data.weighted.temperature_2m[j] : null;
         if (v == null) continue;
         var h = t.getHours();
-        var x = (di * 24 + h + 0.5) / (list.length * 24) * 100;
+        var x = (di * 24 + h) / (list.length * 24) * 100;
         pts.push({x:x, y:yT(v), v:v});
       }
     }
