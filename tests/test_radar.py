@@ -574,11 +574,13 @@ def test_d10_unified_cloud_rain_graph():
     assert "stroke-width" in tpl
     assert ".d10cline{" in tpl
     assert '.d10ccf{fill:rgba(141,154,165,.35);stroke:none}' in tpl
-    assert '.d10prf{fill:rgba(25,118,210,.20);stroke:none}' in tpl
+    assert '.d10prf{fill:rgba(25,118,210,.45);stroke:none}' in tpl
     # температура — синусоида вместо колонок: красная при +, синяя при —, с пересечением нуля
     assert "function tempLineSvg(days,yT)" in tpl
+    assert '<path d="' in tpl
     assert 'stroke="#e74c3c"' in tpl
     assert 'stroke="#3498db"' in tpl
+    assert "<polyline" not in tpl
     assert 'class="d10tbar"' not in tpl
     assert "d10tbar{" not in tpl
     # полоса позиционирована (для наложения svg поверх)
@@ -719,10 +721,14 @@ def test_widget_d10_unified_cloud_rain_graph():
     # обводка только у кривой температуры, не у заливок
     assert "stroke-width" in w
     assert ".d10cline{" in w
+    # заливка дождя ярче
+    assert '.d10prf{fill:rgba(25,118,210,.45);stroke:none}' in w
     # температура — синусоида вместо колонок: красная при +, синяя при —, с пересечением нуля
     assert "function tempCurve(" in w
+    assert '<path d="' in w
     assert 'stroke="#e74c3c"' in w
     assert 'stroke="#3498db"' in w
+    assert "<polyline" not in w
     assert 'class="d10tbar"' not in w
     assert "d10tbar{" not in w
     # результат обёрнут в <svg> (иначе фигуры не видны)

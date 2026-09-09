@@ -59,7 +59,7 @@ body{
 .d10tube{height:50px;position:relative;z-index:1}
 .d10svg{position:absolute;left:0;top:0;width:100%;height:50px;overflow:hidden;pointer-events:none}
 .d10ccf{fill:rgba(141,154,165,.35);stroke:none}
-.d10prf{fill:rgba(25,118,210,.20);stroke:none}
+.d10prf{fill:rgba(25,118,210,.45);stroke:none}
 .d10cline{fill:none;stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
 .d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;white-space:nowrap;line-height:1}
 .d10tday{color:#c0392b}
@@ -366,8 +366,8 @@ function render(data){
       if (b.v >= 0) red += (red ? ' ' : '') + seg; else blue += (blue ? ' ' : '') + seg;
     }
     var out = '';
-    if (red) out += '<polyline class="d10cline" stroke="#e74c3c" points="' + red + '"/>';
-    if (blue) out += '<polyline class="d10cline" stroke="#3498db" points="' + blue + '"/>';
+    if (red) out += '<path d="' + red + '" class="d10cline" stroke="#e74c3c"/>';
+    if (blue) out += '<path d="' + blue + '" class="d10cline" stroke="#3498db"/>';
     return out;
   }
 
