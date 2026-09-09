@@ -296,10 +296,8 @@ function render(data){
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
   var html10 = '';
-  var shownDays = [];
   for (var di = 0; di < Math.min(arr.length, 14); di++){
     var x = arr[di];
-    shownDays.push(x.ds);
     var y1 = yT(x.tmax), y2 = yT(x.tmin);
     var h = (y1==null||y2==null) ? 0 : Math.max(2, y2 - y1);
     html10 += '<div class="d10col"><div class="d10tube">' +
@@ -313,23 +311,25 @@ function render(data){
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
-  d10strip.innerHTML = html10 + cloudRainSvgW(shownDays, 50);
+  d10strip.innerHTML = html10 + cloudRainSvgW(arr, 50);
 
-  function cloudRainSvgW(days, HGT){
-    var N = days.length; if (!N) return '';
+  function cloudRainSvgW(list, HGT){
+    var N = list.length; if (!N) return '';
     var cc = [], pr = [];
     for (var di = 0; di < N; di++){
-      var dref = new Date(days[di] + 'T12:00:00').toDateString();
+      var dref = new Date(list[di].ds + 'T12:00:00').toDateString();
       for (var j = 0; j < times.length; j++){
         var t = times[j];
         if (t.toDateString() !== dref) continue;
         var h = t.getHours();
         var c = data.weighted.cloud_cover ? data.weighted.cloud_cover[j] : null;
-        var r = data.weighted.precipitation ? data.weighted.precipitation[j] : null;
         var x = (di * 24 + h + 0.5) / (N * 24) * 100;
-        if (c != null) cc.push(x.toFixed(2) + ',' + ((100 - c) / 100 * HGT).toFixed(1));
-        if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 30)) * HGT).toFixed(1));
+        if (c != null) cc.push(x.toFixed(2) + ',' + (c / 100 * HGT).toFixed(1));
       }
+      var x0 = di / N * 100, x1 = (di + 1) / N * 100;
+      var sum = list[di].pr;
+      var y = sum == null ? HGT : ((1 - Math.min(1, sum / 30)) * HGT).toFixed(1);
+      pr.push(x0.toFixed(2) + ',' + y, x1.toFixed(2) + ',' + y);
     }
     var out = '';
     if (cc.length >= 2){ var l = cc.join(' '); out += '<polygon points="' + l + ' 100,0 0,0" class="d10ccf"/>'; }

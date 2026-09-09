@@ -582,7 +582,13 @@ def test_d10_unified_cloud_rain_graph():
     # график позади колонок температуры (как раньше бар был первым ребёнком трубки)
     assert ".d10tube{height:135px;position:relative;z-index:1}" in tpl
     # верх графика осадков = 30 мм/час
-    assert "(1-Math.min(1,r/30))*135" in tpl
+    # осадки — по дневной сумме (как в подписи мм), верх = 30 мм, плато на весь день
+    assert "(1-Math.min(1,sum/30))*135" in tpl
+    assert "D.daily.precipitation_sum?.[di]" in tpl
+    assert "const r=D.weighted.precipitation?.[i];" not in tpl
+    # облачность не инвертирована: заливка растёт сверху вниз по мере роста облачности (17% -> ~17% высоты)
+    assert "c/100*135" in tpl
+    assert "(100-c)/100*135" not in tpl
     assert "r/50" not in tpl
     assert "r/20" not in tpl
     # старый пер-колоночный svg и бары удалены
@@ -690,11 +696,10 @@ def test_widget_rain_type_uses_current_hour_not_peak():
 def test_widget_d10_unified_cloud_rain_graph():
     with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
         w = f.read()
-    # единый SVG облачность+осадки по часам в виджете, поверх всей полосы дней
+    # единый SVG облачность+осадки в виджете, поверх всей полосы дней
     assert "function cloudRainSvgW(" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(shownDays, 50)" in w
-    assert "var shownDays = [];" in w
-    assert "shownDays.push(x.ds);" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr, 50)" in w
+    assert "var shownDays" not in w
     # только залитые области без обводки
     assert 'class="d10ccf"' in w
     assert 'class="d10prf"' in w
@@ -713,9 +718,13 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:50px;overflow:hidden;pointer-events:none}" in w
     # график позади колонок температуры
     assert ".d10tube{height:50px;position:relative;z-index:1}" in w
-    # верх графика осадков виджета = 30 мм/час
-    assert "Math.min(1, r / 30)) * HGT" in w
-    assert "r / 20" not in w
+    # осадки — по дневной сумме (как в подписи мм), верх = 30 мм, плато на весь день
+    assert "(1 - Math.min(1, sum / 30)) * HGT" in w
+    assert "list[di].pr" in w
+    assert "r / 30" not in w
+    # облачность виджета не инвертирована (заливка растёт сверху вниз по мере роста облачности)
+    assert "c / 100 * HGT" in w
+    assert "(100 - c) / 100 * HGT" not in w
     # старые пер-дневные бары облачности и осадков убраны
     assert "d10cloud" not in w
     assert "d10prec" not in w

@@ -583,11 +583,14 @@ function cloudRainSvg(days){
     for(const i of idxs){
       const h=+D.time[i].slice(11,13);
       const c=D.weighted.cloud_cover?.[i];
-      const r=D.weighted.precipitation?.[i];
       const x=(di*24+h+0.5)/(N*24)*100;
-      if(c!=null)cc.push([x,(100-c)/100*135]);
-      if(r!=null)pr.push([x,(1-Math.min(1,r/30))*135]);
+      if(c!=null)cc.push([x,c/100*135]);
     }
+    const x0=di/N*100;
+    const x1=(di+1)/N*100;
+    const sum=D.daily.precipitation_sum?.[di];
+    const y=sum==null?135:(1-Math.min(1,sum/30))*135;
+    pr.push([x0,y],[x1,y]);
   }
   let out='';
   if(cc.length>=2){
