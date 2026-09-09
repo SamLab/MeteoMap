@@ -754,6 +754,10 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert 'class="d10mm"' not in w
     assert 'class="d10cond"><span class="ic">' in w
     assert ".d10cond{font-size:14px" in w
+    # первый день в виджете — сегодня (не завтра), подпись «Сегодня/Завтра»
+    assert "if (dateStr < todayStr) continue;" in w
+    assert "dateStr <= todayStr" not in w
+    assert "relDay(x.ds)" in w
 
 
 def test_js_brace_balance_in_html_files():

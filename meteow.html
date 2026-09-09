@@ -112,6 +112,14 @@ var WMO = {
 };
 
 var DOW = ['\u0412\u0441','\u041F\u043D','\u0412\u0442','\u0421\u0440','\u0427\u0442','\u041F\u0442','\u0421\u0431'];
+function relDay(dayStr){
+  var d0 = new Date();
+  var diff = Math.round((new Date(dayStr) - new Date(d0.getFullYear(), d0.getMonth(), d0.getDate())) / 86400000);
+  if (diff === 0) return '\u0421\u0435\u0433\u043E\u0434\u043D\u044F';
+  if (diff === 1) return '\u0417\u0430\u0432\u0442\u0440\u0430';
+  var d = new Date(dayStr);
+  return DOW[d.getDay()] + ' ' + d.getDate();
+}
 
 var DEFAULT_CITY = 'tsedenevo';
 var DEFAULT_HOURS = 14;
@@ -263,11 +271,12 @@ function render(data){
 
   var days = data.daily_time;
   var daily = data.daily;
-  var todayStr = now.toISOString().slice(0,10);
+  var now2 = new Date();
+  var todayStr = now2.getFullYear() + '-' + pad2(now2.getMonth() + 1) + '-' + pad2(now2.getDate());
   var arr = [];
   for (var di = 0; di < days.length; di++){
     var dateStr = days[di];
-    if (dateStr <= todayStr) continue;
+    if (dateStr < todayStr) continue;
     var d = new Date(dateStr + 'T12:00:00');
     var idx15 = -1;
     for (var j = 0; j < times.length; j++){
@@ -304,7 +313,7 @@ function render(data){
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
-      '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
+      '<div class="d10day">' + relDay(x.ds) + '</div>' +
       '</div>';
   }
   d10strip.innerHTML = html10 + cloudRainSvgW(arr, 50);
