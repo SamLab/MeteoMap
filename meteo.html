@@ -247,7 +247,7 @@ function buildSummary(times, data, rawData, idx){
 
 function fmtP(v){
   if(v==null) return '—';
-  return Math.round(v*100)/100;
+  return Math.round(v*10)/10;
 }
 
 function render(data){
@@ -283,7 +283,7 @@ function render(data){
     var mmStr = fmtMm(mm);
 
     html += '<div class="hour' + (rain ? ' rain' : '') + '" title="' + w.l + '">' +
-      '<div class="ht">' + pad2(t.getHours()) + ':00</div>' +
+      '<div class="ht">' + pad2(t.getHours()) + 'ч</div>' +
       '<div class="he">' + w.e + '</div>' +
       '<div class="htemp">' + tempStr + '</div>' +
       '<div class="hpp">' + probStr + '</div>' +
