@@ -678,6 +678,17 @@ def test_no_reserved_js_keywords_as_identifiers():
                     fname + " reserved word used as identifier: " + kw
 
 
+def test_relday_shows_date_for_after_tomorrow():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # «Завтра» остаётся словом
+    assert "if(diff===1)return 'Завтра';" in tpl
+    # «Послезавтра» больше не используется; diff===2 уходит в общий формат даты
+    assert "Послезавтра" not in tpl
+    assert "if(diff===2)" not in tpl
+    assert "return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate();" in tpl
+
+
 def test_warnings_no_current_model_rain_row():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

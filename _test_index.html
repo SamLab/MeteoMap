@@ -627,7 +627,6 @@ function relDay(dayStr){
   const diff=Math.round((new Date(d1)-new Date(d0))/86400000);
   if(diff===0)return 'Сегодня';
   if(diff===1)return 'Завтра';
-  if(diff===2)return 'Послезавтра';
   const d=new Date(d1);return DAY_NAMES_SHORT[d.getDay()]+' '+d.getDate();
 }
 function sourceCountAt(i,list,precipMin){
