@@ -259,7 +259,7 @@ def test_now_shows_intensity_when_raining():
     assert "rainIntensity(w.weather_code?.[curIdx])" in tpl
 
 
-
+def test_detail_summary_column():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert '<div class="hour hsum">' in tpl
@@ -275,7 +275,7 @@ def test_now_shows_intensity_when_raining():
     assert "'<div>с '+rst+' до '+ren+'</div>'" in tpl
     assert "'<div class=\"hour hsun\">'" in tpl
     assert '<div class="sunl">Долгота' in tpl
-    assert "+sunCol+'</div>'" in tpl
+    assert "+sunCol+verdictCol+'</div>'" in tpl
     assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
@@ -721,3 +721,36 @@ def test_index_has_sputnik_tab_and_iframe():
     assert 'id="satellite-frame"' in tpl
     assert "updateSputnikFrame()" in tpl
     assert "'satellite'" in tpl
+
+
+def test_day_verdict_has_phrase_rules():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "function buildDayVerdict(" in tpl
+    assert "без осадков" in tpl
+    assert "ожидается дождь" in tpl
+    assert "'солнечно '" in tpl
+    assert "без прояснений" in tpl
+    assert "'тепло'" in tpl
+    assert "'ветрено'" in tpl
+
+
+def test_day_verdict_inserted_above_params_table():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert 'class="wadv"' in tpl
+    assert "buildDayVerdict(today)" in tpl
+    assert "'<div class=\"wdet\">'" in tpl
+    # wdet переведён в колонку, чтобы вердикт был над таблицей
+    assert ".wdet{display:flex;flex-direction:column" in tpl
+
+
+def test_day_verdict_in_16day_detail_after_columns():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # в блоке 16 дней строки вердикта добавляются после всех столбцов (после sunCol)
+    assert "hverdict" in tpl
+    assert "buildDayVerdict(day)" in tpl
+    assert "sunCol" in tpl
+    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol" in tpl or \
+           "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
