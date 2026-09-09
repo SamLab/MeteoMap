@@ -323,13 +323,11 @@ function render(data){
         if (t.toDateString() !== dref) continue;
         var h = t.getHours();
         var c = data.weighted.cloud_cover ? data.weighted.cloud_cover[j] : null;
+        var r = data.weighted.precipitation ? data.weighted.precipitation[j] : null;
         var x = (di * 24 + h + 0.5) / (N * 24) * 100;
         if (c != null) cc.push(x.toFixed(2) + ',' + (c / 100 * HGT).toFixed(1));
+        if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 10)) * HGT).toFixed(1));
       }
-      var x0 = di / N * 100, x1 = (di + 1) / N * 100;
-      var sum = list[di].pr;
-      var y = sum == null ? HGT : ((1 - Math.min(1, sum / 30)) * HGT).toFixed(1);
-      pr.push(x0.toFixed(2) + ',' + y, x1.toFixed(2) + ',' + y);
     }
     var out = '';
     if (cc.length >= 2){ var l = cc.join(' '); out += '<polygon points="' + l + ' 100,0 0,0" class="d10ccf"/>'; }

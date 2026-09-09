@@ -581,11 +581,10 @@ def test_d10_unified_cloud_rain_graph():
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:100%" not in tpl
     # график позади колонок температуры (как раньше бар был первым ребёнком трубки)
     assert ".d10tube{height:135px;position:relative;z-index:1}" in tpl
-    # верх графика осадков = 30 мм/час
-    # осадки — по дневной сумме (как в подписи мм), верх = 30 мм, плато на весь день
-    assert "(1-Math.min(1,sum/30))*135" in tpl
-    assert "D.daily.precipitation_sum?.[di]" in tpl
-    assert "const r=D.weighted.precipitation?.[i];" not in tpl
+    # осадки — по часовым мм (как в данных weighted.precipitation), верх = 10 мм/час
+    assert "(1-Math.min(1,r/10))*135" in tpl
+    assert "const r=D.weighted.precipitation?.[i];" in tpl
+    assert "sum/30" not in tpl
     # облачность не инвертирована: заливка растёт сверху вниз по мере роста облачности (17% -> ~17% высоты)
     assert "c/100*135" in tpl
     assert "(100-c)/100*135" not in tpl
@@ -718,10 +717,9 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:50px;overflow:hidden;pointer-events:none}" in w
     # график позади колонок температуры
     assert ".d10tube{height:50px;position:relative;z-index:1}" in w
-    # осадки — по дневной сумме (как в подписи мм), верх = 30 мм, плато на весь день
-    assert "(1 - Math.min(1, sum / 30)) * HGT" in w
-    assert "list[di].pr" in w
-    assert "r / 30" not in w
+    # осадки — по часовым мм, верх = 10 мм/час
+    assert "(1 - Math.min(1, r / 10)) * HGT" in w
+    assert "sum / 30" not in w
     # облачность виджета не инвертирована (заливка растёт сверху вниз по мере роста облачности)
     assert "c / 100 * HGT" in w
     assert "(100 - c) / 100 * HGT" not in w
