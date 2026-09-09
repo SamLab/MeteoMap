@@ -560,7 +560,7 @@ def test_d10_unified_cloud_rain_graph():
     # единый график облачности + осадков по часам на полные сутки, поверх всей полосы
     assert "function cloudRainSvg(" in tpl
     assert "function cloudRainSvgWrap(" in tpl
-    assert "cloudRainSvgWrap(dt)" in tpl
+    assert "cloudRainSvgWrap(dt,null,yT)" in tpl
     # облачность: заливка к верху; осадки: заливка к низу (только залитая область, без обводки)
     assert "class=\"d10ccf\"" in tpl
     assert "class=\"d10prf\"" in tpl
@@ -570,7 +570,17 @@ def test_d10_unified_cloud_rain_graph():
     assert 'class="d10prl"' not in tpl
     assert ".d10ccl" not in tpl
     assert ".d10prl" not in tpl
-    assert "stroke-width" not in tpl
+    # обводка только у кривой температуры, не у заливок
+    assert "stroke-width" in tpl
+    assert ".d10cline{" in tpl
+    assert '.d10ccf{fill:rgba(141,154,165,.35);stroke:none}' in tpl
+    assert '.d10prf{fill:rgba(25,118,210,.20);stroke:none}' in tpl
+    # температура — синусоида вместо колонок: красная при +, синяя при —, с пересечением нуля
+    assert "function tempLineSvg(days,yT)" in tpl
+    assert 'stroke="#e74c3c"' in tpl
+    assert 'stroke="#3498db"' in tpl
+    assert 'class="d10tbar"' not in tpl
+    assert "d10tbar{" not in tpl
     # полоса позиционирована (для наложения svg поверх)
     assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in tpl
     # дни разделены тонкой вертикальной линией
@@ -706,7 +716,15 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert 'class="d10prl"' not in w
     assert "d10ccl" not in w
     assert "d10prl" not in w
-    assert "stroke-width" not in w
+    # обводка только у кривой температуры, не у заливок
+    assert "stroke-width" in w
+    assert ".d10cline{" in w
+    # температура — синусоида вместо колонок: красная при +, синяя при —, с пересечением нуля
+    assert "function tempCurve(" in w
+    assert 'stroke="#e74c3c"' in w
+    assert 'stroke="#3498db"' in w
+    assert 'class="d10tbar"' not in w
+    assert "d10tbar{" not in w
     # результат обёрнут в <svg> (иначе фигуры не видны)
     assert "'<svg class=\"d10svg\" viewBox=\"0 0 100 ' + HGT + '\" preserveAspectRatio=\"none\">' + out + '</svg>'" in w
     assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in w
