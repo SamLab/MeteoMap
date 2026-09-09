@@ -302,7 +302,8 @@ function render(data){
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
   var html10 = '';
-  for (var di = 0; di < Math.min(arr.length, 13); di++){
+  var dispDays = Math.min(arr.length, 13);
+  for (var di = 0; di < dispDays; di++){
     var x = arr[di];
     var y1 = yT(x.tmax), y2 = yT(x.tmin);
     html10 += '<div class="d10col"><div class="d10tube">' +
@@ -313,7 +314,7 @@ function render(data){
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
-  d10strip.innerHTML = html10 + cloudRainSvgW(arr, 64);
+  d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 64);
 
   function hourBgSvg(cnt){
     var cc = [], pr = [];

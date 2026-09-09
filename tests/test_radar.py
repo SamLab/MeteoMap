@@ -721,7 +721,7 @@ def test_widget_d10_unified_cloud_rain_graph():
         w = f.read()
     # единый SVG облачность+осадки в виджете, поверх всей полосы дней
     assert "function cloudRainSvgW(" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr, 64)" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 64)" in w
     assert "var shownDays" not in w
     # только залитые области без обводки
     assert 'class="d10ccf"' in w
@@ -784,7 +784,9 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "(1 - Math.min(1, r / 10)) * 100" in w
     # по одному последнему элементу убраны: 13 часов и 13 дней — остальные крупнее
     assert "var DEFAULT_HOURS = 13;" in w
-    assert "Math.min(arr.length, 13)" in w
+    # заливки/кривая считаются по числу выводимых колонок, иначе при обрезке 16→13 сетка графика разъезжалась бы с колонками
+    assert "var dispDays = Math.min(arr.length, 13);" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 64);" in w
 
 
 def test_js_brace_balance_in_html_files():
