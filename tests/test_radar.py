@@ -546,7 +546,10 @@ def test_accuracy_tables_sorted_by_mean_mae():
 def test_hour_ribbon_rain_bar():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}" in tpl
+    assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden;z-index:1}" in tpl
+    assert ".hours .hbg{position:absolute;left:0;top:0;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in tpl
+    assert "hsel.insertAdjacentHTML('afterbegin','<svg class=\"hbg\"" in tpl
+    assert "(hN*65)+'px\"" in tpl
     assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}" in tpl
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
     assert "class=\"hprc\"" in tpl
@@ -612,7 +615,7 @@ def test_d10_unified_cloud_rain_graph():
     # график из «Подробно» убран (не ломает высоту строк и не добавляет скроллов)
     assert "hetSvg" not in tpl
     assert "cloudRainSvgWrap([day]" not in tpl
-    assert ".hours{display:flex;overflow-x:auto;padding:4px 0}" in tpl
+    assert ".hours{display:flex;overflow-x:auto;padding:4px 0;position:relative}" in tpl
 
 
 def test_radar_has_rainradar_base_above_precipitation():

@@ -97,8 +97,9 @@ a{color:var(--accent)}
 @media (max-width:700px){.wnowtbl td.wcol3,.wnowtbl td.wcol5,.wnowtbl td.wcol6,.wnowtbl td.wcol7,.wnowtbl td.wcol8,.wnowtbl td.wcol9{display:none}}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
-.hours{display:flex;overflow-x:auto;padding:4px 0}
-.hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}
+.hours{display:flex;overflow-x:auto;padding:4px 0;position:relative}
+.hours .hbg{position:absolute;left:0;top:0;height:100%;pointer-events:none;z-index:0;overflow:hidden}
+.hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden;z-index:1}
 .hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}
 .hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}
 .hour.nd{border-left:3px solid #9aa3b8}
@@ -502,7 +503,8 @@ function buildWeatherHours(){
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
   if(th&&parts.length)th.textContent=(rainHour>=0?'':'Остаток дня ')+parts.join(', ');
-  document.getElementById('weather-hours').innerHTML=
+  const hsel=document.getElementById('weather-hours');
+  hsel.innerHTML=
     D.time.slice(start,start+48).map((t,i)=>{
       const j=start+i;
       const nd=(j>0&&D.time[j].slice(0,10)!==D.time[j-1].slice(0,10));
@@ -518,6 +520,20 @@ function buildWeatherHours(){
         '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div>'+
         '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>';
     }).join('');
+  const hN=Math.min(48,D.time.length-start);
+  const cc=[],pr=[];
+  for(let hi=0;hi<hN;hi++){
+    const j=start+hi;
+    const c=w.cloud_cover?.[j];
+    const r=w.precipitation?.[j];
+    const x=(hi+0.5)/hN*100;
+    if(c!=null)cc.push(x.toFixed(2)+','+(c/100*100).toFixed(1));
+    if(r!=null)pr.push(x.toFixed(2)+','+((1-Math.min(1,r/10))*100).toFixed(1));
+  }
+  let hb='';
+  if(cc.length>=2)hb+='<polygon points="'+cc.join(' ')+' 100,0 0,0" class="d10ccf"/>';
+  if(pr.length>=2)hb+='<polygon points="'+pr.join(' ')+' 100,100 0,100" class="d10prf"/>';
+  if(hb)hsel.insertAdjacentHTML('afterbegin','<svg class="hbg" style="width:'+(hN*65)+'px" viewBox="0 0 100 100" preserveAspectRatio="none">'+hb+'</svg>');
 }
 function buildWeather16Title(){
   const dt=D.daily_time||[];
