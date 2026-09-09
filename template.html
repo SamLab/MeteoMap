@@ -605,7 +605,7 @@ function buildWeather10(){
     const wd=D.daily.wind_direction_10m_dominant?.[di];
     const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
     const d=new Date(day);
-    return {tmin,tmax,pr,pp,cl,wtext,we,d,ws,arrow};
+    return {tmin,tmax,pr,pp,cl,wtext,we,d,ws,arrow,day};
   });
   const lo=Math.min(...arr.map(x=>x.tmin==null?Infinity:x.tmin));
   const hi=Math.max(...arr.map(x=>x.tmax==null?-Infinity:x.tmax));
@@ -616,7 +616,7 @@ function buildWeather10(){
     const y1=yT(x.tmax),y2=yT(x.tmin);
     const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
     const pR=x.pr!=null?Math.max(0,Math.round(x.pr/50*100)):0;
-    return '<div class="d10col"><div class="d10tube">'+cloudSvg(day)+
+    return '<div class="d10col"><div class="d10tube">'+cloudSvg(x.day)+
       '<div class="d10prec" style="height:'+pR+'%"></div>'+
       '<div class="d10tbar" style="top:'+y1+'px;height:'+h+'px"></div>'+
             '<div class="d10tday" style="top:'+(y1-15)+'px">'+temp(x.tmax)+'</div>'

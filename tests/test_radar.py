@@ -560,6 +560,9 @@ def test_d10_cloud_svg_polyline_by_hour():
     # облачность теперь — SVG-ломаная по часам 6–22ч с заливкой сверху
     assert "function cloudSvg(" in tpl
     assert "partIndices(day,6,22)" in tpl
+    # день передаётся во второй map через x.day (в map x=>… переменная day вне области видимости)
+    assert "cloudSvg(x.day)" in tpl
+    assert "'<div class=\"d10col\"><div class=\"d10tube\">'+cloudSvg(x.day)" in tpl
     assert '<polyline points="' in tpl
     assert "class=\"d10cloudline\"" in tpl
     assert "class=\"d10cloudfill\"" in tpl
