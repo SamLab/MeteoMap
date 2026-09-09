@@ -275,12 +275,14 @@ def test_detail_summary_column():
     assert "'<div>с '+rst+' до '+ren+'</div>'" in tpl
     assert "'<div class=\"hour hsun\">'" in tpl
     assert '<div class="sunl">Долгота' in tpl
-    assert "+sunCol+'</div>'" in tpl
+    assert "sunCol+cloudRainSvgWrap([day],'hetSvg')+'</div>'" in tpl
     assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
     assert "const dayCode=aggWcode(day,'00','24');" in tpl
     assert "'<div class=\"he\">'+wcode(dayCode)[1]+'</div>'" in tpl
+    assert ".hetSvg{position:absolute;left:104px;right:100px" in tpl
+    assert "cloudRainSvgWrap([day],'hetSvg')" in tpl
 
 
 def test_help_text_up_to_date():
@@ -554,28 +556,31 @@ def test_hour_ribbon_rain_bar():
     assert "Math.min(100,Math.round(pr/5*100))" in tpl
 
 
-def test_d10_cloud_svg_polyline_by_hour():
+def test_d10_unified_cloud_rain_graph():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    # облачность теперь — SVG-ломаная по часам 6–22ч с заливкой сверху
-    assert "function cloudSvg(" in tpl
-    assert "partIndices(day,6,22)" in tpl
-    # день передаётся во второй map через x.day (в map x=>… переменная day вне области видимости)
-    assert "cloudSvg(x.day)" in tpl
-    assert "'<div class=\"d10col\"><div class=\"d10tube\">'+cloudSvg(x.day)" in tpl
-    assert '<polyline points="' in tpl
-    assert "class=\"d10cloudline\"" in tpl
-    assert "class=\"d10cloudfill\"" in tpl
-    assert ".d10svg{position:absolute" in tpl
-    assert ".d10cloudline{fill:none" in tpl
-    assert ".d10cloudfill{" in tpl
-    # старый вертикальный бар облачности убран
+    # единый график облачности + осадков по часам на полные сутки, поверх всей полосы
+    assert "function cloudRainSvg(" in tpl
+    assert "function cloudRainSvgWrap(" in tpl
+    assert "cloudRainSvgWrap(dt)" in tpl
+    # облачность: линия + заливка к верху; осадки: линия + заливка к низу
+    assert "class=\"d10ccl\"" in tpl
+    assert "class=\"d10ccf\"" in tpl
+    assert "class=\"d10prl\"" in tpl
+    assert "class=\"d10prf\"" in tpl
+    assert ".d10ccl{fill:none" in tpl
+    assert ".d10prl{fill:none" in tpl
+    assert '.d10ccf{' in tpl
+    assert '.d10prf{' in tpl
+    # полоса позиционирована (для наложения svg поверх)
+    assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in tpl
+    # старый пер-колоночный svg и бары удалены
+    assert "cloudSvg(x.day)" not in tpl
+    assert "cloudSvg(day)" not in tpl
     assert "class=\"d10cloud\"" not in tpl
-    assert "d10cloud{position:absolute;left:0;right:0;top:0" not in tpl
-    assert "Math.max(0,Math.min(100,Math.round(x.cl||0)))" not in tpl
-    # бар осадков и прежние элементы остались
-    assert "class=\"d10prec\"" in tpl
-    assert ".d10prec{position:absolute;left:0;right:0;bottom:0" in tpl
+    assert "class=\"d10prec\"" not in tpl
+    assert "d10cloudline" not in tpl
+    assert "d10cloudfill" not in tpl
 
 
 def test_radar_has_rainradar_base_above_precipitation():
@@ -667,6 +672,25 @@ def test_widget_rain_type_uses_current_hour_not_peak():
         assert "data.weather_code[jPeak]" not in w, fname
 
 
+def test_widget_d10_unified_cloud_rain_graph():
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+    # единый SVG облачность+осадки по часам в виджете, поверх всей полосы дней
+    assert "function cloudRainSvgW(" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(shownDays, 50)" in w
+    assert "var shownDays = [];" in w
+    assert "shownDays.push(x.ds);" in w
+    # облачность: линия+заливка к верху; осадки: линия+заливка к низу
+    assert 'class="d10ccl"' in w
+    assert 'class="d10ccf"' in w
+    assert 'class="d10prl"' in w
+    assert 'class="d10prf"' in w
+    assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in w
+    # старые пер-дневные бары облачности и осадков убраны
+    assert "d10cloud" not in w
+    assert "d10prec" not in w
+
+
 def test_js_brace_balance_in_html_files():
     for fname in ("template.html", "meteo.html", "meteow.html", "radar.html", "radar_template.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
@@ -745,4 +769,4 @@ def test_day_verdict_removed_completely():
     assert "verdictCol" not in tpl
     # блок «Сейчас» вернулся к таблице без вердикта; 16 дней — столбцы без вердикта
     assert "'<div class=\"wdet\"><table class=\"wnowtbl\"><tr>'" in tpl
-    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
+    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+cloudRainSvgWrap([day],'hetSvg')+'</div>'" in tpl

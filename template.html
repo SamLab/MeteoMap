@@ -97,7 +97,7 @@ a{color:var(--accent)}
 @media (max-width:700px){.wnowtbl td.wcol3,.wnowtbl td.wcol5,.wnowtbl td.wcol6,.wnowtbl td.wcol7,.wnowtbl td.wcol8,.wnowtbl td.wcol9{display:none}}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
-.hours{display:flex;overflow-x:auto;padding:4px 0}
+.hours{display:flex;overflow-x:auto;padding:4px 0;position:relative}
 .hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}
 .hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}
 .hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}
@@ -126,13 +126,16 @@ a{color:var(--accent)}
 .wr1{font-weight:400}
 .wr2{font-weight:700}
 .d10wrap{overflow-x:auto;padding:2px 0}
-.d10strip{display:flex;width:100%;min-width:100%}
+.d10strip{display:flex;width:100%;min-width:100%;position:relative}
 .d10col{flex:1;min-width:70px;text-align:center;position:relative}
 .d10tube{height:135px;position:relative}
 .d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
 .d10svg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.d10cloudline{fill:none;stroke:#8d9aa5;stroke-width:1.5}
-.d10cloudfill{fill:rgba(141,154,165,.35);stroke:none}
+.d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1.5}
+.d10ccf{fill:rgba(141,154,165,.35);stroke:none}
+.d10prl{fill:none;stroke:#1976d2;stroke-width:1.5}
+.d10prf{fill:rgba(25,118,210,.20);stroke:none}
+.hetSvg{position:absolute;left:104px;right:100px;top:0;bottom:0;overflow:hidden;pointer-events:none}
 .d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
 .d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
 .d10tday{color:#c0392b}
@@ -574,22 +577,36 @@ function buildWeather16Title(){
   if(th)th.textContent='На 16 дней — '+parts.join(' — ');
 }
 
-function cloudSvg(day){
-  const idxs=partIndices(day,6,22);
-  const pts=[];
-  for(const i of idxs){
-    const h=+D.time[i].slice(11,13);
-    const cc=D.weighted.cloud_cover?.[i];
-    if(cc==null)continue;
-    const x=3+(h-6)/16*94;
-    const y=(100-cc)/100*135;
-    pts.push(x.toFixed(1)+','+y.toFixed(1));
+function cloudRainSvg(days){
+  const N=days.length;
+  if(!N)return '';
+  const cc=[],pr=[];
+  for(let di=0;di<N;di++){
+    const idxs=partIndices(days[di],0,24);
+    for(const i of idxs){
+      const h=+D.time[i].slice(11,13);
+      const c=D.weighted.cloud_cover?.[i];
+      const r=D.weighted.precipitation?.[i];
+      const x=(di*24+h+0.5)/(N*24)*100;
+      if(c!=null)cc.push([x,(100-c)/100*135]);
+      if(r!=null)pr.push([x,(1-Math.min(1,r/20))*135]);
+    }
   }
-  if(pts.length<2)return '';
-  const line=pts.join(' ');
-  return '<svg class="d10svg" viewBox="0 0 100 135" preserveAspectRatio="none">'+
-    '<polygon points="'+line+' 97,0 3,0" class="d10cloudfill"/>'+
-    '<polyline points="'+line+'" class="d10cloudline"/></svg>';
+  let out='';
+  if(cc.length>=2){
+    const line=cc.map(p=>p[0].toFixed(2)+','+p[1].toFixed(1)).join(' ');
+    out+='<polygon points="'+line+' 100,0 0,0" class="d10ccf"/><polyline points="'+line+'" class="d10ccl"/>';
+  }
+  if(pr.length>=2){
+    const line=pr.map(p=>p[0].toFixed(2)+','+p[1].toFixed(1)).join(' ');
+    out+='<polygon points="'+line+' 100,135 0,135" class="d10prf"/><polyline points="'+line+'" class="d10prl"/>';
+  }
+  return out;
+}
+function cloudRainSvgWrap(days,cls){
+  const inner=cloudRainSvg(days);
+  if(!inner)return '';
+  return '<svg class="'+(cls||'d10svg')+'" viewBox="0 0 100 135" preserveAspectRatio="none">'+inner+'</svg>';
 }
 function buildWeather10(){
   const dt=D.daily_time||[];
@@ -605,7 +622,7 @@ function buildWeather10(){
     const wd=D.daily.wind_direction_10m_dominant?.[di];
     const arrow=wd==null?'':' <span class="pwarrow" title="'+rumbFull(wd)+'" style="transform:rotate('+((wd+180)%360)+'deg)">↑</span>';
     const d=new Date(day);
-    return {tmin,tmax,pr,pp,cl,wtext,we,d,ws,arrow,day};
+    return {tmin,tmax,pr,pp,cl,wtext,we,d,ws,arrow};
   });
   const lo=Math.min(...arr.map(x=>x.tmin==null?Infinity:x.tmin));
   const hi=Math.max(...arr.map(x=>x.tmax==null?-Infinity:x.tmax));
@@ -615,9 +632,7 @@ function buildWeather10(){
   document.getElementById('weather-10').innerHTML='<div class="d10wrap"><div class="d10strip">'+arr.map(x=>{
     const y1=yT(x.tmax),y2=yT(x.tmin);
     const h=(y1==null||y2==null)?0:Math.max(2,y2-y1);
-    const pR=x.pr!=null?Math.max(0,Math.round(x.pr/50*100)):0;
-    return '<div class="d10col"><div class="d10tube">'+cloudSvg(x.day)+
-      '<div class="d10prec" style="height:'+pR+'%"></div>'+
+    return '<div class="d10col"><div class="d10tube">'+
       '<div class="d10tbar" style="top:'+y1+'px;height:'+h+'px"></div>'+
             '<div class="d10tday" style="top:'+(y1-15)+'px">'+temp(x.tmax)+'</div>'
 +
@@ -628,7 +643,7 @@ function buildWeather10(){
       '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
-  }).join('')+'</div></div>';
+  }).join('')+cloudRainSvgWrap(dt)+'</div></div>';
   buildWeather16Title();
 }
 const PARTS=[['ночь','00','06'],['утро','06','12'],['день','12','18'],['вечер','18','24']];
@@ -720,7 +735,7 @@ function buildWeatherDetail(){
       '<div class="sunl">Закат</div><div class="sunv">'+ss+'</div>'+
       '<div class="sunl">Долгота</div><div class="sunv">'+dl+'</div>'+
       '</div>';
-    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+'</div>';
+    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+cloudRainSvgWrap([day],'hetSvg')+'</div>';
   }).join('');
 }
 
