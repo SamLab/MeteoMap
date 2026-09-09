@@ -275,14 +275,12 @@ def test_detail_summary_column():
     assert "'<div>с '+rst+' до '+ren+'</div>'" in tpl
     assert "'<div class=\"hour hsun\">'" in tpl
     assert '<div class="sunl">Долгота' in tpl
-    assert "sunCol+cloudRainSvgWrap([day],'hetSvg')+'</div>'" in tpl
+    assert "+sunCol+'</div>'" in tpl
     assert '<div class="dsun">' not in tpl
     assert '<span class="dsum">' not in tpl
     assert 'function daySummary' not in tpl
     assert "const dayCode=aggWcode(day,'00','24');" in tpl
     assert "'<div class=\"he\">'+wcode(dayCode)[1]+'</div>'" in tpl
-    assert ".hetSvg{position:absolute;left:104px;right:100px" in tpl
-    assert "cloudRainSvgWrap([day],'hetSvg')" in tpl
 
 
 def test_help_text_up_to_date():
@@ -574,6 +572,15 @@ def test_d10_unified_cloud_rain_graph():
     assert '.d10prf{' in tpl
     # полоса позиционирована (для наложения svg поверх)
     assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in tpl
+    # график ограничен высотой трубки (0.01мм / 0% строка полосы), не растягивается вниз до подписей дней
+    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:135px;overflow:hidden;pointer-events:none}" in tpl
+    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:100%" not in tpl
+    # график позади колонок температуры (как раньше бар был первым ребёнком трубки)
+    assert ".d10tube{height:135px;position:relative;z-index:1}" in tpl
+    # обводка не жирная (тонкая линия)
+    assert ".d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1}" in tpl
+    assert ".d10prl{fill:none;stroke:#1976d2;stroke-width:1}" in tpl
+    assert "stroke-width:1.5" not in tpl
     # старый пер-колоночный svg и бары удалены
     assert "cloudSvg(x.day)" not in tpl
     assert "cloudSvg(day)" not in tpl
@@ -581,6 +588,10 @@ def test_d10_unified_cloud_rain_graph():
     assert "class=\"d10prec\"" not in tpl
     assert "d10cloudline" not in tpl
     assert "d10cloudfill" not in tpl
+    # график из «Подробно» убран (не ломает высоту строк и не добавляет скроллов)
+    assert "hetSvg" not in tpl
+    assert "cloudRainSvgWrap([day]" not in tpl
+    assert ".hours{display:flex;overflow-x:auto;padding:4px 0}" in tpl
 
 
 def test_radar_has_rainradar_base_above_precipitation():
@@ -685,7 +696,16 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert 'class="d10ccf"' in w
     assert 'class="d10prl"' in w
     assert 'class="d10prf"' in w
+    # результат обёрнут в <svg> (иначе фигуры не видны)
+    assert "'<svg class=\"d10svg\" viewBox=\"0 0 100 ' + HGT + '\" preserveAspectRatio=\"none\">' + out + '</svg>'" in w
     assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in w
+    # график ограничен высотой трубки виджета (50px), не растягивается вниз; обводка тонкая
+    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:50px;overflow:hidden;pointer-events:none}" in w
+    assert ".d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1}" in w
+    assert ".d10prl{fill:none;stroke:var(--rain);stroke-width:1}" in w
+    assert "stroke-width:1.5" not in w
+    # график позади колонок температуры
+    assert ".d10tube{height:50px;position:relative;z-index:1}" in w
     # старые пер-дневные бары облачности и осадков убраны
     assert "d10cloud" not in w
     assert "d10prec" not in w
@@ -769,4 +789,4 @@ def test_day_verdict_removed_completely():
     assert "verdictCol" not in tpl
     # блок «Сейчас» вернулся к таблице без вердикта; 16 дней — столбцы без вердикта
     assert "'<div class=\"wdet\"><table class=\"wnowtbl\"><tr>'" in tpl
-    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+cloudRainSvgWrap([day],'hetSvg')+'</div>'" in tpl
+    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl

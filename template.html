@@ -97,7 +97,7 @@ a{color:var(--accent)}
 @media (max-width:700px){.wnowtbl td.wcol3,.wnowtbl td.wcol5,.wnowtbl td.wcol6,.wnowtbl td.wcol7,.wnowtbl td.wcol8,.wnowtbl td.wcol9{display:none}}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
-.hours{display:flex;overflow-x:auto;padding:4px 0;position:relative}
+.hours{display:flex;overflow-x:auto;padding:4px 0}
 .hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}
 .hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}
 .hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}
@@ -128,14 +128,12 @@ a{color:var(--accent)}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:100%;min-width:100%;position:relative}
 .d10col{flex:1;min-width:70px;text-align:center;position:relative}
-.d10tube{height:135px;position:relative}
-.d10prec{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#4fc3f7,#0288d1);opacity:.75}
-.d10svg{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
-.d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1.5}
+.d10tube{height:135px;position:relative;z-index:1}
+.d10svg{position:absolute;left:0;top:0;width:100%;height:135px;overflow:hidden;pointer-events:none}
+.d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1}
 .d10ccf{fill:rgba(141,154,165,.35);stroke:none}
-.d10prl{fill:none;stroke:#1976d2;stroke-width:1.5}
+.d10prl{fill:none;stroke:#1976d2;stroke-width:1}
 .d10prf{fill:rgba(25,118,210,.20);stroke:none}
-.hetSvg{position:absolute;left:104px;right:100px;top:0;bottom:0;overflow:hidden;pointer-events:none}
 .d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
 .d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
 .d10tday{color:#c0392b}
@@ -735,7 +733,7 @@ function buildWeatherDetail(){
       '<div class="sunl">Закат</div><div class="sunv">'+ss+'</div>'+
       '<div class="sunl">Долгота</div><div class="sunv">'+dl+'</div>'+
       '</div>';
-    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+cloudRainSvgWrap([day],'hetSvg')+'</div>';
+    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+'</div>';
   }).join('');
 }
 
