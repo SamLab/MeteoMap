@@ -719,7 +719,7 @@ def test_widget_d10_unified_cloud_rain_graph():
         w = f.read()
     # единый SVG облачность+осадки в виджете, поверх всей полосы дней
     assert "function cloudRainSvgW(" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr, 50)" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr, 56)" in w
     assert "var shownDays" not in w
     # только залитые области без обводки
     assert 'class="d10ccf"' in w
@@ -747,10 +747,10 @@ def test_widget_d10_unified_cloud_rain_graph():
     # дни разделены тонкой вертикальной линией
     assert ".d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}" in w
     assert ".d10col:first-child{border-left:0}" in w
-    # график ограничен высотой трубки виджета (50px), не растягивается вниз
-    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:50px;overflow:hidden;pointer-events:none}" in w
+    # график ограничен высотой трубки виджета (56px), не растягивается вниз
+    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:56px;overflow:hidden;pointer-events:none}" in w
     # график позади колонок температуры
-    assert ".d10tube{height:50px;position:relative;z-index:1}" in w
+    assert ".d10tube{height:56px;position:relative;z-index:1}" in w
     # осадки — по часовым мм, верх = 10 мм/час
     assert "(1 - Math.min(1, r / 10)) * HGT" in w
     assert "sum / 30" not in w
