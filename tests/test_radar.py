@@ -707,11 +707,6 @@ def test_widget_rain_type_uses_current_hour_not_peak():
 def test_widget_d10_unified_cloud_rain_graph():
     with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
         w = f.read()
-    # почасовая полоса — фиксированная ширина виджета, расширение скроллом (как на сайте)
-    assert ".strip{display:flex;gap:2px;padding:2px 0 4px;overflow-x:auto}" in w
-    assert "flex:none;width:40px" in w
-    assert "var DEFAULT_HOURS = 48;" in w
-    assert "hours <= 48" in w
     # единый SVG облачность+осадки в виджете, поверх всей полосы дней
     assert "function cloudRainSvgW(" in w
     assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr, 50)" in w

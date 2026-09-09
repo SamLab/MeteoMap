@@ -31,9 +31,9 @@ body{
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .city{font-size:15px;font-weight:600}
 .updated{font-size:11px;color:var(--muted)}
-.strip{display:flex;gap:2px;padding:2px 0 4px;overflow-x:auto}
+.strip{display:flex;gap:2px;padding:2px 0 4px}
 .hour{
-  flex:none;width:40px;
+  flex:1 1 0;min-width:0;
   text-align:center;font-size:12px;
   padding:6px 1px;border-radius:10px;
   overflow:hidden;
@@ -114,7 +114,7 @@ var WMO = {
 var DOW = ['\u0412\u0441','\u041F\u043D','\u0412\u0442','\u0421\u0440','\u0427\u0442','\u041F\u0442','\u0421\u0431'];
 
 var DEFAULT_CITY = 'tsedenevo';
-var DEFAULT_HOURS = 48;
+var DEFAULT_HOURS = 14;
 var REFRESH_MS = 5 * 60 * 1000;
 
 function getParam(name, def){
@@ -125,7 +125,7 @@ function getParam(name, def){
 var city = getParam('city', DEFAULT_CITY);
 if (!CITIES[city]) city = DEFAULT_CITY;
 var hours = parseInt(getParam('hours', DEFAULT_HOURS), 10);
-if (!(hours >= 1 && hours <= 48)) hours = DEFAULT_HOURS;
+if (!(hours >= 1 && hours <= 24)) hours = DEFAULT_HOURS;
 
 var strip = document.getElementById('strip');
 var d10strip = document.getElementById('d10strip');
