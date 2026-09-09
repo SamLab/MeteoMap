@@ -98,8 +98,6 @@ a{color:var(--accent)}
 .wd .wdv{font-weight:600}
 .wd .wdl{color:var(--muted);font-size:11px}
 .hours{display:flex;overflow-x:auto;padding:4px 0}
-.hrow{margin:4px 0 2px}
-.hdp{display:block;width:100%;height:32px;pointer-events:none}
 .hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden}
 .hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}
 .hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}
@@ -768,43 +766,8 @@ function buildWeatherDetail(){
       '<div class="sunl">Закат</div><div class="sunv">'+ss+'</div>'+
       '<div class="sunl">Долгота</div><div class="sunv">'+dl+'</div>'+
       '</div>';
-    return '<div class="hrow"><div class="hours">'+sumCol+blocks.join('')+sunCol+'</div>'+
-      detailTempSvg(day)+'</div>';
+    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+'</div>';
   }).join('');
-}
-function detailTempSvg(day){
-  const raw=partIndices(day,0,24).map(i=>{
-    const v=D.weighted.temperature_2m?.[i];
-    if(v==null)return null;
-    const h=+D.time[i].slice(11,13);
-    return {x:(h+0.5)/24*100,v:v};
-  }).filter(p=>p!==null);
-  if(raw.length<2)return '';
-  const lo=Math.min(...raw.map(p=>p.v)),hi=Math.max(...raw.map(p=>p.v));
-  const span=hi>lo?hi-lo:0;
-  const H=32,TOP=5,BTM=H-5;
-  const yT=v=>span>0?BTM-(BTM-TOP)*(v-lo)/span:(TOP+BTM)/2;
-  const pts=raw.map(p=>({x:p.x,y:yT(p.v),v:p.v}));
-  let crossed=[];
-  for(let i=0;i<pts.length-1;i++){
-    const a=pts[i],b=pts[i+1];
-    crossed.push(a);
-    if((a.v<0&&b.v>=0)||(a.v>=0&&b.v<0)){
-      const f=a.v/(a.v-b.v);
-      crossed.push({x:a.x+f*(b.x-a.x),y:a.y+f*(b.y-a.y),v:0});
-    }
-  }
-  crossed.push(pts[pts.length-1]);
-  let red='',blue='';
-  for(let i=0;i<crossed.length-1;i++){
-    const a=crossed[i],b=crossed[i+1];
-    const seg='M'+a.x.toFixed(2)+','+a.y.toFixed(1)+'L'+b.x.toFixed(2)+','+b.y.toFixed(1);
-    if(b.v>=0)red+=(red?' ':'')+seg;else blue+=(blue?' ':'')+seg;
-  }
-  let out='';
-  if(red)out+='<path d="'+red+'" class="d10cline" stroke="#e74c3c"/>';
-  if(blue)out+='<path d="'+blue+'" class="d10cline" stroke="#3498db"/>';
-  return '<svg class="hdp" viewBox="0 0 100 '+H+'" preserveAspectRatio="none">'+out+'</svg>';
 }
 
 const DAY_NAMES_SHORT=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
