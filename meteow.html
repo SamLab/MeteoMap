@@ -57,8 +57,8 @@ body{
 .d10strip{display:flex;width:100%;min-width:100%;position:relative}
 .d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}
 .d10col:first-child{border-left:0}
-.d10tube{height:56px;position:relative;z-index:1}
-.d10svg{position:absolute;left:0;top:0;width:100%;height:56px;overflow:hidden;pointer-events:none}
+.d10tube{height:64px;position:relative;z-index:1}
+.d10svg{position:absolute;left:0;top:0;width:100%;height:64px;overflow:hidden;pointer-events:none}
 .d10ccf{fill:rgba(141,154,165,.35);stroke:none}
 .d10prf{fill:rgba(25,118,210,.45);stroke:none}
 .d10cline{fill:none;stroke-width:0.25;stroke-linejoin:round;stroke-linecap:round}
@@ -116,7 +116,7 @@ var WMO = {
 var DOW = ['\u0412\u0441','\u041F\u043D','\u0412\u0442','\u0421\u0440','\u0427\u0442','\u041F\u0442','\u0421\u0431'];
 
 var DEFAULT_CITY = 'tsedenevo';
-var DEFAULT_HOURS = 14;
+var DEFAULT_HOURS = 13;
 var REFRESH_MS = 5 * 60 * 1000;
 
 function getParam(name, def){
@@ -297,12 +297,12 @@ function render(data){
   }
   if (!isFinite(lo) || !isFinite(hi) || hi <= lo){ lo = 0; hi = 30; }
   var span = hi - lo;
-  var TOP = 12, BTM = 56 - 8;
+  var TOP = 12, BTM = 64 - 8;
   var SCALE = span > 0 ? (BTM - TOP) / span : 0;
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
   var html10 = '';
-  for (var di = 0; di < Math.min(arr.length, 14); di++){
+  for (var di = 0; di < Math.min(arr.length, 13); di++){
     var x = arr[di];
     var y1 = yT(x.tmax), y2 = yT(x.tmin);
     html10 += '<div class="d10col"><div class="d10tube">' +
@@ -313,7 +313,7 @@ function render(data){
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
-  d10strip.innerHTML = html10 + cloudRainSvgW(arr, 56);
+  d10strip.innerHTML = html10 + cloudRainSvgW(arr, 64);
 
   function hourBgSvg(cnt){
     var cc = [], pr = [];
