@@ -543,16 +543,18 @@ def test_accuracy_tables_sorted_by_mean_mae():
     assert "mrows.sort((a,b)=>(meanOf(ver[a],vnames)??1e9)-(meanOf(ver[b],vnames)??1e9))" in tpl
 
 
-def test_hour_ribbon_rain_bar():
+def test_hour_ribbon_no_precip_rects():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden;z-index:1}" in tpl
     assert ".hours .hbg{position:absolute;left:0;top:0;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in tpl
     assert "hsel.insertAdjacentHTML('afterbegin','<svg class=\"hbg\"" in tpl
     assert "(hN*65)+'px\"" in tpl
+    # в почасовой ленте осадки рисует только график-заливка, прямоугольники убраны;
+    # .hprc остался лишь в детальных строках «Подробно», где графика нет
     assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}" in tpl
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
-    assert "class=\"hprc\"" in tpl
+    assert tpl.count('class="hprc"') == 1
     assert "class=\"hcl\"" not in tpl
     assert "const x=(hi)/hN*100;" in tpl
     assert "(hi+0.5)" not in tpl
