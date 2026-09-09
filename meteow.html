@@ -64,9 +64,9 @@ body{
 .d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;white-space:nowrap;line-height:1}
 .d10tday{color:#c0392b}
 .d10tnight{color:#2c6f9b}
-.d10mm{font-size:10px;color:#666;white-space:nowrap;padding:2px 0}
+.d10cond{font-size:16px;line-height:1;min-height:18px;padding:2px 0;white-space:nowrap}
+.d10cond .ic{font-size:16px}
 .d10wind{display:none}
-.d10cond{display:none}
 .d10day{font-size:10px;color:#666;border-top:1px dashed var(--line);padding-top:3px;margin-top:1px;white-space:nowrap}
 .d10day b{color:#222}
 .err{color:var(--muted);font-size:12px;padding:8px 2px}
@@ -303,9 +303,7 @@ function render(data){
       '<div class="d10tday" style="top:' + (y1-15) + 'px">' + temp(x.tmax) + '</div>' +
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
-      '<div class="d10mm">' + (x.pr==null?'\u2014':Math.round(x.pr*10)/10) + '\u043C\u043C</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
-      '<div class="d10wind">' + (x.ws==null?'\u2014':num(x.ws) + ' \u043C/\u0441') + '</div>' +
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }

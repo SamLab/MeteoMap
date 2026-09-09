@@ -750,6 +750,10 @@ def test_widget_d10_unified_cloud_rain_graph():
     # старые пер-дневные бары облачности и осадков убраны
     assert "d10cloud" not in w
     assert "d10prec" not in w
+    # в колонке виджета вместо мм — значок кондиции
+    assert 'class="d10mm"' not in w
+    assert 'class="d10cond"><span class="ic">' in w
+    assert ".d10cond{font-size:16px" in w
 
 
 def test_js_brace_balance_in_html_files():
