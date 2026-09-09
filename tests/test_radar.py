@@ -561,26 +561,30 @@ def test_d10_unified_cloud_rain_graph():
     assert "function cloudRainSvg(" in tpl
     assert "function cloudRainSvgWrap(" in tpl
     assert "cloudRainSvgWrap(dt)" in tpl
-    # облачность: линия + заливка к верху; осадки: линия + заливка к низу
-    assert "class=\"d10ccl\"" in tpl
+    # облачность: заливка к верху; осадки: заливка к низу (только залитая область, без обводки)
     assert "class=\"d10ccf\"" in tpl
-    assert "class=\"d10prl\"" in tpl
     assert "class=\"d10prf\"" in tpl
-    assert ".d10ccl{fill:none" in tpl
-    assert ".d10prl{fill:none" in tpl
     assert '.d10ccf{' in tpl
     assert '.d10prf{' in tpl
+    assert 'class="d10ccl"' not in tpl
+    assert 'class="d10prl"' not in tpl
+    assert ".d10ccl" not in tpl
+    assert ".d10prl" not in tpl
+    assert "stroke-width" not in tpl
     # полоса позиционирована (для наложения svg поверх)
     assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in tpl
+    # дни разделены тонкой вертикальной линией
+    assert ".d10col{flex:1;min-width:70px;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}" in tpl
+    assert ".d10col:first-child{border-left:0}" in tpl
     # график ограничен высотой трубки (0.01мм / 0% строка полосы), не растягивается вниз до подписей дней
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:135px;overflow:hidden;pointer-events:none}" in tpl
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:100%" not in tpl
     # график позади колонок температуры (как раньше бар был первым ребёнком трубки)
     assert ".d10tube{height:135px;position:relative;z-index:1}" in tpl
-    # обводка не жирная (тонкая линия)
-    assert ".d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1}" in tpl
-    assert ".d10prl{fill:none;stroke:#1976d2;stroke-width:1}" in tpl
-    assert "stroke-width:1.5" not in tpl
+    # верх графика осадков = 30 мм/час
+    assert "(1-Math.min(1,r/30))*135" in tpl
+    assert "r/50" not in tpl
+    assert "r/20" not in tpl
     # старый пер-колоночный svg и бары удалены
     assert "cloudSvg(x.day)" not in tpl
     assert "cloudSvg(day)" not in tpl
@@ -691,21 +695,27 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "d10strip.innerHTML = html10 + cloudRainSvgW(shownDays, 50)" in w
     assert "var shownDays = [];" in w
     assert "shownDays.push(x.ds);" in w
-    # облачность: линия+заливка к верху; осадки: линия+заливка к низу
-    assert 'class="d10ccl"' in w
+    # только залитые области без обводки
     assert 'class="d10ccf"' in w
-    assert 'class="d10prl"' in w
     assert 'class="d10prf"' in w
+    assert 'class="d10ccl"' not in w
+    assert 'class="d10prl"' not in w
+    assert "d10ccl" not in w
+    assert "d10prl" not in w
+    assert "stroke-width" not in w
     # результат обёрнут в <svg> (иначе фигуры не видны)
     assert "'<svg class=\"d10svg\" viewBox=\"0 0 100 ' + HGT + '\" preserveAspectRatio=\"none\">' + out + '</svg>'" in w
     assert ".d10strip{display:flex;width:100%;min-width:100%;position:relative}" in w
-    # график ограничен высотой трубки виджета (50px), не растягивается вниз; обводка тонкая
+    # дни разделены тонкой вертикальной линией
+    assert ".d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}" in w
+    assert ".d10col:first-child{border-left:0}" in w
+    # график ограничен высотой трубки виджета (50px), не растягивается вниз
     assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:50px;overflow:hidden;pointer-events:none}" in w
-    assert ".d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1}" in w
-    assert ".d10prl{fill:none;stroke:var(--rain);stroke-width:1}" in w
-    assert "stroke-width:1.5" not in w
     # график позади колонок температуры
     assert ".d10tube{height:50px;position:relative;z-index:1}" in w
+    # верх графика осадков виджета = 30 мм/час
+    assert "Math.min(1, r / 30)) * HGT" in w
+    assert "r / 20" not in w
     # старые пер-дневные бары облачности и осадков убраны
     assert "d10cloud" not in w
     assert "d10prec" not in w

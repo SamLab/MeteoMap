@@ -127,12 +127,11 @@ a{color:var(--accent)}
 .wr2{font-weight:700}
 .d10wrap{overflow-x:auto;padding:2px 0}
 .d10strip{display:flex;width:100%;min-width:100%;position:relative}
-.d10col{flex:1;min-width:70px;text-align:center;position:relative}
+.d10col{flex:1;min-width:70px;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}
+.d10col:first-child{border-left:0}
 .d10tube{height:135px;position:relative;z-index:1}
 .d10svg{position:absolute;left:0;top:0;width:100%;height:135px;overflow:hidden;pointer-events:none}
-.d10ccl{fill:none;stroke:#8d9aa5;stroke-width:1}
 .d10ccf{fill:rgba(141,154,165,.35);stroke:none}
-.d10prl{fill:none;stroke:#1976d2;stroke-width:1}
 .d10prf{fill:rgba(25,118,210,.20);stroke:none}
 .d10tbar{position:absolute;left:50%;transform:translateX(-50%);width:8px;background:linear-gradient(#e74c3c,#f39c12,#3498db);border-radius:4px}
 .d10tday,.d10tnight{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;color:#222;white-space:nowrap;line-height:1.1}
@@ -587,17 +586,17 @@ function cloudRainSvg(days){
       const r=D.weighted.precipitation?.[i];
       const x=(di*24+h+0.5)/(N*24)*100;
       if(c!=null)cc.push([x,(100-c)/100*135]);
-      if(r!=null)pr.push([x,(1-Math.min(1,r/20))*135]);
+      if(r!=null)pr.push([x,(1-Math.min(1,r/30))*135]);
     }
   }
   let out='';
   if(cc.length>=2){
     const line=cc.map(p=>p[0].toFixed(2)+','+p[1].toFixed(1)).join(' ');
-    out+='<polygon points="'+line+' 100,0 0,0" class="d10ccf"/><polyline points="'+line+'" class="d10ccl"/>';
+    out+='<polygon points="'+line+' 100,0 0,0" class="d10ccf"/>';
   }
   if(pr.length>=2){
     const line=pr.map(p=>p[0].toFixed(2)+','+p[1].toFixed(1)).join(' ');
-    out+='<polygon points="'+line+' 100,135 0,135" class="d10prf"/><polyline points="'+line+'" class="d10prl"/>';
+    out+='<polygon points="'+line+' 100,135 0,135" class="d10prf"/>';
   }
   return out;
 }
