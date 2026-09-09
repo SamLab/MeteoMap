@@ -244,12 +244,13 @@ def test_rain_intensity_helper_by_wmo_code():
     assert "средний" in tpl
 
 
-def test_hourly_shows_intensity_line_below_precip_only_when_rainy():
+def test_hourly_has_no_intensity_line():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    # строка интенсивности идёт после блока количества осадков hpp
-    assert 'class="hip"' in tpl
-    assert "rainIntensity(w.weather_code?.[j])" in tpl
+    # интенсивность вынесена из почасового блока — нет ни строки, ни вызова в buildWeatherHours
+    assert 'class="hip"' not in tpl
+    assert "rainIntensity(w.weather_code?.[j])" not in tpl
+    assert "rainIntensity(" in tpl  # helper остаётся для блока «Сейчас»
 
 
 def test_now_shows_intensity_when_raining():
