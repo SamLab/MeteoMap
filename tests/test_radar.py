@@ -758,6 +758,12 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "if (dateStr < todayStr) continue;" in w
     assert "dateStr <= todayStr" not in w
     assert "relDay(x.ds)" in w
+    # заливки облачности/осадков в почасовой части, как в 16 днях (SVG позади ячеек)
+    assert ".strip{display:flex;gap:2px;padding:2px 0 4px;position:relative}" in w
+    assert ".hobg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in w
+    assert "function hourBgSvg(" in w
+    assert "strip.insertAdjacentHTML('afterbegin', bg)" in w
+    assert "(1 - Math.min(1, r / 10)) * 100" in w
 
 
 def test_js_brace_balance_in_html_files():
