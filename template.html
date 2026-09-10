@@ -867,7 +867,7 @@ function buildWarnings(){
     if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;sE=k;}
       const ds=new Date(ts[s]);const dayS='<span class="tlu">'+relDay(ts[s].slice(0,10))+'</span>';
       const sLbl=dayS+' с '+ts[s].slice(11,13)+'ч до '+endLabel(ts[Math.min(sE+1,ts.length-1)],ts[s].slice(0,10));
-      const sLabel='по '+rainModelAll(s,sE)+' моделям';rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+' · '+sLabel+'</div>');}
+      const nAll=rainModelAll(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):'';rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+(sLabel?' · '+sLabel:'')+'</div>');}
     if(c>=0){
       let cLbl,wv;
       let c0=c,c1=c;
@@ -883,7 +883,7 @@ function buildWarnings(){
         wv=wetSpan(c,cE);
         c1=cE;
       }
-      const n=rainModelAll(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+' · по '+(n===1?'1 модели':n+' моделям')+'</div>');}
+      const n=rainModelAll(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+(n>=1?' · по '+(n===1?'1 модели':n+' моделям'):'')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';

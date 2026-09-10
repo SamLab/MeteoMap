@@ -353,7 +353,7 @@ def test_warnings_nearest_row_uses_two_model_threshold_and_first_dry_boundary():
         tpl = f.read()
     assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" in tpl
     assert "sourceList(s,list,precipMin)" not in tpl
-    assert "const sLabel='по '+rainModelAll(s,sE)+' моделям'" in tpl
+    assert "const nAll=rainModelAll(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):''" in tpl
     assert "endLabel(ts[Math.min(sE+1,ts.length-1)]," in tpl
 
 
@@ -838,7 +838,7 @@ def test_rain_model_count_requires_all_window_hours():
     assert "let all=true;for(let j=rainHour;j<=jLast;j++){if(!inWin(j))continue;" in tpl
     assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'" in tpl
+    assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=1?' · по '" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
