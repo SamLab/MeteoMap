@@ -851,8 +851,9 @@ def test_rain_model_count_requires_all_window_hours():
     assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;" in tpl
     assert "if(has)mCnt++" not in tpl
     assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=1?' · по '" in tpl
-    # wr2 сообщает «до» часа после последнего подтверждённого (как wr1/виджет), а не последний час включительно
-    assert "const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';" in tpl
+    # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (как почасы/виджет) и тип по коду часа
+    assert "cLbl=rType+' до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
+    assert "const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';" not in tpl
     assert "endLabel(ts[Math.min(cE+1,ts.length-1)],ts[c].slice(0,10))" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
     for fname in ("meteo.html", "meteow.html"):
