@@ -307,6 +307,13 @@ const rainIntensity=c=>{
   const strong=[55,65,75,82,86];
   return weak.includes(c)?'слабый':(strong.includes(c)?'сильный':([53,63,73,81].includes(c)?'средний':null));
 };
+// слово интенсивности добавляется только нейтральным типам (без степени в названии):
+// Морось/Дождь/Снег/Ливень; у «Небольшой…»/«Сильный…» степень уже в названии — дубль не нужен
+const degreeText=(c,wtext)=>{
+  if(![53,63,73,81].includes(c))return '';
+  const w=c===53?'умеренная':'умеренный';
+  return wtext.indexOf(w)<0?' <span class="wint">'+w+'</span>':'';
+};
 const COMPASS=['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
 const COMPASS_FULL=['северный','северо-восточный','восточный','юго-восточный','южный','юго-западный','западный','северо-западный'];
 const rumbShort=deg=>deg==null?'—':COMPASS[Math.round(deg/45)%8];
@@ -382,7 +389,6 @@ function buildWeatherNow(){
   if(nt)nt.textContent='Сейчас '+(nowMsk().match(/\d{2}:\d{2}/)||['?'])[0]+', '+DAY_NAMES_SHORT[new Date(nowMsk()).getDay()]+' '+new Date(nowMsk()).getDate();
   const w=D.weighted;
   const [wtext,we]=wcode(w.weather_code?.[curIdx]);
-  const inx=rainIntensity(w.weather_code?.[curIdx]);
   const sr=(D.daily.sunrise?.[0]||'').slice(11,16)||'—';
   const ss=(D.daily.sunset?.[0]||'').slice(11,16)||'—';
   const wind=w.wind_speed_10m?.[curIdx];
@@ -440,7 +446,7 @@ function buildWeatherNow(){
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
     '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
-    '<div class="wcond">'+wtext+(inx&&wtext.indexOf(inx)<0?' <span class="wint">'+inx+'</span>':'')+'</div></div>'+
+    '<div class="wcond">'+wtext+degreeText(w.weather_code?.[curIdx],wtext)+'</div></div>'+
     '<div class="wdet"><table class="wnowtbl"><tr>'+cells.map((c,i)=>'<td class="wcol'+i+'">'+c.val+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' lab">'+c.lab+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' rng">'+c.mx+'</td>').join('')+'</tr>'+

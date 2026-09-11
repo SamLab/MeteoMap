@@ -250,13 +250,19 @@ def test_hourly_has_no_intensity_line():
     # интенсивность вынесена из почасового блока — нет ни строки, ни вызова в buildWeatherHours
     assert 'class="hip"' not in tpl
     assert "rainIntensity(w.weather_code?.[j])" not in tpl
-    assert "rainIntensity(" in tpl  # helper остаётся для блока «Сейчас»
+    # в блоке «Сейчас» интенсивность применяется только через degreeText; rainIntensity — чистая таблица маппинга
+    assert "rainIntensity(w.weather_code" not in tpl
+    assert "degreeText(" in tpl
 
 
 def test_now_shows_intensity_when_raining():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "rainIntensity(w.weather_code?.[curIdx])" in tpl
+    # степень добавляется только нейтральным типам, без тавтологии «Небольшой дождь слабый»
+    assert "const degreeText=(c,wtext)=>{" in tpl
+    assert "c===53?'умеренная':'умеренный'" in tpl
+    assert "degreeText(w.weather_code?.[curIdx],wtext)" in tpl
+    assert "rainIntensity(w.weather_code?.[curIdx])" not in tpl
 
 
 def test_detail_summary_column():
