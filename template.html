@@ -407,12 +407,16 @@ function buildWeatherNow(){
     iMx[f]=mx;iMn[f]=mn;
   });
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  // окно осадков: первый дождливый час дня и первый час после конца непрерывного эпизода (как в остальных блоках)
   let pFirst=-1,pLast=-1;
   for(let j=0;j<D.time.length;j++){
     if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
     if(!rainCodes.includes(w.weather_code?.[j]))continue;
-    if(pFirst<0)pFirst=j;
-    pLast=j;
+    pFirst=j;
+    let k=j+1;
+    while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===today&&rainCodes.includes(w.weather_code?.[k]))k++;
+    pLast=Math.min(k,D.time.length-1);
+    break;
   }
   let dl='—';
   if(D.daily.sunrise?.[0]&&D.daily.sunset?.[0]){
@@ -548,16 +552,21 @@ function buildWeather16Title(){
   const dayLabel=d=>DOW_S[d.getDay()]+' '+d.getDate();
   const hh=t=>t.slice(11,13)+'ч';
   const todayStr=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
-  let rainDayI=-1,rainA=-1,rainB=-1;
-  for(let di=0;di<dt.length;di++){
-    const hhIdx=hourIdx(dt[di]);
-    const hits=hhIdx.filter(i=>rainCodes.includes(D.weighted.weather_code?.[i]));
-    if(hits.length&&!((dt[di]===todayStr)&&hits[hits.length-1]<=curIdx)){rainDayI=di;rainA=hits[0];rainB=hits[hits.length-1];break;}
+let rainDayI=-1,rainA=-1,rainB=-1;
+  // ближайший дождь: непрерывный эпизод от текущего часа, конец эксклюзивный (час после последнего дождливого)
+  for(let i=curIdx;i<D.time.length;i++){
+    if(!D.time[i]||!rainCodes.includes(D.weighted.weather_code?.[i]))continue;
+    rainA=i;
+    let k=i+1;
+    while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===D.time[i].slice(0,10)&&rainCodes.includes(D.weighted.weather_code?.[k]))k++;
+    rainB=Math.min(k,D.time.length-1);
+    rainDayI=1;
+    break;
   }
   if(rainDayI>=0){
-    const d=new Date(dt[rainDayI]);
+    const d=new Date(D.time[rainA].slice(0,10));
     const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
-    const rainNow=dt[rainDayI]===today&&rainCodes.includes(D.weighted.weather_code?.[curIdx]);
+    const rainNow=D.time[rainA].slice(0,10)===today&&rainA===curIdx;
     parts.push(rainNow?'Ближайший дождь до '+hh(D.time[rainB]):'Ближайший дождь '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
   }else parts.push('Ближайший дождь: не ожидается');
   let hotI=-1,hotT=-Infinity,coldI=-1,coldT=Infinity;

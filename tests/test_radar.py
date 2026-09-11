@@ -318,7 +318,10 @@ def test_d10_title_line_over_days():
     assert "Ближайший дождь" in tpl
     assert "Ближайший дождь в " not in tpl
     assert "'Ближайший дождь '+dayLabel(d)" in tpl
-    assert "hits[hits.length-1]<=curIdx" in tpl
+    # ближайший дождь — непрерывный эпизод от текущего часа; конец эксклюзивный (час после последнего дождливого)
+    assert "while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===D.time[i].slice(0,10)&&rainCodes.includes(D.weighted.weather_code?.[k]))k++;" in tpl
+    assert "rainB=Math.min(k,D.time.length-1);" in tpl
+    assert "hits[hits.length-1]" not in tpl
     assert "'На 16 дней — '+parts.join(' — ')" in tpl
     assert "parts.join(' / ')" not in tpl
     assert "не ожидается" in tpl
@@ -527,6 +530,8 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "D.time[iMx['temperature_2m']].slice(11,16)" in tpl
     assert "'с '+D.time[pFirst].slice(11,16)" in tpl
     assert "'до '+D.time[pLast].slice(11,16)" in tpl
+    # окно «Осадки» — от первого дождливого часа дня до часа после конца непрерывного эпизода
+    assert "while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===today&&rainCodes.includes(w.weather_code?.[k]))k++;" in tpl
     assert "if(!rainCodes.includes(w.weather_code?.[j]))continue;" in tpl
     assert "'↑ '+fmt(w.precipitation[pMx])+' в '" not in tpl
     assert "const aptMean=apn?temp(apt/apn):'';" in tpl
