@@ -79,7 +79,8 @@ def test_hours_title_uses_remaining_today_window():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const start=curIdx;" in tpl
-    assert "const hs=Math.min(curIdx+1,D.time.length-1);" in tpl
+    # окно «по часам» считает от текущего часа включительно — цифры совпадают с виджетом и предупреждениями
+    assert "const hs=Math.min(curIdx,D.time.length-1);" in tpl
     assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
     assert "th.textContent=(rainHour>=0?'':'Остаток дня ')+parts.join(', ')" in tpl
@@ -845,6 +846,9 @@ def test_rain_model_count_requires_all_window_hours():
     assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;" in tpl
     assert "if(has)mCnt++" not in tpl
     assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=1?' · по '" in tpl
+    # wr2 сообщает «до» часа после последнего подтверждённого (как wr1/виджет), а не последний час включительно
+    assert "const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';" in tpl
+    assert "endLabel(ts[Math.min(cE+1,ts.length-1)],ts[c].slice(0,10))" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:

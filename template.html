@@ -455,7 +455,7 @@ function buildWeatherNow(){
 function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
-  const hs=Math.min(curIdx+1,D.time.length-1);
+  const hs=Math.min(curIdx,D.time.length-1);
   const today=D.time[hs]?D.time[hs].slice(0,10):'';
   const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs;
   const parts=[];
@@ -878,14 +878,14 @@ function buildWarnings(){
       let cLbl,wv;
       let c0=c,c1=c;
       if(conOngoing){
-        const eh=ce>curIdx?endLabel(ts[ce]):'';
+        const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';
         cLbl=ongoingWord+(eh?' до '+eh:'');
         wv=wetSpan(curIdx,ce);
         c0=curIdx;c1=ce;
       }else{
         let cE=c;for(let k=c+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;cE=k;}
         const dc=new Date(ts[c]);const dayC='<span class="tlu">'+relDay(ts[c].slice(0,10))+'</span>';
-        cLbl=cE>c?(dayC+' с '+ts[c].slice(11,13)+'ч до '+endLabel(ts[cE],ts[c].slice(0,10))):tstr(c);
+        cLbl=cE>c?(dayC+' с '+ts[c].slice(11,13)+'ч до '+endLabel(ts[Math.min(cE+1,ts.length-1)],ts[c].slice(0,10))):tstr(c);
         wv=wetSpan(c,cE);
         c1=cE;
       }
