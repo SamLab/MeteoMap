@@ -714,7 +714,7 @@ function buildWeather10(){
       '<div class="d10tnight" style="top:'+(y2+2)+'px">'+temp(x.tmin)+'</div>'+
       '</div>'+
       '<div class="d10mm">'+(x.pr==null?'—':fmtP(x.pr))+'мм / '+(x.pp==null?'—':num(x.pp))+'%</div>'+
-      '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':('облака '+num(x.cl)+'%'))+'</div>'+
+      '<div class="d10cond"><span class="ic">'+x.we+'</span>'+(x.cl==null?'':(num(x.cl)+'%'))+'</div>'+
       '<div class="d10wind">'+(x.ws==null?'—':x.arrow+' '+num(x.ws)+' м/с')+'</div>'+
       '<div class="d10day"><b>'+DOW_S[x.d.getDay()]+'</b> '+x.d.getDate()+'</div>'+
       '</div>';
