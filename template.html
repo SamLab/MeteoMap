@@ -210,7 +210,7 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — текущие условия и параметры по консенсусу; в скобках — средняя за день, ↑/↓ — максимум и минимум за сегодня с временем. На телефоне видны 4 основных параметра, на ПК — 10.</li>
       <li><b>По часам</b> — ближайшие 48 часов; заливка на графике — облачность и дождь. Подсчёт дождя: код погоды из «дождевых» (есть) → осадки ≥ 0.1 мм (нет кода) → вероятность осадков &gt; 33% (нет кода и осадков).</li>
-      <li><b>Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «Небольшой дождь до 14ч» (тип — по коду погоды текущего часа; «до» — час после последнего подтверждённого дождливого часа) с консенсусными значениями; для будущих периодов — «с 08ч до 09ч» (один час) или «с 08ч до 10ч» (несколько; интервал тянется непрерывно, пока в каждом следующем часу консенсус подтверждает дождь; «до» — час после последнего дождливого). В строках дождя «по N моделям» — число моделей с дождём во все часы интервала (при 0 не показывается). Заморозки: первый час, где хотя бы одна модель на 0 °C или ниже, с интервалом до последнего непрерывного такого часа; «по N моделям» — максимум числа моделей за час в интервале. Подтверждённая строка — то же по консенсусу, жирным. Заморозков нет — «Заморозков в ближайшие дни не ожидается».</li>
+      <li><b>Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «до 16ч» («до» — час после последнего подтверждённого дождливого часа) с консенсусными значениями; для будущих периодов — «с 08ч до 09ч» (один час) или «с 08ч до 10ч» (несколько; интервал тянется непрерывно, пока в каждом следующем часу консенсус подтверждает дождь; «до» — час после последнего дождливого). В строках дождя «по N моделям» — наименьшее число моделей с дождём в каком-то часу интервала (при 0 не показывается). Заморозки: первый час, где хотя бы одна модель на 0 °C или ниже, с интервалом до последнего непрерывного такого часа; «по N моделям» — максимум числа моделей за час в интервале. Подтверждённая строка — то же по консенсусу, жирным. Заморозков нет — «Заморозков в ближайшие дни не ожидается».</li>
       <li><b>На 16 дней</b> — день, погода, температура, осадки, облачность.</li>
       <li><b>Подробно на 16 дней</b> — почасовый прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Восход/закат и долгота дня.</li>
       <li>Заголовок «По часам» — сводка по дождю на остаток дня: тип и интервал по консенсусу, либо «Подтвержденного дождя нет, но по N моделям вероятны Осадки …». Интервал тянется непрерывно: пока в каждом следующем часу консенсус или ≥ 2 модели дают дождь; при первом «сухом» часу — обрыв. «до Nч» — час после последнего дождливого часа интервала. Если дождь идёт сейчас — начало не указывается («до 14ч»).</li>
@@ -265,7 +265,7 @@ a{color:var(--accent)}
     <ul>
       <li><b>Почасовой</b>: <b>https://samlab.github.io/MeteoMap/meteo.html</b> — погода на ближайшие часы + сводка по дождю.</li>
       <li><b>Комбинированный</b>: <b>https://samlab.github.io/MeteoMap/meteow.html</b> — почасовой прогноз + 13-дневный.</li>
-      <li>Сводка по дождю в виджете: консенсусная — «Небольшой дождь с 11ч до 14ч на 2.4мм с 91% (11м)» («до» — час после конца непрерывного дождя; в скобках — число моделей с дождём во все часы интервала); без подтверждения консенсусом — начинается со слов «Вероятны Осадки». Если дождь идёт сейчас — «до 14ч» без начала.</li>
+      <li>Сводка по дождю в виджете: консенсусная — «Небольшой дождь с 11ч до 14ч на 2.4мм с 91% (11м)» («до» — час после конца непрерывного дождя; в скобках — наименьшее число моделей с дождём в каком-то часу интервала); без подтверждения консенсусом — начинается со слов «Вероятны Осадки». Если дождь идёт сейчас — «до 14ч» без начала.</li>
       <li>Параметры в адресе: <b>?city=yaroslavl|tsedenevo|petropavlovka|moscow|loo|balakirevo|rybinsk|borok|rostov</b> — город; <b>?hours=1–24</b> — сколько часов показать (в meteo.html и meteow.html). Пример: <b>meteo.html?city=moscow&amp;hours=8</b></li>
       <li>Данные те же, что на главной странице; обновление — каждые 5 минут.</li>
     </ul>
@@ -491,8 +491,19 @@ function buildWeatherHours(){
       const p=w.precipitation?.[j];if(p!=null)sumPr+=p;
       const pp=w.precipitation_probability?.[j];if(pp!=null&&pp>maxPp)maxPp=pp;
     }
-    let mCnt=0;
-    for(const c of codes){let all=true;for(let j=rainHour;j<=jLast;j++){if(!inWin(j))continue;const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;}
+    let mCnt=Infinity;
+    for(let j=rainHour;j<=jLast;j++){
+      if(!inWin(j))continue;
+      let n=0;
+      for(const c of codes){
+        const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;
+        const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;
+        const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;
+        if(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;
+      }
+      if(n<mCnt)mCnt=n;
+    }
+    if(mCnt===Infinity)mCnt=0;
     let jPeak=rainHour,peakPr=-1;
     for(let j=rainHour;j<=jLast;j++){
       if(!inWin(j))continue;
@@ -509,7 +520,8 @@ function buildWeatherHours(){
     const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);
     const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
-    parts.push(fromModels?'Сегодня — Подтвержденного дождя нет, но по '+(mCnt===1?'1 модели':mCnt+' моделям')+' вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+' · по '+(mCnt===1?'1 модели':mCnt+' моделям'));
+    const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');
+    parts.push(fromModels?'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+(mCnt>=1?' · '+mcLbl:''));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
@@ -822,19 +834,19 @@ function sourceCountAt(i,list,precipMin){
   }
   return n;
 }
-function rainModelAll(a,b){
-  let n=0;
-  for(const c of codes){
-    let all=true;
-    for(let j=a;j<=b;j++){
+function rainMinModels(a,b){
+  let m=Infinity;
+  for(let j=a;j<=b;j++){
+    let n=0;
+    for(const c of codes){
       const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;
       const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;
       const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;
-      if(!(v!=null?RAIN_CODES.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}
+      if(v!=null?RAIN_CODES.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;
     }
-    if(all)n++;
+    if(n<m)m=n;
   }
-  return n;
+  return m;
 }
 function buildWarnings(){
   const el=document.getElementById('warnings');
@@ -880,14 +892,12 @@ function buildWarnings(){
     const rows=[];
 if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;sE=k;}
         const sLbl='с '+ts[s].slice(11,13)+'ч до '+endLabel(ts[Math.min(sE+1,ts.length-1)],ts[s].slice(0,10));
-      const nAll=rainModelAll(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):'';rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+(sLabel?' · '+sLabel:'')+'</div>');}
+      const nAll=rainMinModels(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):'';rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+(sLabel?' · '+sLabel:'')+'</div>');}
     if(c>=0){
       let cLbl,wv;
       let c0=c,c1=c;
       if(conOngoing){
-        const codeHere=Number(D.weighted.weather_code?.[curIdx]);
-        const rType=(rainCodesLocal.includes(codeHere)&&wcode(codeHere)?wcode(codeHere)[0]:'Дождь');
-        cLbl=rType+' до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);
+        cLbl='до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);
         wv=wetSpan(curIdx,ce);
         c0=curIdx;c1=ce;
       }else{
@@ -896,7 +906,7 @@ if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1
         wv=wetSpan(c,cE);
         c1=cE;
       }
-      const n=rainModelAll(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+(n>=1?' · по '+(n===1?'1 модели':n+' моделям'):'')+'</div>');}
+      const n=rainMinModels(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+(n>=1?' · по '+(n===1?'1 модели':n+' моделям'):'')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';

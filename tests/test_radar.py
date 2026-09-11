@@ -184,10 +184,11 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
-    assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
+    assert "const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');" in tpl
+    assert "mCnt>=1?' · '+mcLbl:''" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
-    assert "'Сегодня — Подтвержденного дождя нет, но по '+" in tpl
+    assert "'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
     assert "Сегодня подтвержденного дождя нет" not in tpl
 
 
@@ -222,7 +223,8 @@ def test_hourstitle_rain_interval():
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
-    assert "· по '+(mCnt===1?'1 модели':mCnt+' моделям')" in tpl
+    assert "const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');" in tpl
+    assert "mCnt>=1?' · '+mcLbl:''" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
 
@@ -363,7 +365,7 @@ def test_warnings_nearest_row_uses_two_model_threshold_and_first_dry_boundary():
         tpl = f.read()
     assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" in tpl
     assert "sourceList(s,list,precipMin)" not in tpl
-    assert "const nAll=rainModelAll(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):''" in tpl
+    assert "const nAll=rainMinModels(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):''" in tpl
     assert "endLabel(ts[Math.min(sE+1,ts.length-1)]," in tpl
 
 
@@ -844,23 +846,26 @@ def test_warnings_no_current_model_rain_row():
     assert "curN>=minProb&&(curIdx<from)" not in tpl
 
 
-def test_rain_model_count_requires_all_window_hours():
+def test_rain_model_count_uses_min_per_hour():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "let all=true;for(let j=rainHour;j<=jLast;j++){if(!inWin(j))continue;" in tpl
-    assert "if(!(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))){all=false;break;}}if(all)mCnt++;" in tpl
+    assert "let mCnt=Infinity;" in tpl
+    assert "if(n<mCnt)mCnt=n;" in tpl
+    assert "if(mCnt===Infinity)mCnt=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const n=rainModelAll(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=1?' · по '" in tpl
-    # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (как почасы/виджет) и тип по коду часа
-    assert "cLbl=rType+' до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
+    assert "const n=rainMinModels(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=1?' · по '" in tpl
+    # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (без типа)
+    assert "cLbl='до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
+    assert "cLbl=rType+' до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" not in tpl
     assert "const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';" not in tpl
     assert "endLabel(ts[Math.min(cE+1,ts.length-1)],ts[c].slice(0,10))" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
-        assert "if(all)peakModels++" in w, fname
-        assert "seenModels" not in w, fname
+        assert "if(n<peakModels)peakModels=n;" in w, fname
+        assert "if(peakModels===Infinity)peakModels=0;" in w, fname
+        assert "if(all)peakModels++" not in w, fname
 
 
 def test_index_has_sputnik_tab_and_iframe():
