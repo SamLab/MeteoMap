@@ -735,7 +735,7 @@ def test_widget_d10_unified_cloud_rain_graph():
         w = f.read()
     # единый SVG облачность+осадки в виджете, поверх всей полосы дней
     assert "function cloudRainSvgW(" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 64)" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 68)" in w
     assert "var shownDays" not in w
     # только залитые области без обводки
     assert 'class="d10ccf"' in w
@@ -764,9 +764,9 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert ".d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}" in w
     assert ".d10col:first-child{border-left:0}" in w
     # график ограничен высотой трубки виджета (64px), не растягивается вниз
-    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:64px;overflow:hidden;pointer-events:none}" in w
+    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:68px;overflow:hidden;pointer-events:none}" in w
     # график позади колонок температуры
-    assert ".d10tube{height:64px;position:relative;z-index:1}" in w
+    assert ".d10tube{height:68px;position:relative;z-index:1}" in w
     # осадки — по часовым мм, верх = 10 мм/час
     assert "(1 - Math.min(1, r / 5)) * HGT" in w
     assert "sum / 30" not in w
@@ -791,7 +791,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "var x = h / cnt * 100;" in w
     assert "(h + 0.5)" not in w
     # заливки облачности/осадков в почасовой части, как в 16 днях (SVG позади ячеек)
-    assert ".strip{display:flex;gap:2px;padding:2px 0 4px;position:relative}" in w
+    assert ".strip{display:flex;gap:2px;padding:2px 0 2px;position:relative}" in w
     assert ".hobg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in w
     assert "function hourBgSvg(" in w
     assert "strip.insertAdjacentHTML('afterbegin', bg)" in w
@@ -800,7 +800,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "var DEFAULT_HOURS = 13;" in w
     # заливки/кривая считаются по числу выводимых колонок, иначе при обрезке 16→13 сетка графика разъезжалась бы с колонками
     assert "var dispDays = Math.min(arr.length, 13);" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 64);" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 68);" in w
 
 
 def test_js_brace_balance_in_html_files():
