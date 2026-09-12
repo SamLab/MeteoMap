@@ -735,7 +735,7 @@ def test_widget_d10_unified_cloud_rain_graph():
         w = f.read()
     # единый SVG облачность+осадки в виджете, поверх всей полосы дней
     assert "function cloudRainSvgW(" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 68)" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 74)" in w
     assert "var shownDays" not in w
     # только залитые области без обводки
     assert 'class="d10ccf"' in w
@@ -764,9 +764,9 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert ".d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}" in w
     assert ".d10col:first-child{border-left:0}" in w
     # график ограничен высотой трубки виджета (64px), не растягивается вниз
-    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:68px;overflow:hidden;pointer-events:none}" in w
+    assert ".d10svg{position:absolute;left:0;top:0;width:100%;height:74px;overflow:hidden;pointer-events:none}" in w
     # график позади колонок температуры
-    assert ".d10tube{height:68px;position:relative;z-index:1}" in w
+    assert ".d10tube{height:74px;position:relative;z-index:1}" in w
     # осадки — по часовым мм, верх = 10 мм/час
     assert "(1 - Math.min(1, r / 5)) * HGT" in w
     assert "sum / 30" not in w
@@ -779,7 +779,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     # в колонке виджета вместо мм — значок кондиции
     assert 'class="d10mm"' not in w
     assert 'class="d10cond"><span class="ic">' in w
-    assert ".d10cond{font-size:14px" in w
+    assert ".d10cond{font-size:16px" in w
     # первый день в виджете — сегодня (не завтра), подпись — день недели + число (без «Сегодня/Завтра»)
     assert "if (dateStr < todayStr) continue;" in w
     assert "dateStr <= todayStr" not in w
@@ -800,7 +800,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "var DEFAULT_HOURS = 13;" in w
     # заливки/кривая считаются по числу выводимых колонок, иначе при обрезке 16→13 сетка графика разъезжалась бы с колонками
     assert "var dispDays = Math.min(arr.length, 13);" in w
-    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 68);" in w
+    assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 74);" in w
 
 
 def test_js_brace_balance_in_html_files():
