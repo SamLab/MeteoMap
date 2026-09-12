@@ -30,30 +30,58 @@ def test_daily_variables_include_dominant_wind_direction():
 def test_fetch_all_forecasts_returns_all_models(monkeypatch):
     calls = []
 
-    def fake_fetch_model(code, endpoint, variables, days=None, timezone=None):
+    def fake_fetch_model(code, endpoint, variables, days=None, timezone=None,
+                         lats=None, lons=None):
         calls.append((code, endpoint))
-        return [{"model": code}]
+        n = len(lats.split(",")) if lats else 1
+        return [{"model": code}] * n
 
     monkeypatch.setattr(meteo, "fetch_model", fake_fetch_model)
     models = [("a", "A", "forecast"), ("b", "B", "ensemble")]
     res = meteo.fetch_all_forecasts(models, ["temperature_2m"], 2, "UTC", max_workers=2)
     assert set(res) == {"a", "b"}
-    assert res["a"] == [{"model": "a"}]
-    assert res["b"] == [{"model": "b"}]
     assert set(calls) == {("a", "forecast"), ("b", "ensemble")}
+    assert len(res["a"]) == len(meteo.LOCATIONS)
+    assert res["a"] == [{"model": "a"}] * len(meteo.LOCATIONS)
+    assert res["b"] == [{"model": "b"}] * len(meteo.LOCATIONS)
 
 
 def test_fetch_all_forecasts_skips_failures(monkeypatch):
-    def fake_fetch_model(code, endpoint, variables, days=None, timezone=None):
+    def fake_fetch_model(code, endpoint, variables, days=None, timezone=None,
+                         lats=None, lons=None):
         if code == "bad":
             raise RuntimeError("boom")
-        return [{"model": code}]
+        n = len(lats.split(",")) if lats else 1
+        return [{"model": code}] * n
 
     monkeypatch.setattr(meteo, "fetch_model", fake_fetch_model)
     models = [("good", "G", "forecast"), ("bad", "B", "forecast")]
     res = meteo.fetch_all_forecasts(models, ["t"], 2, "UTC", max_workers=2)
     assert "good" in res
     assert "bad" not in res
+
+
+def test_fetch_all_forecasts_groups_by_timezone(monkeypatch):
+    calls = []
+
+    def fake_fetch_model(code, endpoint, variables, days=None, timezone=None,
+                         lats=None, lons=None):
+        n = len(lats.split(",")) if lats else 1
+        calls.append((code, timezone, n))
+        return [{"code": code, "tz": timezone, "n": n}] * n
+
+    monkeypatch.setattr(meteo, "fetch_model", fake_fetch_model)
+    locs = [
+        {"name": "A", "slug": "a", "lat": 1.0, "lon": 2.0},
+        {"name": "B", "slug": "b", "lat": 3.0, "lon": 4.0, "tz": "Asia/Tbilisi"},
+    ]
+    res = meteo.fetch_all_forecasts([("m", "M", "forecast")], ["t"], 2, "UTC",
+                                    max_workers=2, locs=locs)
+    assert len(res["m"]) == 2
+    assert res["m"][0]["tz"] == "UTC"
+    assert res["m"][1]["tz"] == "Asia/Tbilisi"
+    assert set(c[1] for c in calls) == {"UTC", "Asia/Tbilisi"}
+    assert all(c[2] == 1 for c in calls)
 
 
 def test_fetch_external_providers_fills_all_cities(monkeypatch):
@@ -63,12 +91,12 @@ def test_fetch_external_providers_fills_all_cities(monkeypatch):
     providers = [("p1", "P1", fake_fetch), ("p2", "P2", fake_fetch)]
     locs = [
         {"name": "Ярославль", "slug": "yaroslavl", "lat": 57.63, "lon": 39.87},
-        {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
+        {"name": "Батуми (Грузия)", "slug": "batumi", "lat": 41.6461, "lon": 41.6356},
     ]
     res = meteo.fetch_external_providers(providers, locs, max_workers=2)
-    assert set(res["p1"]) == {"yaroslavl", "balakirevo"}
+    assert set(res["p1"]) == {"yaroslavl", "batumi"}
     assert res["p1"]["yaroslavl"] == [{"utc": None, "temperature_2m": 57.63}]
-    assert res["p2"]["balakirevo"] == [{"utc": None, "temperature_2m": 56.507}]
+    assert res["p2"]["batumi"] == [{"utc": None, "temperature_2m": 41.6461}]
 
 
 def test_fetch_external_providers_tolerates_failure():

@@ -16,6 +16,14 @@ def test_moscow_external_disabled():
     assert m.get("external") is False
 
 
+def test_batumi_timezone():
+    b = next(loc for loc in meteo.LOCATIONS if loc["slug"] == "batumi")
+    assert b["name"] == "Батуми (Грузия)"
+    assert b["tz"] == "Asia/Tbilisi"
+    assert b["tz_offset"] == 4
+    assert "balakirevo" not in [loc["slug"] for loc in meteo.LOCATIONS]
+
+
 def test_fetch_model_batch_splits_by_city(monkeypatch):
     calls = {}
 
@@ -83,7 +91,7 @@ def test_build_payload_uses_location():
         "time": ["h0"], "weighted": {"temperature_2m": [1.0]},
         "mean": {"temperature_2m": [1.0]}, "median": {"temperature_2m": [1.0]},
     }
-    loc = {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846}
+    loc = {"name": "Батуми (Грузия)", "slug": "batumi", "lat": 41.6461, "lon": 41.6356}
     p = meteo.build_payload(["a"], {"a": "A"}, hourly, {}, consensus, {},
                             "2026-08-06T12:00:00+03:00", loc)
     assert p["location"] == loc
@@ -95,4 +103,5 @@ def test_render_replaces_cities_placeholder():
     html = meteo.render(template, payload)
     assert "__CITIES__" not in html
     assert '"slug": "yaroslavl"' in html
-    assert "Балакирево" in html
+    assert 'Батуми (Грузия)' in html
+    assert '"slug": "batumi"' in html

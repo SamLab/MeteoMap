@@ -10,7 +10,8 @@ LOCATIONS = [
      "external": False},
     {"name": "Лоо", "slug": "loo", "lat": 43.70, "lon": 39.59},
     {"name": "Борок", "slug": "borok", "lat": 57.975, "lon": 38.227},
-    {"name": "Балакирево", "slug": "balakirevo", "lat": 56.507, "lon": 38.846},
+    {"name": "Батуми (Грузия)", "slug": "batumi", "lat": 41.6461, "lon": 41.6356,
+     "tz": "Asia/Tbilisi", "tz_offset": 4},
 ]
 TIMEZONE = "Europe/Moscow"
 FORECAST_DAYS = 16
@@ -260,22 +261,46 @@ def request_with_retry(url, params, timeout, get=None, max_retries=2,
 from concurrent.futures import ThreadPoolExecutor
 
 
-def fetch_all_forecasts(models, variables, days, timezone, max_workers=5):
-    """Параллельные батч-запросы по всем моделям. Возвращает {code: [ответы по городам]}."""
+def fetch_all_forecasts(models, variables, days, timezone, max_workers=5, locs=None):
+    """Параллельные батч-запросы по всем моделям. Возвращает {code: [ответы по городам]}.
+    Города группируются по часовому поясу — каждый пояс запрашивается отдельным батчем,
+    результат собирается в порядке переданного locs."""
+    if locs is None:
+        locs = LOCATIONS
+    groups = {}
+    for idx, loc in enumerate(locs):
+        tz = loc.get("tz", timezone)
+        groups.setdefault(tz, []).append(idx)
     with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        future_by_code = {
-            code: ex.submit(
-                fetch_model, code, endpoint, variables,
-                days=days, timezone=timezone,
-            )
-            for code, _name, endpoint in models
-        }
+        future_by = {}
+        for code, _name, endpoint in models:
+            for tz, idxs in groups.items():
+                lats = ",".join(str(locs[i]["lat"]) for i in idxs)
+                lons = ",".join(str(locs[i]["lon"]) for i in idxs)
+                future_by[(code, tz)] = ex.submit(
+                    fetch_model, code, endpoint, variables,
+                    days=days, timezone=tz, lats=lats, lons=lons,
+                )
     raw = {}
     for code, _name, _endpoint in models:
-        try:
-            raw[code] = future_by_code[code].result()
-        except Exception as exc:
-            print(f"[warn] {code}: {exc}")
+        slots = [None] * len(locs)
+        failed = False
+        for tz, idxs in groups.items():
+            try:
+                resp = future_by[(code, tz)].result()
+            except Exception as exc:
+                print(f"[warn] {code}: {exc}")
+                failed = True
+                break
+            if len(resp) != len(idxs):
+                print(f"[warn] {code}: response count mismatch "
+                      f"({len(resp)} != {len(idxs)})")
+                failed = True
+                break
+            for k, i in enumerate(idxs):
+                slots[i] = resp[k]
+        if not failed:
+            raw[code] = slots
     return raw
 
 
@@ -1395,11 +1420,11 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
             continue
         if code == YR_CODE:
             hourly_by_model[YR_CODE] = align_yr_to_grid(
-                rows, grid, timezone(timedelta(hours=3))
+                rows, grid, timezone(timedelta(hours=loc.get("tz_offset", 3)))
             )
         else:
             hourly_by_model[code] = align_to_grid(
-                rows, grid, timezone(timedelta(hours=3))
+                rows, grid, timezone(timedelta(hours=loc.get("tz_offset", 3)))
             )
         city_codes.append(code)
         city_names[code] = name
