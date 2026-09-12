@@ -326,7 +326,7 @@ function render(data){
       var r = data.weighted.precipitation ? data.weighted.precipitation[i] : null;
       var x = h / cnt * 100;
       if (c != null) cc.push(x.toFixed(2) + ',' + (c / 100 * 100).toFixed(1));
-      if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 10)) * 100).toFixed(1));
+      if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 5)) * 100).toFixed(1));
     }
     var out = '';
     if (cc.length >= 2){ var l = cc.join(' '); out += '<polygon points="' + l + ' 100,0 0,0" class="d10ccf"/>'; }
@@ -347,7 +347,7 @@ function render(data){
         var r = data.weighted.precipitation ? data.weighted.precipitation[j] : null;
         var x = (di * 24 + h) / (N * 24) * 100;
         if (c != null) cc.push(x.toFixed(2) + ',' + (c / 100 * HGT).toFixed(1));
-        if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 10)) * HGT).toFixed(1));
+        if (r != null) pr.push(x.toFixed(2) + ',' + ((1 - Math.min(1, r / 5)) * HGT).toFixed(1));
       }
     }
     var out = '';

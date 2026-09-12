@@ -319,7 +319,7 @@ def test_d10_title_line_over_days():
     assert "На 16 дней — " in tpl or "'На 16 дней' +" in tpl or "'На 16 дней — '" in tpl
     assert "Ближайший дождь" in tpl
     assert "Ближайший дождь в " not in tpl
-    assert "'Ближайший дождь '+dayLabel(d)" in tpl
+    assert "'Ближайший дождь: '+dayLabel(d)" in tpl
     # ближайший дождь — непрерывный эпизод от текущего часа; конец эксклюзивный (час после последнего дождливого)
     assert "while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===D.time[i].slice(0,10)&&rainCodes.includes(D.weighted.weather_code?.[k]))k++;" in tpl
     assert "rainB=Math.min(k,D.time.length-1);" in tpl
@@ -327,8 +327,8 @@ def test_d10_title_line_over_days():
     assert "'На 16 дней — '+parts.join(' — ')" in tpl
     assert "parts.join(' / ')" not in tpl
     assert "не ожидается" in tpl
-    assert "Теплее " in tpl
-    assert "Холоднее " in tpl
+    assert "Теплее: " in tpl
+    assert "Холоднее: " in tpl
     assert "D.weighted.weather_code" in tpl
     assert "D.daily.temperature_2m_max" in tpl
     assert "D.daily.temperature_2m_min" in tpl
@@ -620,7 +620,7 @@ def test_d10_unified_cloud_rain_graph():
     assert "const x=(di*24+h)/(N*24)*100;" in tpl
     assert "(di*24+h+0.5)" not in tpl
     # осадки — по часовым мм (как в данных weighted.precipitation), верх = 10 мм/час
-    assert "(1-Math.min(1,r/10))*135" in tpl
+    assert "(1-Math.min(1,r/5))*135" in tpl
     assert "const r=D.weighted.precipitation?.[i];" in tpl
     assert "sum/30" not in tpl
     # облачность не инвертирована: заливка растёт сверху вниз по мере роста облачности (17% -> ~17% высоты)
@@ -768,7 +768,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     # график позади колонок температуры
     assert ".d10tube{height:64px;position:relative;z-index:1}" in w
     # осадки — по часовым мм, верх = 10 мм/час
-    assert "(1 - Math.min(1, r / 10)) * HGT" in w
+    assert "(1 - Math.min(1, r / 5)) * HGT" in w
     assert "sum / 30" not in w
     # облачность виджета не инвертирована (заливка растёт сверху вниз по мере роста облачности)
     assert "c / 100 * HGT" in w
@@ -795,7 +795,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert ".hobg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in w
     assert "function hourBgSvg(" in w
     assert "strip.insertAdjacentHTML('afterbegin', bg)" in w
-    assert "(1 - Math.min(1, r / 10)) * 100" in w
+    assert "(1 - Math.min(1, r / 5)) * 100" in w
     # по одному последнему элементу убраны: 13 часов и 13 дней — остальные крупнее
     assert "var DEFAULT_HOURS = 13;" in w
     # заливки/кривая считаются по числу выводимых колонок, иначе при обрезке 16→13 сетка графика разъезжалась бы с колонками

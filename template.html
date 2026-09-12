@@ -550,7 +550,7 @@ function buildWeatherHours(){
     const r=w.precipitation?.[j];
     const x=(hi)/hN*100;
     if(c!=null)cc.push(x.toFixed(2)+','+(c/100*100).toFixed(1));
-    if(r!=null)pr.push(x.toFixed(2)+','+((1-Math.min(1,r/10))*100).toFixed(1));
+    if(r!=null)pr.push(x.toFixed(2)+','+((1-Math.min(1,r/5))*100).toFixed(1));
   }
   let hb='';
   if(cc.length>=2)hb+='<polygon points="'+cc.join(' ')+' 100,0 0,0" class="d10ccf"/>';
@@ -580,7 +580,7 @@ let rainDayI=-1,rainA=-1,rainB=-1;
     const d=new Date(D.time[rainA].slice(0,10));
     const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
     const rainNow=D.time[rainA].slice(0,10)===today&&rainA===curIdx;
-    parts.push(rainNow?'Ближайший дождь до '+hh(D.time[rainB]):'Ближайший дождь '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
+    parts.push(rainNow?'Ближайший дождь: до '+hh(D.time[rainB]):'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
   }else parts.push('Ближайший дождь: не ожидается');
   let hotI=-1,hotT=-Infinity,coldI=-1,coldT=Infinity;
   for(let di=0;di<dt.length;di++){
@@ -606,12 +606,12 @@ let rainDayI=-1,rainA=-1,rainB=-1;
   if(hotI>=0){
     const d=new Date(dt[hotI]);
     const pi=peakH(hotI);
-    parts.push('Теплее '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(hotT));
+    parts.push('Теплее: '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(hotT));
   }
   if(coldI>=0){
     const d=new Date(dt[coldI]);
     const pi=lowH(coldI);
-    parts.push('Холоднее '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(coldT));
+    parts.push('Холоднее: '+dayLabel(d)+(pi!=null?' в '+hh(D.time[pi]):'')+' '+temp(coldT));
   }
   const th=document.getElementById('d10title');
   if(th)th.textContent='На 16 дней — '+parts.join(' — ');
@@ -629,7 +629,7 @@ function cloudRainSvg(days){
       const r=D.weighted.precipitation?.[i];
       const x=(di*24+h)/(N*24)*100;
       if(c!=null)cc.push([x,c/100*135]);
-      if(r!=null)pr.push([x,(1-Math.min(1,r/10))*135]);
+      if(r!=null)pr.push([x,(1-Math.min(1,r/5))*135]);
     }
   }
   let out='';
