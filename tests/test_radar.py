@@ -180,7 +180,7 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const jStartCode=w.weather_code?.[ws];" in tpl
     assert "rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';" in tpl
     assert "const jPeakCode=w.weather_code?.[jPeak];" not in tpl
-    assert "RainType' not in tpl"
+    assert "RainType" not in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
@@ -841,7 +841,7 @@ def test_relday_shows_date_for_after_tomorrow():
 def test_warnings_no_current_model_rain_row():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "nowWord' in tpl" not in tpl
+    assert "const curN" not in tpl
     assert "'Сейчас'+endH" not in tpl
     assert "endH?'Сейчас':'Текущий час'" not in tpl
     assert "curN>=minProb&&(curIdx<from)" not in tpl
@@ -890,3 +890,74 @@ def test_day_verdict_removed_completely():
     # блок «Сейчас» вернулся к таблице без вердикта; 16 дней — столбцы без вердикта
     assert "'<div class=\"wdet\"><table class=\"wnowtbl\"><tr>'" in tpl
     assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
+
+
+def test_current_hour_uses_city_timezone():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "function cityTz()" in tpl
+    assert "function cityClock()" in tpl
+    assert "function cityToday()" in tpl
+    assert "const curHour=cityClock().slice(0,13)+':00';" in tpl
+    assert "nowMsk().replace(', ','T').slice(0,13)+':00'" not in tpl
+
+
+def test_warnings_today_uses_city_grid():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const todayStr=cityToday();" in tpl
+    assert "const today=todayStr;" in tpl
+    assert "new Date().toISOString().slice(0,10)" not in tpl
+
+
+def test_detail_rain_window_breaks_on_dry_hour():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "else if(rst!==null)break;" in tpl
+
+
+def test_meteo_widget_hour_fill():
+    with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
+        m = f.read()
+    assert ".strip{" in m and "position:relative" in m
+    assert ".hobg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in m
+    assert ".d10ccf{fill:rgba(141,154,165,.35);stroke:none}" in m
+    assert ".d10prf{fill:rgba(25,118,210,.45);stroke:none}" in m
+    assert "function hourBgSvg(cnt)" in m
+    assert "if (bg) strip.insertAdjacentHTML('afterbegin', bg);" in m
+    assert "(1 - Math.min(1, r / 5)) * 100" in m
+    assert "(pr.length >= 2){ out += '<polygon points=\"' + pr.join(' ') + ' 100,100 0,100\" class=\"d10prf\"/>'; }" in m
+    assert "data.weighted.temperature_2m ? data.weighted.temperature_2m[i] : 0" in m
+
+
+def test_widget_fill_scale_is_five_mm():
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "r / 5" in w, fname
+        assert "r / 10" not in w, fname
+        assert "r/10" not in w, fname
+
+
+def test_widget_summary_formats_match_both_widgets():
+    import re as _re
+
+    def unescape(src):
+        return _re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), src)
+
+    def stmt(src, var):
+        for line in src.splitlines():
+            if line.strip().startswith("var " + var + "="):
+                return line.strip()
+        return None
+
+    with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
+        m = unescape(f.read())
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = unescape(f.read())
+    for var in ("timeStr", "cntStr", "stats"):
+        assert stmt(m, var) is not None
+        assert stmt(m, var) == stmt(w, var), var
+    assert "if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;" in m
+    assert "if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;" in w
+    assert "var txt=rainType+' '+timeStr+' '+stats+cntStr;" in m

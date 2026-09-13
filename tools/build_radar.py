@@ -31,7 +31,7 @@ def _read_strict(p):
         return f.read()
 
 
-def build(name=None):
+def build(name=None, out_dir=None):
     if name is not None and name not in TARGETS:
         sys.exit(f"error: unknown target: {name} (choose from {', '.join(TARGETS)})")
     for p in (LEAFLET, LEAFLET_CSS, PALETTE):
@@ -46,6 +46,8 @@ def build(name=None):
     for n, (tpl, out) in targets.items():
         if not os.path.isfile(tpl):
             sys.exit(f"error: template not found: {tpl}")
+        if out_dir:
+            out = os.path.join(out_dir, os.path.basename(out))
         template = _read_strict(tpl)
         for marker in MARKERS:
             assert marker in template, f"placeholder missing in {tpl}: {marker}"

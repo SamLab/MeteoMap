@@ -210,10 +210,10 @@ a{color:var(--accent)}
     <ul>
       <li><b>Сейчас</b> — текущие условия и параметры по консенсусу; в скобках — средняя за день, ↑/↓ — максимум и минимум за сегодня с временем. На телефоне видны 4 основных параметра, на ПК — 10.</li>
       <li><b>По часам</b> — ближайшие 48 часов; заливка на графике — облачность и дождь. Подсчёт дождя: код погоды из «дождевых» (есть) → осадки ≥ 0.1 мм (нет кода) → вероятность осадков &gt; 33% (нет кода и осадков).</li>
-      <li><b>Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу. Дождь: если у консенсуса есть код погоды — считается только он; нет кода — осадки ≥ 0.1 мм; нет ни кода, ни осадков — вероятность осадков &gt; 33%. Если дождь идёт прямо сейчас — строка «до 16ч» («до» — час после последнего подтверждённого дождливого часа) с консенсусными значениями; для будущих периодов — «с 08ч до 09ч» (сегодня, без названия дня) или «Завтра с 08ч до 10ч» (для других дней впереди название дня; интервал тянется непрерывно, пока в каждом следующем часу консенсус подтверждает дождь; «до» — час после последнего дождливого). В строках дождя «по N моделям» — наименьшее число моделей с дождём в каком-то часу интервала (при 0 не показывается). Заморозки: первый час, где хотя бы одна модель на 0 °C или ниже, с интервалом до последнего непрерывного такого часа; «по N моделям» — максимум числа моделей за час в интервале. Подтверждённая строка — то же по консенсусу, жирным. Заморозков нет — «Заморозков в ближайшие дни не ожидается».</li>
+      <li><b>Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу. Дождь: ближайшее — первый час, где ≥ 2 модели дают дождь (дождевой код или осадки ≥ 0.1 мм); интервал тянется непрерывно, пока в каждом следующем часу ≥ 2 модели дают дождь. Подтверждённое — по коду погоды консенсуса (только дождевые коды): от первого такого часа до последнего непрерывного. Если дождь идёт прямо сейчас — строка «до 16ч» («до» — час после последнего подтверждённого дождливого часа) с консенсусными значениями; для будущих периодов — «с 08ч до 09ч» (сегодня, без названия дня) или «Завтра с 08ч до 10ч» (для других дней впереди название дня). В строках дождя «по N моделям» — наименьшее число моделей с дождём в каком-то часу интервала (модель даёт дождь, если дождевой код, осадки ≥ 0.1 мм или вероятность &gt; 33%; при 0 не показывается). Заморозки: первый час, где хотя бы одна модель на 0 °C или ниже, с интервалом до последнего непрерывного такого часа; «по N моделям» — максимум числа моделей за час в интервале. Подтверждённая строка — то же по консенсусу, жирным. Заморозков нет — «Заморозков в ближайшие дни не ожидается».</li>
       <li><b>На 16 дней</b> — день, погода, температура, осадки, облачность.</li>
       <li><b>Подробно на 16 дней</b> — почасовый прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Восход/закат и долгота дня.</li>
-      <li>Заголовок «По часам» — сводка по дождю на остаток дня: тип и интервал по консенсусу, либо «Подтвержденного дождя нет, но по N моделям вероятны Осадки …». Интервал тянется непрерывно: пока в каждом следующем часу консенсус или ≥ 2 модели дают дождь; при первом «сухом» часу — обрыв. «до Nч» — час после последнего дождливого часа интервала. Если дождь идёт сейчас — начало не указывается («до 14ч»).</li>
+      <li>Заголовок «По часам» — сводка по дождю на остаток дня: сначала по коду погоды консенсуса; если консенсус-дождя на остаток дня нет — по ≥ 2 моделям («Подтвержденного дождя нет, но по N моделям вероятны Осадки …»). Интервал — непрерывная серия дождливых часов от первого; при первом «сухом» часу — обрыв. «до Nч» — час после последнего дождливого часа интервала. Если дождь идёт сейчас — начало не указывается («до 14ч»).</li>
     </ul>
     <h2>Графики</h2>
     <ul>
@@ -367,6 +367,10 @@ function buildVarSel(id,onSel,vars){
 
 // conditions
 function nowMsk(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
+function cityTz(){return D&&D.location&&D.location.tz?D.location.tz:'Europe/Moscow';}
+function cityClock(){return new Intl.DateTimeFormat('en-CA',{timeZone:cityTz(),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date()).replace(', ','T');}
+function cityToday(){return curIdx>=0&&D.time&&D.time[curIdx]?D.time[curIdx].slice(0,10):cityClock().slice(0,10);}
+function cityDateParts(){const p=cityClock().slice(0,10).split('-').map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return {dayName:DAY_NAMES_SHORT[d.getUTCDay()],date:p[2]};}
 let curIdx=0;
 function buildConditions(){
   const w=D.weighted;
@@ -387,7 +391,8 @@ function buildConditions(){
 }
 function buildWeatherNow(){
   const nt=document.getElementById('nowtitle');
-  if(nt)nt.textContent='Сейчас '+(nowMsk().match(/\d{2}:\d{2}/)||['?'])[0]+', '+DAY_NAMES_SHORT[new Date(nowMsk()).getDay()]+' '+new Date(nowMsk()).getDate();
+  const cp=cityDateParts();
+  if(nt)nt.textContent='Сейчас '+(cityClock().match(/\d{2}:\d{2}/)||['?'])[0]+', '+cp.dayName+' '+cp.date;
   const w=D.weighted;
   const [wtext,we]=wcode(w.weather_code?.[curIdx]);
   const sr=(D.daily.sunrise?.[0]||'').slice(11,16)||'—';
@@ -797,7 +802,7 @@ function buildWeatherDetail(){
       if(RAIN_CODES.includes(D.weighted.weather_code?.[j])){
         if(rst===null)rst=t.slice(11,13)+'ч';
         ren=t.slice(11,13)+'ч';
-      }
+      }else if(rst!==null)break;
     }
     const rainStr=rst===null?'':(rst===ren?('<div>в '+rst+'</div>'):('<div>с '+rst+' до '+ren+'</div>'));
     const dayCode=aggWcode(day,'00','24');
@@ -819,7 +824,7 @@ function buildWeatherDetail(){
 
 const DAY_NAMES_SHORT=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 function relDay(dayStr){
-  const d0=nowMsk().slice(0,10),d1=dayStr.slice(0,10);
+  const d0=cityClock().slice(0,10),d1=dayStr.slice(0,10);
   const diff=Math.round((new Date(d1)-new Date(d0))/86400000);
   if(diff===0)return 'Сегодня';
   if(diff===1)return 'Завтра';
@@ -853,6 +858,7 @@ function buildWarnings(){
   if(!el)return;
   const ts=D.time||[],wc=D.weighted.weather_code||[];
   const from=curIdx;
+  const todayStr=cityToday();
   const R=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   const GUST_MIN=15;
   const findSrc=(list,pm,mn)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=mn)return i;}return -1;};
@@ -876,7 +882,7 @@ function buildWarnings(){
     return wetVal(pr>0?pr:0, pp>0?pp:undefined);
   };
   const col=(icon,list,extra=[],precipMin,emptyMsg='',probWord='Вероятен',ongoingWord='Дождь',minProb=1)=>{
-    const today=new Date().toISOString().slice(0,10);
+    const today=todayStr;
     const endLabel=(tsStr,startDay)=>{
       const ed=new Date(tsStr);
       const eDay=tsStr.slice(0,10);
@@ -915,7 +921,7 @@ if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1
   };
   const frostModelCount=i=>{let n=0;for(const c of codes){const t=D.models[c]?D.models[c].temperature_2m?.[i]:undefined;if(t!==null&&t!==undefined&&t<=0)n++;}return n;};
   const frostRun=pred=>{let s=-1,e=-1;for(let i=from;i<ts.length;i++){if(pred(i)){if(s<0)s=i;e=i;}else if(s>=0)break;}return s<0?null:{s,e};};
-  const frostEndLabel=(i,startDay)=>{const eDay=ts[i].slice(0,10),eTime=ts[i].slice(11,13)+'ч';if(eDay===new Date().toISOString().slice(0,10)||eDay===startDay)return eTime;return relDay(ts[i])+' '+eTime;};
+  const frostEndLabel=(i,startDay)=>{const eDay=ts[i].slice(0,10),eTime=ts[i].slice(11,13)+'ч';if(eDay===todayStr||eDay===startDay)return eTime;return relDay(ts[i])+' '+eTime;};
   const frostLbl=(s,e)=>{const st=ts[s].slice(11,13)+'ч';const ds=ts[s].slice(0,10);if(e===s)return relDay(ds)+' в '+st;return relDay(ds)+' с '+st+' до '+frostEndLabel(e,ds);};
   const tempMinModels=(s,e)=>{let m=null;for(let k=s;k<=e;k++){for(const c of codes){const t=D.models[c]?D.models[c].temperature_2m?.[k]:undefined;if(t!==null&&t!==undefined&&(m===null||t<m))m=t;}}return m;};
   const fRows=[];
@@ -1142,7 +1148,7 @@ function buildMaeTables(){
 
 function renderAll(){
   codes=D.model_codes; names=D.model_names;
-  const curHour=nowMsk().replace(', ','T').slice(0,13)+':00';
+  const curHour=cityClock().slice(0,13)+':00';
   curIdx=D.time.findIndex(t=>t>=curHour);
   if(curIdx<0)curIdx=0;
   document.title='MeteoMap — '+D.location.name;

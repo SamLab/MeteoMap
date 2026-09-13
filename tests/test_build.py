@@ -1,11 +1,21 @@
 import os
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS = os.path.join(HERE, "tools")
 BUILD = os.path.join(TOOLS, "build_radar.py")
 NOWCAST_TEMPLATE = os.path.join(HERE, "nowcast_template.html")
 NOWCAST_OUTPUT = os.path.join(HERE, "nowcast.html")
+
+
+def _build_nowcast(tmp):
+    if HERE not in sys.path:
+        sys.path.insert(0, HERE)
+    from tools import build_radar
+
+    build_radar.build("nowcast", out_dir=tmp)
+    return os.path.join(tmp, "nowcast.html")
 
 
 def test_nowcast_template_has_required_placeholders():
@@ -22,14 +32,10 @@ def test_build_script_defines_nowcast_output():
     assert "nowcast.html" in s
 
 
-def test_builder_produces_nowcast_html():
-    if HERE not in sys.path:
-        sys.path.insert(0, HERE)
-    from tools import build_radar
-
-    build_radar.build("nowcast")
-    assert os.path.isfile(NOWCAST_OUTPUT), "nowcast.html not written"
-    with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
+def test_builder_produces_nowcast_html(tmpdir):
+    out = _build_nowcast(str(tmpdir))
+    assert os.path.isfile(out), "nowcast.html not written"
+    with open(out, encoding="utf-8") as f:
         html = f.read()
     assert "satellite-europe" in html
     assert "imn-rust-lb.infoplaza.io" in html
@@ -96,13 +102,9 @@ def test_nowcast_template_has_sat24_cloud_layer():
     assert "sat24Fallback" in s
 
 
-def test_builder_produces_sat24_cloud_in_output():
-    if HERE not in sys.path:
-        sys.path.insert(0, HERE)
-    from tools import build_radar
-
-    build_radar.build("nowcast")
-    with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
+def test_builder_produces_sat24_cloud_in_output(tmpdir):
+    out = _build_nowcast(str(tmpdir))
+    with open(out, encoding="utf-8") as f:
         html = f.read()
     assert "satellite-europe" in html
     assert "imn-rust-lb.infoplaza.io" in html
@@ -128,13 +130,9 @@ def test_nowcast_template_has_sat24_rewind():
     assert "satFrames" in s
 
 
-def test_builder_produces_sat24_rewind_in_output():
-    if HERE not in sys.path:
-        sys.path.insert(0, HERE)
-    from tools import build_radar
-
-    build_radar.build("nowcast")
-    with open(NOWCAST_OUTPUT, encoding="utf-8") as f:
+def test_builder_produces_sat24_rewind_in_output(tmpdir):
+    out = _build_nowcast(str(tmpdir))
+    with open(out, encoding="utf-8") as f:
         html = f.read()
     assert 'id="sattimeline"' in html
     assert 'id="satplay"' in html

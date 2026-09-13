@@ -1239,7 +1239,8 @@ def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=2
                 median_out[v][i] = vote
                 continue
             wv = weights_by_var.get(v, {})
-            weights = [wv.get(code, 1.0) for code in model_codes]
+            fallback = min(wv.values()) if wv else 1.0
+            weights = [wv.get(code, fallback) for code in model_codes]
             weighted[v][i] = weighted_consensus(per_model, weights)
             mean_out[v][i] = mean(per_model)
             if v == "wind_direction_10m":

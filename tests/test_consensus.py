@@ -29,6 +29,16 @@ def test_assemble_default_min_sources_is_two():
     assert out["weighted"]["temperature_2m"][0] == 15.0
 
 
+def test_assemble_unweighted_model_gets_min_weight_not_one():
+    hb = _series([0.0], [20.0], [20.0], var="temperature_2m")
+    weights = {"temperature_2m": {"a": 0.8, "b": 0.2}}
+    out = meteo.assemble_consensus(hb, ["temperature_2m"], weights, min_sources=2)
+    got = out["weighted"]["temperature_2m"][0]
+    expected = (0.0 + 0.2 * 20 + 0.2 * 20) / (0.8 + 0.2 + 0.2)
+    assert abs(got - expected) < 1e-6
+    assert abs(got - 12.0) > 0.1
+
+
 def test_assemble_min_sources_threshold():
     hb = _series([1.0], [None], [None], var="temperature_2m")
     out = meteo.assemble_consensus(

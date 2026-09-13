@@ -244,7 +244,7 @@ function render(data){
     var t = times[i];
     var code = data.weighted.weather_code ? Math.round(data.weighted.weather_code[i]) : 0;
     var w = WMO[code] || {e:'\uD83C\uDF21', l:'\u041A\u043E\u0434 ' + code};
-    var temperature = Math.round(data.weighted.temperature_2m[i]);
+    var temperature = Math.round(data.weighted.temperature_2m ? data.weighted.temperature_2m[i] : 0);
     var prob = data.weighted.precipitation_probability ? Math.round(data.weighted.precipitation_probability[i]) : 0;
     var mm = data.weighted.precipitation ? data.weighted.precipitation[i] : 0;
     var rain = prob >= 50 || mm >= 0.1;
