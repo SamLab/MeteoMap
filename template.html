@@ -855,7 +855,7 @@ function buildWarnings(){
   const from=curIdx;
   const R=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   const GUST_MIN=15;
-  const findSrc=(list,pm)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=minProb)return i;}return -1;};
+  const findSrc=(list,pm,mn)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=mn)return i;}return -1;};
   // �ᨬ���� �� ���: ��还� ��ᮩ��� - ���������� �������� (D.weighted.weather_code)
   // ��� ������ (��᭣��/���) - ���������� ��� ��� 2+ �ᢥ�� (W �ᯭ� SAPCE/CIN)
   const rainCodesLocal=[51,53,55,56,57,61,63,65,66,67,80,81,82];
@@ -884,7 +884,7 @@ function buildWarnings(){
       if(eDay===today||eDay===startDay)return eTime;
       return relDay(tsStr)+' '+eTime;
     };
-    const s=findSrc(list,precipMin),c=findCon(list,precipMin);
+    const s=findSrc(list,precipMin,minProb),c=findCon(list,precipMin);
     const conNow=isConfirmed(curIdx,list,precipMin);
     let ce=-1;
     if(conNow){ce=curIdx;for(let k=curIdx+1;k<ts.length;k++){if(!isConfirmed(k,list,precipMin))break;ce=k;}}

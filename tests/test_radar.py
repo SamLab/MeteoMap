@@ -373,7 +373,7 @@ def test_warnings_confirmed_requires_two_models():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "sourceCountAt(i,list,pm)>=2" in tpl
-    assert "if(sourceCountAt(i,list,pm)>=minProb)return i;" in tpl
+    assert "if(sourceCountAt(i,list,pm)>=mn)return i;" in tpl
     assert "sourceCountAt(i,list,pm)>0)return i;" not in tpl
 
 
