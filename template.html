@@ -943,6 +943,7 @@ if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1
   }
   const frC=frostRun(i=>{const t=D.weighted.temperature_2m?.[i];return t!==null&&t!==undefined&&t<=0;});
   if(frC){let m=null;for(let k=frC.s;k<=frC.e;k++){const t=D.weighted.temperature_2m?.[k];if(t!==null&&t!==undefined&&(m===null||t<m))m=t;}fRows.push('<div class="wr2">'+frostLbl(frC.s,frC.e)+' '+num(m)+'° · подтверждено</div>');}
+  else if(minIdx>=0)fRows.push('<div class="wr2"><i>Заморозков в ближайшие дни не ожидается</i></div>');
   if(fRows.length===0)fRows.push('<div class="wr1"><i>Заморозков в ближайшие дни не ожидается</i></div>');
   const gustInfo=i=>{let n=0,m=0;const lst=[];for(const c of codes){const v=D.models[c]?D.models[c].wind_gusts_10m?.[i]:undefined;if(v===null||v===undefined)continue;if(v>m)m=v;if(v>=GUST_MIN){n++;lst.push(names[c]);}}return {n,m,lst};};
   const findGust=minN=>{for(let i=from;i<ts.length;i++){if(gustInfo(i).n>=minN)return i;}return -1;};
