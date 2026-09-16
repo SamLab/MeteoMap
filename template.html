@@ -919,11 +919,9 @@ if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1
     if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';
   };
-  const frostModelCount=i=>{let n=0;for(const c of codes){const t=D.models[c]?D.models[c].temperature_2m?.[i]:undefined;if(t!==null&&t!==undefined&&t<=0)n++;}return n;};
   const frostRun=pred=>{let s=-1,e=-1;for(let i=from;i<ts.length;i++){if(pred(i)){if(s<0)s=i;e=i;}else if(s>=0)break;}return s<0?null:{s,e};};
   const frostEndLabel=(i,startDay)=>{const eDay=ts[i].slice(0,10),eTime=ts[i].slice(11,13)+'ч';if(eDay===todayStr||eDay===startDay)return eTime;return relDay(ts[i])+' '+eTime;};
   const frostLbl=(s,e)=>{const st=ts[s].slice(11,13)+'ч';const ds=ts[s].slice(0,10);if(e===s)return relDay(ds)+' в '+st;return relDay(ds)+' с '+st+' до '+frostEndLabel(e,ds);};
-  const tempMinModels=(s,e)=>{let m=null;for(let k=s;k<=e;k++){for(const c of codes){const t=D.models[c]?D.models[c].temperature_2m?.[k]:undefined;if(t!==null&&t!==undefined&&(m===null||t<m))m=t;}}return m;};
   const fRows=[];
   let minT=null,minIdx=-1;
   for(let i=from;i<ts.length;i++){
