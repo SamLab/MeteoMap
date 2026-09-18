@@ -199,6 +199,18 @@ def test_hourstitle_interval_breaks_on_first_dry_hour():
     assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
 
 
+def test_consensus_rain_confirmed_by_code_mm_or_prob_in_all_four():
+    consensus = "(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20)"
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const conAt=i=>{const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return (c!=null&&rainCodesLocal.includes(Number(c)))||" + consensus + ";};" in tpl
+    assert "function hasRainAt(j){const c=w.weather_code?.[j],p=w.precipitation?.[j],q=w.precipitation_probability?.[j];return rainCodes.includes(c)||" + consensus + ";}" in tpl
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||" + consensus + ";}" in w, fname
+
+
 def test_widget_interval_breaks_on_first_dry_hour():
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:

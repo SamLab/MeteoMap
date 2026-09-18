@@ -165,7 +165,7 @@ function buildSummary(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   var now=new Date();
   var todayStr=now.toDateString();
-  function hasRainAt(j){var code=data.weather_code?Math.round(data.weather_code[j]):0;return RAIN.indexOf(code)>=0;}
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
   function modelRainCount(j){
     var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;}return n;
   }
