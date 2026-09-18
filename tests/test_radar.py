@@ -185,7 +185,8 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');" in tpl
-    assert "mCnt>=1?' · '+mcLbl:''" in tpl
+    assert "mCnt>=2?' · '+mcLbl:''" in tpl
+    assert "mCnt>=1?' · '+mcLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
     assert "'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
@@ -236,7 +237,8 @@ def test_hourstitle_rain_interval():
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');" in tpl
-    assert "mCnt>=1?' · '+mcLbl:''" in tpl
+    assert "mCnt>=2?' · '+mcLbl:''" in tpl
+    assert "mCnt>=1?' · '+mcLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
 
@@ -866,7 +868,8 @@ def test_rain_model_count_uses_min_per_hour():
     assert "if(n<mCnt)mCnt=n;" in tpl
     assert "if(mCnt===Infinity)mCnt=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const n=rainMinModels(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=1?' · по '" in tpl
+    assert "const n=rainMinModels(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=2?' · по '+n+' моделям':'')+'</div>');}" in tpl
+    assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
     # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (без типа)
     assert "cLbl='до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
     assert "cLbl=rType+' до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" not in tpl
@@ -972,4 +975,5 @@ def test_widget_summary_formats_match_both_widgets():
         assert stmt(m, var) == stmt(w, var), var
     assert "if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;" in m
     assert "if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;" in w
-    assert "var txt=rainType+' '+timeStr+' '+stats+cntStr;" in m
+    assert "var txt=rainType+' '+timeStr+' '+stats+conCnt;" in m
+    assert "var txt=rainType+' '+timeStr+' '+stats+cntStr;" not in m

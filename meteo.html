@@ -246,8 +246,9 @@ function buildSummary(times, data, rawData, idx){
   var en=(times[endIdx].getHours()===0)?'00ч':(pad2(times[endIdx].getHours())+'ч');
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'в '+st:st+'—'+en);
   var cntStr=peakModels>=1?(' '+peakModels+'м'):'';
+  var conCnt=peakModels>=2?(' '+peakModels+'м'):'';
   var stats='['+fmtP(sumPr)+'мм_'+Math.round(maxPp)+'%]';
-  var txt=rainType+' '+timeStr+' '+stats+cntStr;
+  var txt=rainType+' '+timeStr+' '+stats+conCnt;
   if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;
   return txt;
 }
