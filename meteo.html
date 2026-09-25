@@ -199,6 +199,7 @@ function getRainModelsCount(rawData, idx){
   return null;
 }
 
+function rcCnt(mn,mx){return mn===mx?mn+'м':mn+'-'+mx+'м';}
 function buildSummary(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   var now=new Date();
@@ -228,12 +229,14 @@ function buildSummary(times, data, rawData, idx){
     var pp=data.precipitation_probability?data.precipitation_probability[j]:0;
     if(pp!=null&&pp>maxPp)maxPp=pp;
   }
-  var peakModels=Infinity;
+  var peakModels=Infinity,peakMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var n=0;
     for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;}
     if(n<peakModels)peakModels=n;
+    if(n>peakMax)peakMax=n;
   }
   if(peakModels===Infinity)peakModels=0;
+  if(peakMax===-Infinity)peakMax=0;
   var jPeak=rainHour,peakPr=-1;
   for(var j=rainHour;j<=jLast;j++){
     var p=data.precipitation?data.precipitation[j]:0;
@@ -245,8 +248,8 @@ function buildSummary(times, data, rawData, idx){
   var endIdx=Math.min(jLast+1,times.length-1);
   var en=(times[endIdx].getHours()===0)?'00ч':(pad2(times[endIdx].getHours())+'ч');
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'в '+st:st+'—'+en);
-  var cntStr=peakModels>=1?(' '+peakModels+'м'):'';
-  var conCnt=peakModels>=2?(' '+peakModels+'м'):'';
+  var cntStr=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';
+  var conCnt=peakModels>=2?(' '+rcCnt(peakModels,peakMax)):'';
   var stats='['+fmtP(sumPr)+'мм_'+Math.round(maxPp)+'%]';
   var txt=rainType+' '+timeStr+' '+stats+conCnt;
   if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;

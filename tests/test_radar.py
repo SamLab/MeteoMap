@@ -888,6 +888,13 @@ def test_rain_model_count_uses_min_per_hour():
         assert "if(n<peakModels)peakModels=n;" in w, fname
         assert "if(peakModels===Infinity)peakModels=0;" in w, fname
         assert "if(all)peakModels++" not in w, fname
+        assert "if(n>peakMax)peakMax=n;" in w, fname
+        assert "function rcCnt(mn,mx)" in w, fname
+        assert "rcCnt(peakModels,peakMax)" in w, fname
+        assert "mn===mx?mn+'" in w, fname
+    with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
+        m = f.read()
+    assert "function rcCnt(mn,mx){return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
 
 
 def test_index_has_sputnik_tab_and_iframe():
