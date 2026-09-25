@@ -591,9 +591,10 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "D.time[iMx['temperature_2m']].slice(11,16)" in tpl
     assert "'с '+D.time[pFirst].slice(11,16)" in tpl
     assert "'до '+D.time[pLast].slice(11,16)" in tpl
-    # окно «Осадки» — от первого дождливого часа дня до часа после конца непрерывного эпизода
-    assert "while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===today&&rainCodes.includes(w.weather_code?.[k]))k++;" in tpl
-    assert "if(!rainCodes.includes(w.weather_code?.[j]))continue;" in tpl
+    # окно «Осадки» — от первого дождливого часа дня до часа после конца непрерывного эпизода (консенсус)
+    assert "while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===today&&hasRainAt(k))k++;" in tpl
+    assert "if(!hasRainAt(j))continue;" in tpl
+    assert "function hasRainAt(j){const c=w.weather_code?.[j],p=w.precipitation?.[j],q=w.precipitation_probability?.[j];return rainCodes.includes(c)||" in tpl
     assert "'↑ '+fmt(w.precipitation[pMx])+' в '" not in tpl
     assert "const aptMean=apn?temp(apt/apn):'';" in tpl
     assert "aptMean?' ('+aptMean+')':''" in tpl

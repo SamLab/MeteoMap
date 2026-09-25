@@ -413,14 +413,15 @@ function buildWeatherNow(){
     iMx[f]=mx;iMn[f]=mn;
   });
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  function hasRainAt(j){const c=w.weather_code?.[j],p=w.precipitation?.[j],q=w.precipitation_probability?.[j];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
   // окно осадков: первый дождливый час дня и первый час после конца непрерывного эпизода (как в остальных блоках)
   let pFirst=-1,pLast=-1;
   for(let j=0;j<D.time.length;j++){
     if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
-    if(!rainCodes.includes(w.weather_code?.[j]))continue;
+    if(!hasRainAt(j))continue;
     pFirst=j;
     let k=j+1;
-    while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===today&&rainCodes.includes(w.weather_code?.[k]))k++;
+    while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===today&&hasRainAt(k))k++;
     pLast=Math.min(k,D.time.length-1);
     break;
   }
