@@ -187,8 +187,8 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
-    assert "mCnt>=2?' · '+mcLbl:''" in tpl
-    assert "mCnt>=1?' · '+mcLbl:''" not in tpl
+    assert "mCnt>=1?' · '+mcLbl:''" in tpl
+    assert "mCnt>=2?' · '+mcLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
     assert "'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
@@ -257,8 +257,8 @@ def test_hourstitle_rain_interval():
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
-    assert "mCnt>=2?' · '+mcLbl:''" in tpl
-    assert "mCnt>=1?' · '+mcLbl:''" not in tpl
+    assert "mCnt>=1?' · '+mcLbl:''" in tpl
+    assert "mCnt>=2?' · '+mcLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
 
@@ -917,7 +917,7 @@ def test_rain_model_count_uses_min_per_hour():
     assert "if(mn===Infinity)mn=0;" in tpl
     assert "if(mx===-Infinity)mx=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const R=rainModelRange(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=2?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
+    assert "const R=rainModelRange(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
     # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (без типа)
     assert "cLbl='до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
@@ -937,6 +937,8 @@ def test_rain_model_count_uses_min_per_hour():
         assert "mn===mx?mn+'" in w, fname
         assert "if(code!=null?RAIN.indexOf(code)>=0:" in w, fname
         assert "if(mn<1)return '';" in w, fname
+        assert "var conCnt=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';" in w, fname
+        assert "var conCnt=peakModels>=2?(' '+rcCnt(peakModels,peakMax)):'';" not in w, fname
     with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
         m = f.read()
     assert "function rcCnt(mn,mx){if(mn<1)return '';return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
@@ -1028,7 +1030,7 @@ def test_widget_summary_formats_match_both_widgets():
         m = unescape(f.read())
     with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
         w = unescape(f.read())
-    for var in ("timeStr", "cntStr", "stats"):
+    for var in ("timeStr", "cntStr", "conCnt", "stats"):
         assert stmt(m, var) is not None
         assert stmt(m, var) == stmt(w, var), var
     assert "if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;" in m

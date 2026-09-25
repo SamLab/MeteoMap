@@ -215,7 +215,7 @@ function buildSummary(times, data, rawData, idx){
   var en=(times[endIdx].getHours()===0)?'\u0030\u0030\u0447':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'ч':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч');
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'\u0432 '+st:st+'—'+en);
   var cntStr=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';
-  var conCnt=peakModels>=2?(' '+rcCnt(peakModels,peakMax)):'';
+  var conCnt=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';
   var stats='['+fmtP(sumPr)+'\u043C\u043C_'+Math.round(maxPp)+'%]';
   if(fromModels) return '\u0412\u0435\u0440\u043E\u044F\u0442\u043D\u044B \u041E\u0441\u0430\u0434\u043A\u0438 '+timeStr+' '+stats+cntStr;
   return rainType+' '+timeStr+' '+stats+conCnt;
