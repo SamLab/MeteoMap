@@ -839,8 +839,8 @@ function sourceCountAt(i,list,precipMin){
   }
   return n;
 }
-function rainMinModels(a,b){
-  let m=Infinity;
+function rainModelRange(a,b){
+  let mn=Infinity,mx=-Infinity;
   for(let j=a;j<=b;j++){
     let n=0;
     for(const c of codes){
@@ -849,9 +849,15 @@ function rainMinModels(a,b){
       const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;
       if(v!=null?RAIN_CODES.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;
     }
-    if(n<m)m=n;
+    if(n<mn)mn=n;
+    if(n>mx)mx=n;
   }
-  return m;
+  return {mn,mx};
+}
+function rcLbl(mn,mx){
+  if(mn<1)return '';
+  if(mn===mx)return mn===1?'1 модели':mn+' моделям';
+  return mn+'-'+mx+' моделям';
 }
 function buildWarnings(){
   const el=document.getElementById('warnings');
@@ -899,7 +905,7 @@ function buildWarnings(){
 if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1;k<ts.length;k++){if(sourceCountAt(k,list,precipMin)<2)break;sE=k;}
         const sp=relDay(ts[s].slice(0,10));
         const sLbl=(sp==='Сегодня'?'':sp+' ')+'с '+ts[s].slice(11,13)+'ч до '+endLabel(ts[Math.min(sE+1,ts.length-1)],ts[s].slice(0,10));
-      const nAll=rainMinModels(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):'';rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+(sLabel?' · '+sLabel:'')+'</div>');}
+      const R=rainModelRange(s,sE);const sLabel=R.mn>=1?'по '+rcLbl(R.mn,R.mx):'';rows.push('<div class="wr1">'+sLbl+wetSpan(s,sE)+(sLabel?' · '+sLabel:'')+'</div>');}
     if(c>=0){
       let cLbl,wv;
       let c0=c,c1=c;
@@ -914,7 +920,7 @@ if(s>=0&&s!==c&&sourceCountAt(s,list,precipMin)>=minProb){let sE=s;for(let k=s+1
         wv=wetSpan(c,cE);
         c1=cE;
       }
-      const n=rainMinModels(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+(n>=2?' · по '+n+' моделям':'')+'</div>');}
+      const R=rainModelRange(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+(R.mn>=2?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}
     rows.push(...extra);
     if(rows.length===0)rows.push('<div class="wr1"><i>'+emptyMsg+'</i></div>');
     return '<div class="wcol"><div class="wicon">'+icon+'</div><div class="wrows">'+rows.join('')+'</div></div>';

@@ -379,8 +379,11 @@ def test_warnings_nearest_row_uses_two_model_threshold_and_first_dry_boundary():
         tpl = f.read()
     assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" in tpl
     assert "sourceList(s,list,precipMin)" not in tpl
-    assert "const nAll=rainMinModels(s,sE);const sLabel=nAll>=1?'по '+(nAll===1?'1 модели':nAll+' моделям'):''" in tpl
+    assert "const R=rainModelRange(s,sE);const sLabel=R.mn>=1?'по '+rcLbl(R.mn,R.mx):''" in tpl
     assert "endLabel(ts[Math.min(sE+1,ts.length-1)]," in tpl
+    assert "function rainModelRange(a,b){" in tpl
+    assert "function rcLbl(mn,mx){" in tpl
+    assert "return {mn,mx};" in tpl
 
 
 def test_warnings_confirmed_requires_two_models():
@@ -868,7 +871,7 @@ def test_rain_model_count_uses_min_per_hour():
     assert "if(n<mCnt)mCnt=n;" in tpl
     assert "if(mCnt===Infinity)mCnt=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const n=rainMinModels(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(n>=2?' · по '+n+' моделям':'')+'</div>');}" in tpl
+    assert "const R=rainModelRange(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=2?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
     # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (без типа)
     assert "cLbl='до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
