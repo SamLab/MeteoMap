@@ -354,6 +354,7 @@ def test_help_text_up_to_date():
     assert "голосование моделей по коду" in tpl
     assert "дождь, гроза, град" not in tpl
     assert "<b>Сегодня</b> — ближайшие 48 часов по часам." not in tpl
+    assert "первый дождливый час дня и час после конца первой непрерывной серии дождя по консенсусу" in tpl
 
 
 def test_d10_title_line_over_days():
