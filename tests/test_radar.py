@@ -186,9 +186,11 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
+    assert "const ccLbl='по '+rcLbl(ccCnt,ccX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
-    assert "mCnt>=1?' · '+mcLbl:''" in tpl
-    assert "mCnt>=2?' · '+mcLbl:''" not in tpl
+    assert "ccCnt>=1?' · '+ccLbl:''" in tpl
+    assert "ccCnt>=2?' · '+ccLbl:''" not in tpl
+    assert "if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
     assert "'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
@@ -257,8 +259,8 @@ def test_hourstitle_rain_interval():
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
-    assert "mCnt>=1?' · '+mcLbl:''" in tpl
-    assert "mCnt>=2?' · '+mcLbl:''" not in tpl
+    assert "ccCnt>=1?' · '+ccLbl:''" in tpl
+    assert "ccCnt>=2?' · '+ccLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
 
@@ -910,14 +912,17 @@ def test_warnings_no_current_model_rain_row():
 def test_rain_model_count_uses_min_per_hour():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "let mCnt=Infinity,mX=-Infinity;" in tpl
+    assert "let mCnt=Infinity,mX=-Infinity,ccCnt=Infinity,ccX=-Infinity;" in tpl
     assert "if(n<mCnt)mCnt=n;" in tpl
+    assert "if(cn<ccCnt)ccCnt=cn;" in tpl
     assert "if(mCnt===Infinity)mCnt=0;" in tpl
     assert "if(mX===-Infinity)mX=0;" in tpl
     assert "if(mn===Infinity)mn=0;" in tpl
     assert "if(mx===-Infinity)mx=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const R=rainModelRange(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
+    assert "const R=rainModelRangeCons(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
+    assert "const R=rainModelRange(c0,c1);rows.push" not in tpl
+    assert "const R=rainModelRangeCons(s,sE);" not in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
     # wr2 для идущего сейчас дождя показывает «до часа после последнего подтверждённого» (без типа)
     assert "cLbl='до '+endLabel(ts[Math.min(ce+1,ts.length-1)]);" in tpl
@@ -937,8 +942,11 @@ def test_rain_model_count_uses_min_per_hour():
         assert "mn===mx?mn+'" in w, fname
         assert "if(code!=null?RAIN.indexOf(code)>=0:" in w, fname
         assert "if(mn<1)return '';" in w, fname
-        assert "var conCnt=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';" in w, fname
-        assert "var conCnt=peakModels>=2?(' '+rcCnt(peakModels,peakMax)):'';" not in w, fname
+        assert "var conCnt=conPeak>=1?(' '+rcCnt(conPeak,conMax)):'';" in w, fname
+        assert "var conCnt=conPeak>=2?(' '+rcCnt(conPeak,conMax)):'';" not in w, fname
+        assert "if(cn<conPeak)conPeak=cn;" in w, fname
+        assert "if(cn>conMax)conMax=cn;" in w, fname
+        assert "if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;" in w, fname
     with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
         m = f.read()
     assert "function rcCnt(mn,mx){if(mn<1)return '';return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
