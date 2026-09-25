@@ -184,7 +184,8 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
-    assert "const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');" in tpl
+    assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
+    assert "if(n>mX)mX=n;" in tpl
     assert "mCnt>=2?' · '+mcLbl:''" in tpl
     assert "mCnt>=1?' · '+mcLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
@@ -236,7 +237,8 @@ def test_hourstitle_rain_interval():
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
-    assert "const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');" in tpl
+    assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
+    assert "if(n>mX)mX=n;" in tpl
     assert "mCnt>=2?' · '+mcLbl:''" in tpl
     assert "mCnt>=1?' · '+mcLbl:''" not in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
@@ -867,9 +869,10 @@ def test_warnings_no_current_model_rain_row():
 def test_rain_model_count_uses_min_per_hour():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "let mCnt=Infinity;" in tpl
+    assert "let mCnt=Infinity,mX=-Infinity;" in tpl
     assert "if(n<mCnt)mCnt=n;" in tpl
     assert "if(mCnt===Infinity)mCnt=0;" in tpl
+    assert "if(mX===-Infinity)mX=0;" in tpl
     assert "if(has)mCnt++" not in tpl
     assert "const R=rainModelRange(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=2?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl

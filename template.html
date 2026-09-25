@@ -496,7 +496,7 @@ function buildWeatherHours(){
       const p=w.precipitation?.[j];if(p!=null)sumPr+=p;
       const pp=w.precipitation_probability?.[j];if(pp!=null&&pp>maxPp)maxPp=pp;
     }
-    let mCnt=Infinity;
+    let mCnt=Infinity,mX=-Infinity;
     for(let j=rainHour;j<=jLast;j++){
       if(!inWin(j))continue;
       let n=0;
@@ -507,8 +507,10 @@ function buildWeatherHours(){
         if(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;
       }
       if(n<mCnt)mCnt=n;
+      if(n>mX)mX=n;
     }
     if(mCnt===Infinity)mCnt=0;
+    if(mX===-Infinity)mX=0;
     let jPeak=rainHour,peakPr=-1;
     for(let j=rainHour;j<=jLast;j++){
       if(!inWin(j))continue;
@@ -525,7 +527,7 @@ function buildWeatherHours(){
     const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);
     const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
-    const mcLbl='по '+(mCnt===1?'1 модели':mCnt+' моделям');
+    const mcLbl='по '+rcLbl(mCnt,mX);
     parts.push(fromModels?'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+(mCnt>=2?' · '+mcLbl:''));
   }
   else parts.push('без дождя');
