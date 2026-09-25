@@ -214,6 +214,23 @@ def test_consensus_rain_confirmed_by_code_mm_or_prob_in_all_four():
         assert "function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||" + consensus + ";}" in w, fname
 
 
+def test_widget_episode_crosses_midnight_with_rel_day():
+    with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
+        m = f.read()
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+    assert "if(times[j].toDateString()!==todayStr) break;" not in m
+    assert "if(times[j].toDateString()!==todayStr) break;" not in w
+    assert "var todayStr=now.toDateString();" not in m
+    assert "var todayStr=now.toDateString();" not in w
+    assert "var DOW = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];" in m
+    assert "function relDay(d){" in m and "function relDay(d){" in w
+    assert "relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч'" in m
+    assert "relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч'" in w
+    assert "times[endIdx].toDateString()===times[rainHour].toDateString()" in m
+    assert "times[endIdx].toDateString()===times[rainHour].toDateString()" in w
+
+
 def test_widget_interval_breaks_on_first_dry_hour():
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
