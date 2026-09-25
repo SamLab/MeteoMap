@@ -183,7 +183,7 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const jPeakCode=w.weather_code?.[jPeak];" not in tpl
     assert "RainType" not in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
-    assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
+    assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
@@ -253,7 +253,7 @@ def test_hourstitle_rain_interval():
         tpl = f.read()
     assert "const jStartCode=w.weather_code?.[ws];" in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
-    assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
+    assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
@@ -278,7 +278,8 @@ def test_hourstitle_search_not_limited_to_today():
     # эпизод ищется от curIdx до конца данных; день отсекается только границей данных, не календарём
     assert "const isToday=j=>D.time[j]&&j>=hs;" in tpl
     assert "const inWin=j=>j>=ws&&D.time[j];" in tpl
-    assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
+    assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
+    assert "enDay!==today" not in tpl
 
 
 def test_rain_intensity_helper_by_wmo_code():

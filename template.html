@@ -466,7 +466,6 @@ function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
   const hs=Math.min(curIdx,D.time.length-1);
-  const today=D.time[hs]?D.time[hs].slice(0,10):'';
   const isToday=j=>D.time[j]&&j>=hs;
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
@@ -524,7 +523,7 @@ function buildWeatherHours(){
     const enTs=D.time[enIdx];
     const enDay=enTs.slice(0,10);
     const enTime=enTs.slice(11,13)+'ч';
-    const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);
+    const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);
     const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     const mcLbl='по '+rcLbl(mCnt,mX);
