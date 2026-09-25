@@ -337,7 +337,8 @@ def test_d10_title_line_over_days():
     assert "Ближайший дождь в " not in tpl
     assert "'Ближайший дождь: '+dayLabel(d)" in tpl
     # ближайший дождь — непрерывный эпизод от текущего часа; конец эксклюзивный (час после последнего дождливого)
-    assert "while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===D.time[i].slice(0,10)&&rainCodes.includes(D.weighted.weather_code?.[k]))k++;" in tpl
+    assert "while(k<D.time.length&&D.time[k]&&hasRainAt(k))k++;" in tpl
+    assert "D.time[k].slice(0,10)===D.time[i].slice(0,10)" not in tpl
     assert "rainB=Math.min(k,D.time.length-1);" in tpl
     assert "hits[hits.length-1]" not in tpl
     assert "'На 16 дней — '+parts.join(' — ')" in tpl
@@ -348,6 +349,15 @@ def test_d10_title_line_over_days():
     assert "D.weighted.weather_code" in tpl
     assert "D.daily.temperature_2m_max" in tpl
     assert "D.daily.temperature_2m_min" in tpl
+
+
+def test_d10_rain_uses_consensus_and_crosses_midnight():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}" in tpl
+    assert "if(!D.time[i]||!hasRainAt(i))continue;" in tpl
+    assert "const endLabel=(eTime==='00ч'&&eDay!==D.time[rainA].slice(0,10))?'00ч':(eDay===D.time[rainA].slice(0,10)?eTime:relDay(eTs)+' '+eTime);" in tpl
+    assert "'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+endLabel" in tpl
 
 
 def test_d10_wind_like_hourly():

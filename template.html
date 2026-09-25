@@ -572,13 +572,14 @@ function buildWeather16Title(){
   const dayLabel=d=>DOW_S[d.getDay()]+' '+d.getDate();
   const hh=t=>t.slice(11,13)+'ч';
   const todayStr=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
+  function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
 let rainDayI=-1,rainA=-1,rainB=-1;
   // ближайший дождь: непрерывный эпизод от текущего часа, конец эксклюзивный (час после последнего дождливого)
   for(let i=curIdx;i<D.time.length;i++){
-    if(!D.time[i]||!rainCodes.includes(D.weighted.weather_code?.[i]))continue;
+    if(!D.time[i]||!hasRainAt(i))continue;
     rainA=i;
     let k=i+1;
-    while(k<D.time.length&&D.time[k]&&D.time[k].slice(0,10)===D.time[i].slice(0,10)&&rainCodes.includes(D.weighted.weather_code?.[k]))k++;
+    while(k<D.time.length&&D.time[k]&&hasRainAt(k))k++;
     rainB=Math.min(k,D.time.length-1);
     rainDayI=1;
     break;
@@ -587,7 +588,9 @@ let rainDayI=-1,rainA=-1,rainB=-1;
     const d=new Date(D.time[rainA].slice(0,10));
     const today=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
     const rainNow=D.time[rainA].slice(0,10)===today&&rainA===curIdx;
-    parts.push(rainNow?'Ближайший дождь: до '+hh(D.time[rainB]):'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+hh(D.time[rainB]));
+    const eTs=D.time[rainB],eDay=eTs.slice(0,10),eTime=hh(eTs);
+    const endLabel=(eTime==='00ч'&&eDay!==D.time[rainA].slice(0,10))?'00ч':(eDay===D.time[rainA].slice(0,10)?eTime:relDay(eTs)+' '+eTime);
+    parts.push(rainNow?'Ближайший дождь: до '+endLabel:'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+endLabel);
   }else parts.push('Ближайший дождь: не ожидается');
   let hotI=-1,hotT=-Infinity,coldI=-1,coldT=Infinity;
   for(let di=0;di<dt.length;di++){
