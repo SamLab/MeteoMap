@@ -467,7 +467,7 @@ function buildWeatherHours(){
   const start=curIdx;
   const hs=Math.min(curIdx,D.time.length-1);
   const today=D.time[hs]?D.time[hs].slice(0,10):'';
-  const isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs;
+  const isToday=j=>D.time[j]&&j>=hs;
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   function hasRainAt(j){const c=w.weather_code?.[j],p=w.precipitation?.[j],q=w.precipitation_probability?.[j];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
@@ -489,7 +489,7 @@ function buildWeatherHours(){
   if(rainHour>=0){
     const nowRain=(rainHour===hs)&&(hasRainAt(start)||modelRainCount(start)>=2);
     const ws=nowRain?start:rainHour;
-    const inWin=j=>j>=ws&&D.time[j]&&D.time[j].slice(0,10)===today;
+    const inWin=j=>j>=ws&&D.time[j];
     let sumPr=0,maxPp=0;
     for(let j=rainHour;j<=jLast;j++){
       if(!inWin(j))continue;

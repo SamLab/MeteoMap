@@ -81,7 +81,8 @@ def test_hours_title_uses_remaining_today_window():
     assert "const start=curIdx;" in tpl
     # окно «по часам» считает от текущего часа включительно — цифры совпадают с виджетом и предупреждениями
     assert "const hs=Math.min(curIdx,D.time.length-1);" in tpl
-    assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs" in tpl
+    assert "const isToday=j=>D.time[j]&&j>=hs;" in tpl
+    assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs" not in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
     assert "th.textContent=(rainHour>=0?'':'Остаток дня ')+parts.join(', ')" in tpl
 
@@ -249,8 +250,18 @@ def test_hourstitle_includes_current_hour_when_raining():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const ws=nowRain?start:rainHour;" in tpl
-    assert "const inWin=j=>j>=ws&&D.time[j]&&D.time[j].slice(0,10)===today;" in tpl
+    assert "const inWin=j=>j>=ws&&D.time[j];" in tpl
+    assert "const inWin=j=>j>=ws&&D.time[j]&&D.time[j].slice(0,10)===today;" not in tpl
     assert tpl.count("if(!inWin(j))continue;") >= 3
+
+
+def test_hourstitle_search_not_limited_to_today():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # эпизод ищется от curIdx до конца данных; день отсекается только границей данных, не календарём
+    assert "const isToday=j=>D.time[j]&&j>=hs;" in tpl
+    assert "const inWin=j=>j>=ws&&D.time[j];" in tpl
+    assert "const enLabel=(enTime==='00ч'&&enDay!==today)?'00ч':(enDay===today?enTime:relDay(enTs)+' '+enTime);" in tpl
 
 
 def test_rain_intensity_helper_by_wmo_code():
