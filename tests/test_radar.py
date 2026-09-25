@@ -873,6 +873,8 @@ def test_rain_model_count_uses_min_per_hour():
     assert "if(n<mCnt)mCnt=n;" in tpl
     assert "if(mCnt===Infinity)mCnt=0;" in tpl
     assert "if(mX===-Infinity)mX=0;" in tpl
+    assert "if(mn===Infinity)mn=0;" in tpl
+    assert "if(mx===-Infinity)mx=0;" in tpl
     assert "if(has)mCnt++" not in tpl
     assert "const R=rainModelRange(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=2?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
@@ -892,9 +894,11 @@ def test_rain_model_count_uses_min_per_hour():
         assert "function rcCnt(mn,mx)" in w, fname
         assert "rcCnt(peakModels,peakMax)" in w, fname
         assert "mn===mx?mn+'" in w, fname
+        assert "if(code!=null?RAIN.indexOf(code)>=0:" in w, fname
+        assert "if(mn<1)return '';" in w, fname
     with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
         m = f.read()
-    assert "function rcCnt(mn,mx){return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
+    assert "function rcCnt(mn,mx){if(mn<1)return '';return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
 
 
 def test_index_has_sputnik_tab_and_iframe():
@@ -996,4 +1000,4 @@ def test_help_texts_mention_model_range():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "«по N-K моделям»" in tpl
-    assert "N-K моделям" in tpl or "мин-макс" in tpl
+    assert "диапазон числа моделей по часам интервала" in tpl or "минимум-максимум по часам" in tpl

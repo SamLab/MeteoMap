@@ -854,6 +854,8 @@ function rainModelRange(a,b){
     if(n<mn)mn=n;
     if(n>mx)mx=n;
   }
+  if(mn===Infinity)mn=0;
+  if(mx===-Infinity)mx=0;
   return {mn,mx};
 }
 function rcLbl(mn,mx){
