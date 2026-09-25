@@ -990,3 +990,10 @@ def test_widget_summary_formats_match_both_widgets():
     assert "if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;" in w
     assert "var txt=rainType+' '+timeStr+' '+stats+conCnt;" in m
     assert "var txt=rainType+' '+timeStr+' '+stats+cntStr;" not in m
+
+
+def test_help_texts_mention_model_range():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "«по N-K моделям»" in tpl
+    assert "N-K моделям" in tpl or "мин-макс" in tpl
