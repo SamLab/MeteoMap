@@ -1273,14 +1273,60 @@ def _models_with_data(model_codes, hourly_by_model):
     ]
 
 
+PRECIP_SUM_TOL_MM = 0.5
+
+
+def _precip_sum_by_model(daily_by_model, hourly_by_model):
+    """Ежедневные суммы осадков по моделям с маской расхождений.
+
+    Ячейка (день) модели маскируется None, если её precipitation_sum
+    значительно расходится с суммой её own hourly precipitation за те же сутки
+    (защита от несогласованных ежедневных данных источников)."""
+    out = {}
+    for code, m in daily_by_model.items():
+        dsum = m.get("precipitation_sum")
+        dtime = m.get("time")
+        if not dsum or not dtime:
+            continue
+        hm = hourly_by_model.get(code) or {}
+        htime = hm.get("time") or []
+        hprec = (hm.get("data") or {}).get("precipitation") or []
+        if not htime or not hprec:
+            out[code] = list(dsum)
+            continue
+        by_day = {}
+        for t, p in zip(htime, hprec):
+            if p is None:
+                continue
+            by_day[t[:10]] = by_day.get(t[:10], 0.0) + p
+        masked = []
+        for day, val in zip(dtime, dsum):
+            if val is None:
+                masked.append(None)
+                continue
+            hsum = by_day.get(day)
+            if hsum is not None and abs(val - hsum) > PRECIP_SUM_TOL_MM:
+                masked.append(None)
+            else:
+                masked.append(val)
+        out[code] = masked
+    return out
+
+
 def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
                   consensus, verification, generated_at, location):
     codes = _models_with_data(model_codes, hourly_by_model) or list(model_codes)
     dvars = list(DAILY_VARIABLES)
     TIME_DAILY = {"sunrise", "sunset"}
     daily_consensus = {}
+    precip_by_model = _precip_sum_by_model(daily_by_model, hourly_by_model)
     for v in dvars:
-        cols = [m[v] for m in daily_by_model.values() if m.get(v)]
+        if v == "precipitation_sum":
+            cols = [
+                m for m in precip_by_model.values() if any(x is not None for x in m)
+            ]
+        else:
+            cols = [m[v] for m in daily_by_model.values() if m.get(v)]
         if not cols:
             continue
         if v in TIME_DAILY:
