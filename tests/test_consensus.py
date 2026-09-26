@@ -71,6 +71,36 @@ def test_assemble_weather_code_by_majority():
     assert out["weighted"]["weather_code"][1] == 0
 
 
+def test_assemble_precipitation_floored_to_tenths():
+    hb = {
+        "a": {"time": ["h0"], "data": {"precipitation": [0.2]}},
+        "b": {"time": ["h0"], "data": {"precipitation": [0.2]}},
+        "c": {"time": ["h0"], "data": {"precipitation": [0.1]}},
+        "d": {"time": ["h0"], "data": {"precipitation": [0.1]}},
+        "e": {"time": ["h0"], "data": {"precipitation": [0.2]}},
+    }
+    out = meteo.assemble_consensus(
+        hb, ["precipitation"], {"precipitation": {}}, min_sources=2
+    )
+    assert out["weighted"]["precipitation"][0] == 0.1  # 0.16, не 0.2
+    assert out["mean"]["precipitation"][0] == 0.1
+    assert out["median"]["precipitation"][0] == 0.2
+
+
+def test_assemble_precipitation_below_tenth_floors_to_zero():
+    hb = {
+        "a": {"time": ["h0"], "data": {"precipitation": [0.1]}},
+        "b": {"time": ["h0"], "data": {"precipitation": [0.0]}},
+        "c": {"time": ["h0"], "data": {"precipitation": [0.0]}},
+    }
+    out = meteo.assemble_consensus(
+        hb, ["precipitation"], {"precipitation": {}}, min_sources=2
+    )
+    assert out["weighted"]["precipitation"][0] == 0.0  # 0.033, а не 0.04
+    assert out["mean"]["precipitation"][0] == 0.0
+    assert out["median"]["precipitation"][0] == 0.0
+
+
 def test_assemble_cape_consensus():
     hb = _series([0.0, 1500.0], [10.0, 1800.0], [5.0, 1200.0], var="cape")
     out = meteo.assemble_consensus(

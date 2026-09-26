@@ -957,6 +957,16 @@ def mean(values):
     return sum(vals) / len(vals)
 
 
+def _floor_precip(v):
+    """Округляет консенсусные осадки вниз до десятых мм.
+
+    Модели дают осадки с шагом 0.1 мм, поэтому консенсус (средние/взвешенные)
+    тоже должен быть в десятых, без ложной точности в сотых долях."""
+    if v is None:
+        return None
+    return math.floor(v * 10 + 1e-9) / 10
+
+
 def median(values):
     vals = sorted(v for v in values if v is not None)
     if not vals:
@@ -1247,6 +1257,10 @@ def assemble_consensus(hourly_by_model, variables, weights_by_var, min_sources=2
                 median_out[v][i] = circular_mean(per_model)
             else:
                 median_out[v][i] = median(per_model)
+            if v == "precipitation":
+                weighted[v][i] = _floor_precip(weighted[v][i])
+                mean_out[v][i] = _floor_precip(mean_out[v][i])
+                median_out[v][i] = _floor_precip(median_out[v][i])
     return {
         "time": hours,
         "weighted": weighted,
@@ -1335,7 +1349,8 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
         else:
             length = max(len(c) for c in cols)
             daily_consensus[v] = [
-                mean([c[i] for c in cols if i < len(c)]) for i in range(length)
+                _floor_precip(mean([c[i] for c in cols if i < len(c)]))
+                for i in range(length)
             ]
     daily_time = next(
         (m.get("time") for m in daily_by_model.values() if m.get("time")),

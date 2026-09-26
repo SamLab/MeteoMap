@@ -200,4 +200,5 @@ def test_daily_precip_uses_hourly_when_daily_diverges():
     )
     # день 0: 6.5 расходится с hourly sum 0.5 → в консенсус идёт почасовая 0.5
     # день 1: 1.0 согласуется → остаётся 1.0
-    assert p["daily"]["precipitation_sum"] == [0.25, 0.5]
+    # консенсус осадков округляется вниз до десятых: mean(0.5, 0.0)=0.25 → 0.2
+    assert p["daily"]["precipitation_sum"] == [0.2, 0.5]
