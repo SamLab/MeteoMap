@@ -173,57 +173,31 @@ def test_payload_keeps_original_codes_when_all_empty():
     assert p["model_codes"] == ["a"]
 
 
-def test_daily_precip_excludes_models_inconsistent_with_hourly():
+def test_daily_precip_uses_hourly_when_daily_diverges():
     hourly = {
-        "good": {"time": ["2026-08-03T00:00", "2026-08-04T00:00"],
-                 "data": {"precipitation": [0.0, 0.0]}},
-        "bad": {"time": ["2026-08-03T00:00", "2026-08-04T00:00"],
-                "data": {"precipitation": [0.0, 0.0]}},
+        "plausible": {"time": ["2026-08-03T00:00", "2026-08-04T00:00"],
+                      "data": {"precipitation": [0.0, 0.0]}},
+        "spike": {"time": ["2026-08-03T00:00", "2026-08-04T00:00"],
+                  "data": {"precipitation": [0.5, 1.0]}},
     }
     consensus = {
         "time": ["2026-08-03T00:00", "2026-08-04T00:00"],
-        "weighted": {"precipitation": [0.0, 0.0]},
-        "mean": {"precipitation": [0.0, 0.0]},
-        "median": {"precipitation": [0.0, 0.0]},
+        "weighted": {"precipitation": [0.25, 0.5]},
+        "mean": {"precipitation": [0.25, 0.5]},
+        "median": {"precipitation": [0.25, 0.5]},
     }
+    # "spike" daily 6.5 мм резко расходится с её hourly (0.5), а 1.0 согласован
     daily = {
-        "good": {"time": ["2026-08-03", "2026-08-04"],
-                 "precipitation_sum": [0.0, 0.0]},
-        "bad": {"time": ["2026-08-03", "2026-08-04"],
-                "precipitation_sum": [6.5, 0.0]},
+        "plausible": {"time": ["2026-08-03", "2026-08-04"],
+                      "precipitation_sum": [0.0, 0.0]},
+        "spike": {"time": ["2026-08-03", "2026-08-04"],
+                  "precipitation_sum": [6.5, 1.0]},
     }
     p = meteo.build_payload(
-        ["good", "bad"], {"good": "A", "bad": "B"},
+        ["plausible", "spike"], {"plausible": "A", "spike": "B"},
         hourly, daily, consensus, {}, "2026-08-03T12:00:00+03:00",
         meteo.LOCATIONS[0],
     )
-    assert p["daily"]["precipitation_sum"] == [0.0, 0.0]
-
-
-def test_daily_precip_masks_only_diverging_day():
-    hourly = {
-        "good": {"time": ["2026-08-03T00:00", "2026-08-04T00:00"],
-                 "data": {"precipitation": [0.0, 0.0]}},
-        "bad": {"time": ["2026-08-03T00:00", "2026-08-04T00:00"],
-                "data": {"precipitation": [0.0, 1.0]}},
-    }
-    consensus = {
-        "time": ["2026-08-03T00:00", "2026-08-04T00:00"],
-        "weighted": {"precipitation": [0.0, 0.5]},
-        "mean": {"precipitation": [0.0, 0.5]},
-        "median": {"precipitation": [0.0, 0.5]},
-    }
-    daily = {
-        "good": {"time": ["2026-08-03", "2026-08-04"],
-                 "precipitation_sum": [0.0, 0.0]},
-        "bad": {"time": ["2026-08-03", "2026-08-04"],
-                "precipitation_sum": [6.5, 1.0]},
-    }
-    p = meteo.build_payload(
-        ["good", "bad"], {"good": "A", "bad": "B"},
-        hourly, daily, consensus, {}, "2026-08-03T12:00:00+03:00",
-        meteo.LOCATIONS[0],
-    )
-    # день 0: 6.5 расходится с hourly sum 0.0 → маскируется, остаётся 0.0;
-    # день 1: 1.0 согласуется с hourly sum 1.0 → входит в среднее (0.0+1.0)/2 = 0.5
-    assert p["daily"]["precipitation_sum"] == [0.0, 0.5]
+    # день 0: 6.5 расходится с hourly sum 0.5 → в консенсус идёт почасовая 0.5
+    # день 1: 1.0 согласуется → остаётся 1.0
+    assert p["daily"]["precipitation_sum"] == [0.25, 0.5]

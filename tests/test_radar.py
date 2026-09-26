@@ -544,6 +544,12 @@ def test_precip_shows_hundredths_for_small_values():
     assert "fmtP(prSum)+' мм'" in tpl
 
 
+def test_daily_precip_shows_zero_below_tenth():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "'Осадки за день',(pr<0.1?0:fmtP(pr))+' мм'" in tpl
+
+
 def test_hourly_rain_fill_less_bright():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

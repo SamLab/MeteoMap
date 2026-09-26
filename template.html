@@ -386,7 +386,7 @@ function buildConditions(){
   const mx=D.daily.temperature_2m_max?.[0], mn=D.daily.temperature_2m_min?.[0], pr=D.daily.precipitation_sum?.[0];
   if(mx!==undefined&&mx!==null)list.push(['Макс сегодня',fmt(mx)+'°']);
   if(mn!==undefined&&mn!==null)list.push(['Мин сегодня',fmt(mn)+'°']);
-  if(pr!==undefined&&pr!==null)list.push(['Осадки за день',fmtP(pr)+' мм']);
+  if(pr!==undefined&&pr!==null)list.push(['Осадки за день',(pr<0.1?0:fmtP(pr))+' мм']);
   document.getElementById('conditions').innerHTML=list.map(([l,v])=>`<div class="cond"><div class="val">${v}</div><div class="lab">${l}</div></div>`).join('');
 }
 function buildWeatherNow(){

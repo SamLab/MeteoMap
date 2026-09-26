@@ -1277,11 +1277,12 @@ PRECIP_SUM_TOL_MM = 0.5
 
 
 def _precip_sum_by_model(daily_by_model, hourly_by_model):
-    """Ежедневные суммы осадков по моделям с маской расхождений.
+    """Ежедневные суммы осадков по моделям с коррекцией расхождений.
 
-    Ячейка (день) модели маскируется None, если её precipitation_sum
-    значительно расходится с суммой её own hourly precipitation за те же сутки
-    (защита от несогласованных ежедневных данных источников)."""
+    Ячейка (день) модели заменяется суммой её own hourly precipitation за те
+    же сутки, если ежедневная precipitation_sum значительно расходится с ней
+    (защита от несогласованных ежедневных данных источников; почасовые данные
+    той же модели считаются более согласованными с консенсусом)."""
     out = {}
     for code, m in daily_by_model.items():
         dsum = m.get("precipitation_sum")
@@ -1299,17 +1300,17 @@ def _precip_sum_by_model(daily_by_model, hourly_by_model):
             if p is None:
                 continue
             by_day[t[:10]] = by_day.get(t[:10], 0.0) + p
-        masked = []
+        fixed = []
         for day, val in zip(dtime, dsum):
             if val is None:
-                masked.append(None)
+                fixed.append(None)
                 continue
             hsum = by_day.get(day)
             if hsum is not None and abs(val - hsum) > PRECIP_SUM_TOL_MM:
-                masked.append(None)
+                fixed.append(hsum)
             else:
-                masked.append(val)
-        out[code] = masked
+                fixed.append(val)
+        out[code] = fixed
     return out
 
 
