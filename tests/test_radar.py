@@ -532,6 +532,7 @@ def test_warnings_empty_messages():
     assert "Заморозков в ближайшие дни не ожидается" in tpl
     assert "Гроз и града в ближайшие дни не ожидается" not in tpl
     assert "Порывистого ветра в ближайшие дни не ожидается" in tpl
+    assert "Возможный минимум " in tpl
 
 
 def test_warnings_precip_column_wider_than_wind():
