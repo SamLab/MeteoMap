@@ -534,7 +534,17 @@ def test_warnings_empty_messages():
     assert "Порывистого ветра в ближайшие дни не ожидается" in tpl
 
 
-def test_precip_shows_hundredths_for_small_values():
+def test_warnings_precip_column_wider_than_wind():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    import re
+    def flex_grow(cls):
+        m = re.search(r"\." + cls + r"\s*\{[^}]*?flex\s*:\s*([\d.]+)", tpl)
+        assert m, "no flex in .%s rule" % cls
+        return float(m.group(1))
+    assert flex_grow("wcol-precip") > flex_grow("wcol-wind")
+    assert "'wcol-precip')" in tpl
+    assert "wcol wcol-wind" in tpl
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const fmtP=v=>" in tpl
