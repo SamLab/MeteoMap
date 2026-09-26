@@ -542,7 +542,8 @@ def test_warnings_precip_column_wider_than_wind():
         m = re.search(r"\." + cls + r"\s*\{[^}]*?flex\s*:\s*([\d.]+)", tpl)
         assert m, "no flex in .%s rule" % cls
         return float(m.group(1))
-    assert flex_grow("wcol-precip") > flex_grow("wcol-wind")
+    assert flex_grow("wcol-precip") == 1.25
+    assert flex_grow("wcol-wind") == 0.8
     assert "'wcol-precip')" in tpl
     assert "wcol wcol-wind" in tpl
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
