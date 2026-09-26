@@ -245,6 +245,51 @@ def test_rain_interval_start_labels_day_when_not_today():
     assert "const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';" in tpl
 
 
+def test_tomorrow_23h_interval_with_00h_edge_keeps_day():
+    # Регрессия a4b15b3: интервал завтра 23ч—00ч (послезавтра 00ч) терял день,
+    # т.к. st был голым часом, а en при 00ч отбрасывал day. Должно быть «Завтра 23ч—00ч».
+    import re as _re
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        # сравнение дня rainHour идёт с текущим часом idx, НЕ с самим rainHour
+        assert "var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';" in w, fname
+        assert "var st=times[rainHour].toDateString()===times[rainHour].toDateString()" not in w, fname
+        # en при 00ч остаётся «00ч» (намеренно без дня), но старт держит день
+        assert "var en=(times[endIdx].getHours()===0)?'00ч':" in w or "var en=(times[endIdx].getHours()===0)?'\\u0030\\u0030\\u0447':" in w, fname
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';" in tpl
+    assert "const st=D.time[rainHour].slice(0,10)===D.time[rainHour].slice(0,10)" not in tpl
+
+    # поведенческая эмуляция: завтра 23ч → послезавтра 00ч
+    def pad2(n):
+        return str(n).zfill(2)
+    def rel_day(ts, cur):
+        from datetime import datetime
+        d0 = datetime.strptime(cur[:10], "%Y-%m-%d")
+        d1 = datetime.strptime(ts[:10], "%Y-%m-%d")
+        diff = (d1 - d0).days
+        if diff == 0:
+            return "Сегодня"
+        if diff == 1:
+            return "Завтра"
+        return ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"][d1.isoweekday() % 7] + " " + str(d1.day)
+    def emit(st_day, cur_day, sh, eh):
+        st = pad2(sh) + "ч" if st_day == cur_day else rel_day(st_day, cur_day) + " " + pad2(sh) + "ч"
+        en = "00ч" if eh == 0 else pad2(eh) + "ч"
+        return st + "—" + en
+    curated = {
+        "2026-09-26T23:00": ("2026-09-26", 23, 0, "23ч—00ч"),      # сегодня 23ч → завтра 00ч: день не нужен
+        "2026-09-27T23:00": ("2026-09-27", 23, 0, "Завтра 23ч—00ч"),  # завтра 23ч → послезавтра 00ч: день нужен
+        "2026-09-28T23:00": ("2026-09-28", 23, 0, "Пн 28 23ч—00ч"),   # послезавтра: день-дата нужен
+    }
+    for ts, (st_day, sh, eh, expected) in curated.items():
+        cur_day = "2026-09-26"
+        out = emit(st_day, cur_day, sh, eh)
+        assert out == expected, (ts, out, expected)
+
+
 def test_widget_interval_breaks_on_first_dry_hour():
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
