@@ -171,7 +171,8 @@ def test_radar_frame_is_lazy_loaded_on_tab_activation():
 def test_warnings_title_lists_nearest_confirmed():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "Предупреждения (ближайшее/подтвержденное)" in tpl
+    assert "Предупреждения (ближайшее/" in tpl
+    assert "подтвержденное</b>)" in tpl or "подтвержденное</strong>)" in tpl
     assert '<h3 class="tstab">Предупреждения</h3>' not in tpl
 
 
