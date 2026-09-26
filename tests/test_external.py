@@ -221,6 +221,47 @@ def test_fetch_wwo_requires_key(monkeypatch, capsys):
     assert "WWO_KEY" in capsys.readouterr().out
 
 
+def test_fetch_xw_converts_pressure_and_visibility(monkeypatch):
+    def fake_retry(url, params, timeout):
+        return {"response": [{"place": {"city": "X"},
+                              "periods": [{
+                                  "timestamp": 1785067200,
+                                  "tempC": 15.0,
+                                  "pressureMB": 1015.0,
+                                  "visibilityKM": 10.0,
+                                  "windSpeedMPS": 5.0,
+                                  "windGustMPS": 8.0,
+                                  "weatherPrimaryCoded": "CL:R",
+                              }]}]}
+
+    monkeypatch.setattr(meteo, "request_with_retry", fake_retry)
+    rows = meteo.fetch_xw(57.63, 39.87, api_key="secret")
+    assert rows[0]["pressure_msl"] == round(1015.0 * meteo.HPA_TO_MMHG, 1)
+    assert rows[0]["visibility"] == 10000
+    assert rows[0]["pressure_msl"] < 800
+
+
+def test_fetch_tomorrow_converts_pressure_and_visibility(monkeypatch):
+    def fake_retry(url, params, timeout):
+        return {"timelines": {"hourly": [{
+            "time": "2026-07-26T12:00:00Z",
+            "values": {
+                "temperature": 20.0,
+                "pressureSurfaceLevel": 1015.0,
+                "visibility": 10.0,
+                "windSpeed": 5.0,
+                "precipitationIntensity": 0.0,
+                "weatherCode": 1000,
+            },
+        }]}}
+
+    monkeypatch.setattr(meteo, "request_with_retry", fake_retry)
+    rows = meteo.fetch_tomorrow(57.63, 39.87, api_key="secret")
+    assert rows[0]["pressure_msl"] == round(1015.0 * meteo.HPA_TO_MMHG, 1)
+    assert rows[0]["visibility"] == 10000
+    assert rows[0]["pressure_msl"] < 800
+
+
 _ROW = {"utc": datetime(2026, 8, 24, 12, 0, tzinfo=timezone.utc),
         "temperature_2m": 20.0}
 

@@ -779,6 +779,7 @@ def fetch_xw(lat=None, lon=None, api_key=None):
             dt = datetime.fromtimestamp(ts, tz=timezone.utc)
             wind_mps = p.get("windSpeedMPS")
             gust_mps = p.get("windGustMPS")
+            mb = p.get("pressureMB")
             rows.append({
                 "utc": dt,
                 "temperature_2m": p.get("tempC"),
@@ -788,7 +789,8 @@ def fetch_xw(lat=None, lon=None, api_key=None):
                 "precipitation": p.get("precipMM"),
                 "precipitation_probability": p.get("pop"),
                 "weather_code": _xw_wmo(p.get("weatherPrimaryCoded")),
-                "pressure_msl": p.get("pressureMB"),
+                "pressure_msl": round(mb * HPA_TO_MMHG, 1)
+                if mb is not None else None,
                 "cloud_cover": p.get("sky"),
                 "wind_speed_10m": wind_mps,
                 "wind_direction_10m": p.get("windDirDEG"),
@@ -833,6 +835,7 @@ def fetch_tomorrow(lat=None, lon=None, api_key=None):
         dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
         v = entry.get("values", {})
         wmo = TW_WMO.get(v.get("weatherCode"))
+        mb = v.get("pressureSurfaceLevel")
         rows.append({
             "utc": dt,
             "temperature_2m": v.get("temperature"),
@@ -842,7 +845,8 @@ def fetch_tomorrow(lat=None, lon=None, api_key=None):
             "precipitation": v.get("precipitationIntensity"),
             "precipitation_probability": v.get("precipitationProbability"),
             "weather_code": wmo,
-            "pressure_msl": v.get("pressureSurfaceLevel"),
+            "pressure_msl": round(mb * HPA_TO_MMHG, 1)
+            if mb is not None else None,
             "cloud_cover": v.get("cloudCover"),
             "wind_speed_10m": v.get("windSpeed"),
             "wind_direction_10m": v.get("windDirection"),
