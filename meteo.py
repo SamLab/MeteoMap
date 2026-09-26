@@ -1043,7 +1043,6 @@ def weather_code_consensus(codes):
     return max(top, key=lambda c: (WEATHER_PRIORITY.get(c, 0), c))
 
 
-_EXTERNAL_LOW = {OWM_CODE, VC_CODE, MB_CODE, WWO_CODE, TW_CODE, TT_CODE}
 _EXTERNAL_MED = {XW_CODE}
 
 def make_weights(mae_by_model, variable):
@@ -1352,10 +1351,21 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
             daily_consensus[v] = list(cols[0])
         else:
             length = max(len(c) for c in cols)
-            daily_consensus[v] = [
-                _floor_precip(mean([c[i] for c in cols if i < len(c)]))
-                for i in range(length)
-            ]
+            if v == "wind_direction_10m_dominant":
+                daily_consensus[v] = [
+                    circular_mean([c[i] for c in cols if i < len(c)])
+                    for i in range(length)
+                ]
+            elif v == "precipitation_sum":
+                daily_consensus[v] = [
+                    _floor_precip(mean([c[i] for c in cols if i < len(c)]))
+                    for i in range(length)
+                ]
+            else:
+                daily_consensus[v] = [
+                    mean([c[i] for c in cols if i < len(c)])
+                    for i in range(length)
+                ]
     daily_time = next(
         (m.get("time") for m in daily_by_model.values() if m.get("time")),
         None,
@@ -1387,7 +1397,9 @@ def render(template, payload):
          for l in LOCATIONS], ensure_ascii=False)
     html = template.replace("__CITIES__", cities)
     html = html.replace(
-        "__DATA__", json.dumps(payload, ensure_ascii=False)
+        "__DATA__", json.dumps(payload, ensure_ascii=False).replace(
+            "</", "<\\/"
+        )
     )
     html = html.replace("__GENERATED_AT__", payload["generated_at"])
     html = html.replace("__CITY__", payload["location"]["name"])
@@ -1544,7 +1556,13 @@ def main():
     with open(os.path.join(here, "data", "version.json"), "w",
               encoding="utf-8") as f:
         json.dump({"v": generated_at}, f)
-    write_index(render(template, payload_by_city[LOCATIONS[0]["slug"]]))
+    main_payload = payload_by_city.get(LOCATIONS[0]["slug"])
+    if main_payload is None:
+        raise SystemExit(
+            f"no data for main city {LOCATIONS[0]['slug']}; "
+            f"available: {sorted(payload_by_city)}"
+        )
+    write_index(render(template, main_payload))
     print(f"[ok] index.html + {len(payload_by_city)} city json written")
 
 

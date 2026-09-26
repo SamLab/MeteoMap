@@ -10,6 +10,7 @@ def test_model_order():
         "dwd_icon_global",
         "ukmo_global_deterministic_10km", "cma_grapes_global",
         "meteofrance_arpege_world025",
+        "ecmwf_aifs025",
     ]
     idx = [codes.index(c) for c in wanted]
     assert idx == sorted(idx)

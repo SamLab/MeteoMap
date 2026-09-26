@@ -132,8 +132,10 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
   function clearStatus(){elStatus.classList.remove('show');}
   function fmtTime(ts){
     var d=new Date(ts*1000);
+    // кадры rainradar.ru в UTC, подпись показываем в МСК (UTC+3)
+    var msk=new Date(d.getTime()+3*3600*1000);
     var p=function(n){return (n<10?'0':'')+n;};
-    return p(d.getDate())+'.'+p(d.getMonth()+1)+' '+p(d.getHours())+':'+p(d.getMinutes());
+    return p(msk.getUTCDate())+'.'+p(msk.getUTCMonth()+1)+' '+p(msk.getUTCHours())+':'+p(msk.getUTCMinutes());
   }
   function getDataZoom(z){return z>7?5:z>5?4:3;}
   function getScale(dz,z){return Math.pow(2,dz-z);}
@@ -282,7 +284,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
             var list=f[1][g]||[];
             for(var i2=0;i2<list.length;i2++)sets[g][list[i2][0]+'|'+list[i2][1]]=1;
           }
-          return {time:f[0],sets:sets,future:false};
+          return {time:f[0],sets:sets};
         }).sort(function(a,b){return a.time-b.time;});
         if(!frames.length)throw new Error('нет кадров');
         try{sessionStorage.setItem('rr_manifest',JSON.stringify(d));}catch(e){}
@@ -303,7 +305,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
               var list=f[1][g]||[];
               for(var i2=0;i2<list.length;i2++)sets[g][list[i2][0]+'|'+list[i2][1]]=1;
             }
-            return {time:f[0],sets:sets,future:false};
+            return {time:f[0],sets:sets};
           }).sort(function(a,b){return a.time-b.time;});
           if(frames.length){
             if(overlay){map.removeLayer(overlay);overlay=null;}

@@ -305,11 +305,6 @@ const WCODE={
  85:['Снегопад','🌨️'],86:['Снегопад','🌨️'],
  95:['Гроза','⚡'],96:['Гроза с градом','⚡'],99:['Гроза с градом','⚡']};
 const wcode=c=>WCODE[c]||['—',''];
-const rainIntensity=c=>{
-  const weak=[51,56,57,61,66,67,71,77,80,85];
-  const strong=[55,65,75,82,86];
-  return weak.includes(c)?'слабый':(strong.includes(c)?'сильный':([53,63,73,81].includes(c)?'средний':null));
-};
 // слово интенсивности добавляется только нейтральным типам (без степени в названии):
 // Морось/Дождь/Снег/Ливень; у «Небольшой…»/«Сильный…» степень уже в названии — дубль не нужен
 const degreeText=(c,wtext)=>{
@@ -368,7 +363,6 @@ function buildVarSel(id,onSel,vars){
 }
 
 // conditions
-function nowMsk(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Moscow',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date());}
 function cityTz(){return D&&D.location&&D.location.tz?D.location.tz:'Europe/Moscow';}
 function cityClock(){return new Intl.DateTimeFormat('en-CA',{timeZone:cityTz(),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(new Date()).replace(', ','T');}
 function cityToday(){return curIdx>=0&&D.time&&D.time[curIdx]?D.time[curIdx].slice(0,10):cityClock().slice(0,10);}
@@ -518,21 +512,17 @@ function buildWeatherHours(){
     if(mX===-Infinity)mX=0;
     if(ccCnt===Infinity)ccCnt=0;
     if(ccX===-Infinity)ccX=0;
-    let jPeak=rainHour,peakPr=-1;
-    for(let j=rainHour;j<=jLast;j++){
-      if(!inWin(j))continue;
-      const p=w.precipitation?.[j];
-      if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
-    }
     const jStartCode=w.weather_code?.[ws];
     const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';
-    const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';
+    const stDay=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?'':relDay(D.time[rainHour])+' ';
+    const stHour=D.time[rainHour].slice(11,13)+'ч';
+    const st=stDay+stHour;
     const enIdx=Math.min(jLast+1,D.time.length-1);
     const enTs=D.time[enIdx];
     const enDay=enTs.slice(0,10);
     const enTime=enTs.slice(11,13)+'ч';
     const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);
-    const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);
+    const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     const mcLbl='по '+rcLbl(mCnt,mX);
     const ccLbl='по '+rcLbl(ccCnt,ccX);
@@ -570,7 +560,7 @@ function buildWeatherHours(){
   let hb='';
   if(cc.length>=2)hb+='<polygon points="'+cc.join(' ')+' 100,0 0,0" class="d10ccf"/>';
   if(pr.length>=2)hb+='<polygon points="'+pr.join(' ')+' 100,100 0,100" class="d10prf"/>';
-  if(hb)hsel.insertAdjacentHTML('afterbegin','<svg class="hbg" style="width:'+(hN*65)+'px" viewBox="0 0 100 100" preserveAspectRatio="none">'+hb+'</svg>');
+  if(hb)hsel.insertAdjacentHTML('afterbegin','<svg class="hbg" style="width:'+(hN*64)+'px" viewBox="0 0 100 100" preserveAspectRatio="none">'+hb+'</svg>');
 }
 function buildWeather16Title(){
   const dt=D.daily_time||[];
@@ -900,8 +890,8 @@ function buildWarnings(){
   const R=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   const GUST_MIN=15;
   const findSrc=(list,pm,mn)=>{for(let i=from;i<ts.length;i++){if(sourceCountAt(i,list,pm)>=mn)return i;}return -1;};
-  // �ᨬ���� �� ���: ��还� ��ᮩ��� - ���������� �������� (D.weighted.weather_code)
-  // ��� ������ (��᭣��/���) - ���������� ��� ��� 2+ �ᢥ�� (W �ᯭ� SAPCE/CIN)
+  // ближайший по моделям: первый час с >= mn моделями, дающими дождь (sourceCountAt)
+  // подтверждённый (консенсус/модель): consensus-условие для R, иначе 2+ модели
   const rainCodesLocal=[51,53,55,56,57,61,63,65,66,67,80,81,82];
   const conAt=i=>{const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return (c!=null&&rainCodesLocal.includes(Number(c)))||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);};
   const isConfirmed=(i,list,pm)=>list===R?conAt(i):sourceCountAt(i,list,pm)>=2;
@@ -1187,7 +1177,22 @@ function buildMaeTables(){
   const vnames2=['temperature_2m','precipitation','wind_speed_10m'];
   const items=codes.filter(c=>ver[c]).map(c=>({c,avg:meanOf(ver[c],vnames2)})).filter(x=>typeof x.avg==='number');
   items.sort((a,b)=>a.avg-b.avg);
-  new Chart(document.getElementById('maeChart').getContext('2d'),{type:'bar',
+  const maeEl=document.getElementById('maeChart');
+  if(!items.length){
+    const mel=Chart.getChart(maeEl);
+    if(mel)mel.destroy();
+    return;
+  }
+  const labels=items.map(x=>names[x.c]),data=items.map(x=>x.avg);
+  const exists=Chart.getChart(maeEl);
+  if(exists){
+    exists.data.labels=labels;
+    exists.data.datasets[0].data=data;
+    exists.data.datasets[0].backgroundColor=PALETTE.slice(0,items.length);
+    exists.update();
+    return;
+  }
+  new Chart(maeEl.getContext('2d'),{type:'bar',
     data:{labels:items.map(x=>names[x.c]),datasets:[{label:'Средний MAE за 7 дней',data:items.map(x=>x.avg),backgroundColor:PALETTE.slice(0,items.length)}]},
     options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'MAE: '+(c.parsed.y===null?'—':c.parsed.y.toFixed(2))}}},
       scales:{x:{ticks:{color:'#5c6579'}},y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'}}}}});
@@ -1212,11 +1217,15 @@ function renderAll(){
   buildVarSel('varsel',setVar);
   document.getElementById('varsel2').innerHTML='';
   buildVarSel('varsel2',v=>{cmpVar=v;buildCmpTable();},CHART_VARS.concat(['weather_code']));
-  if(mainChart)mainChart.destroy();
-  makeMainChart();
+  if(mainChart){
+    mainChart.data.labels=D.time.map(fmtTime);
+    const hw=document.getElementById('mainChart').parentElement;
+    if(hw)hw.style.width=Math.max(D.time.length*10,hw.clientWidth)+'px';
+    setVar(curVar);
+  }else{
+    makeMainChart();
+  }
   buildCmpTable();
-  const oldMae=Chart.getChart(document.getElementById('maeChart'));
-  if(oldMae)oldMae.destroy();
   buildMaeTables();
   const cs=document.getElementById('citysel');
   if(cs)cs.childNodes[0].textContent=D.location.name;

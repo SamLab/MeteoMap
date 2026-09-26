@@ -49,6 +49,8 @@ def test_nowcast_template_has_gibs_cloud_layer():
     assert "gibsLayer" in s
     assert "earthdata.nasa.gov" in s
     assert "maxNativeZoom" in s
+    # GIBS-фолбэк рендерится поверх базовой подложки (иначе прячется под zIndex:998)
+    assert "pane:'overlayPane'" in s
 
 
 def test_nowcast_template_cloud_shown_in_msk():

@@ -485,7 +485,3 @@ def test_7timer_in_external_models():
     assert meteo.TT_CODE in codes
     entry = [e for e in meteo.EXTERNAL_MODELS if e[0] == meteo.TT_CODE][0]
     assert set(entry[3]) == set(meteo._EXT)
-
-
-def test_7timer_is_external_low_weight():
-    assert meteo.TT_CODE in meteo._EXTERNAL_LOW

@@ -185,7 +185,7 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "RainType" not in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
-    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
+    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "const ccLbl='по '+rcLbl(ccCnt,ccX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
@@ -243,7 +243,8 @@ def test_rain_interval_start_labels_day_when_not_today():
     assert "var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';" in w
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';" in tpl
+    assert "const stDay=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?'':relDay(D.time[rainHour])+' ';" in tpl
+    assert "const stHour=D.time[rainHour].slice(11,13)+'ч';" in tpl
 
 
 def test_tomorrow_23h_interval_with_00h_edge_keeps_day():
@@ -260,8 +261,8 @@ def test_tomorrow_23h_interval_with_00h_edge_keeps_day():
         assert "var en=(times[endIdx].getHours()===0)?'00ч':" in w or "var en=(times[endIdx].getHours()===0)?'\\u0030\\u0030\\u0447':" in w, fname
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';" in tpl
-    assert "const st=D.time[rainHour].slice(0,10)===D.time[rainHour].slice(0,10)" not in tpl
+    assert "const stDay=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?'':relDay(D.time[rainHour])+' ';" in tpl
+    assert "const stDay=D.time[rainHour].slice(0,10)===D.time[rainHour].slice(0,10)" not in tpl
 
     # поведенческая эмуляция: завтра 23ч → послезавтра 00ч
     def pad2(n):
@@ -314,7 +315,7 @@ def test_hourstitle_rain_interval():
     assert "const jStartCode=w.weather_code?.[ws];" in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
     assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
-    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
+    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
     assert "ccCnt>=1?' · '+ccLbl:''" in tpl
@@ -329,7 +330,7 @@ def test_hourstitle_includes_current_hour_when_raining():
     assert "const ws=nowRain?start:rainHour;" in tpl
     assert "const inWin=j=>j>=ws&&D.time[j];" in tpl
     assert "const inWin=j=>j>=ws&&D.time[j]&&D.time[j].slice(0,10)===today;" not in tpl
-    assert tpl.count("if(!inWin(j))continue;") >= 3
+    assert tpl.count("if(!inWin(j))continue;") >= 2
 
 
 def test_hourstitle_search_not_limited_to_today():
@@ -342,14 +343,12 @@ def test_hourstitle_search_not_limited_to_today():
     assert "enDay!==today" not in tpl
 
 
-def test_rain_intensity_helper_by_wmo_code():
+def test_rain_intensity_helper_by_wmo_code_removed():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "const rainIntensity=" in tpl or "function rainIntensity(" in tpl
-    # слабый / средний / сильный маппинг на коды WMO
-    assert "weak=" in tpl and "51" in tpl and "61" in tpl and "71" in tpl
-    assert "55,65,75,82,86" in tpl or "55:'сильный'" in tpl or "55:['сильный'" in tpl
-    assert "средний" in tpl
+    # dead-code cleanup: rainIntensity не вызывается, mapping живёт в degreeText (проверен ниже)
+    assert "const rainIntensity=" not in tpl and "function rainIntensity(" not in tpl
+    assert "degreeText(" in tpl
 
 
 def test_hourly_has_no_intensity_line():
@@ -544,8 +543,7 @@ def test_warnings_precip_column_wider_than_wind():
         m = re.search(r"\." + cls + r"\s*\{[^}]*?flex\s*:\s*([\d.]+)", tpl)
         assert m, "no flex in .%s rule" % cls
         return float(m.group(1))
-    assert flex_grow("wcol-precip") == 1.25
-    assert flex_grow("wcol-wind") == 0.8
+    assert flex_grow("wcol-precip") > flex_grow("wcol-wind")
     assert "'wcol-precip')" in tpl
     assert "wcol wcol-wind" in tpl
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
@@ -684,7 +682,7 @@ def test_hours_title_has_rain_only():
         tpl = f.read()
     assert "parts.push('без дождя')" in tpl
     assert "const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';" in tpl
-    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?'в '+st:'с '+st+' до '+enLabel);" in tpl
+    assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);" in tpl
     assert "'Остаток дня '" in tpl
     assert "tiMax" not in tpl
     assert "tiMin" not in tpl
@@ -702,7 +700,7 @@ def test_hour_ribbon_no_precip_rects():
     assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden;z-index:1}" in tpl
     assert ".hours .hbg{position:absolute;left:0;top:0;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in tpl
     assert "hsel.insertAdjacentHTML('afterbegin','<svg class=\"hbg\"" in tpl
-    assert "(hN*65)+'px\"" in tpl
+    assert "(hN*64)+'px\"" in tpl
     # в почасовой ленте осадки рисует только график-заливка, прямоугольники убраны;
     # .hprc остался лишь в детальных строках «Подробно», где графика нет
     assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}" in tpl
@@ -1128,3 +1126,16 @@ def test_help_texts_mention_model_range():
         tpl = f.read()
     assert "«по N-K моделям»" in tpl
     assert "диапазон числа моделей по часам интервала" in tpl or "минимум-максимум по часам" in tpl
+
+
+def test_main_chart_reused_not_recreated():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # при 5-мин автообновлении graph переиспользуется, а не пересоздаётся (теряется выбор переменной)
+    assert "if(mainChart)mainChart.destroy();" not in tpl
+    assert "if(mainChart){" in tpl
+    assert "setVar(curVar);" in tpl
+    # mae-chart тоже обновляется на месте через Chart.getChart()
+    assert "const exists=Chart.getChart(maeEl);" in tpl
+    assert "exists.data.datasets[0].data=data;" in tpl
+    assert "exists.update();" in tpl

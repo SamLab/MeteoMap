@@ -184,7 +184,7 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
       gibsDate=ds;
       elSatTime.textContent=mskLabel(ds);
       sat24Layer=L.tileLayer(GIBS_BASE+GIBS_PRODUCT+'/default/'+ds+'/GoogleMapsCompatible_Level9/9/{y}/{x}.jpg',{
-        minZoom:3,maxZoom:10,minNativeZoom:9,maxNativeZoom:9,zIndex:900,opacity:0.9,
+        minZoom:3,maxZoom:10,minNativeZoom:9,maxNativeZoom:9,pane:'overlayPane',zIndex:900,opacity:0.9,
         attribution:'Спутник: <a href="https://earthdata.nasa.gov/">NASA GIBS</a>'
       });
       map.addLayer(sat24Layer);

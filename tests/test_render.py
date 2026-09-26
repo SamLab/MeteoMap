@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 import meteo
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -75,6 +77,20 @@ def test_render_replaces_placeholders_and_keeps_attribution():
     assert "</script>" not in html.replace(
         "<script id='data' type='application/json'>", ""
     ).split("</script>")[0]
+
+
+def test_render_escapes_closing_script_in_payload():
+    payload = _payload()
+    # модель с именем/данными, содержащими закрывающий тег, не должна рвать страницу
+    payload["model_names"]["a"] = "Model </scr" + "ipt> X"
+    payload["location"]["name"] = "Город </scr" + "ipt>"
+    template = "<script id='data' type='application/json'>__DATA__</script>"
+    html = meteo.render(template, payload)
+    body = html.replace("<script id='data' type='application/json'>", "").split(
+        "</script>")[0]
+    assert "</scr" + "ipt>" not in body
+    assert "<\\/scr" + "ipt>" in body or "<\\u003c/scr" + "ipt>" in body
+    assert "Model </scr" + "ipt>" not in body
 
 
 def test_render_attribution_link(tmp_path):
@@ -202,3 +218,43 @@ def test_daily_precip_uses_hourly_when_daily_diverges():
     # день 1: 1.0 согласуется → остаётся 1.0
     # консенсус осадков округляется вниз до десятых: mean(0.5, 0.0)=0.25 → 0.2
     assert p["daily"]["precipitation_sum"] == [0.2, 0.5]
+
+
+def test_daily_nonprecip_keeps_precision():
+    hourly = {"a": {"time": ["h0"], "data": {"temperature_2m": [1.0]}}}
+    consensus = {
+        "time": ["h0"],
+        "weighted": {"temperature_2m": [1.0]},
+        "mean": {"temperature_2m": [1.0]},
+        "median": {"temperature_2m": [1.0]},
+    }
+    daily = {
+        "a": {"time": ["d0"], "cloud_cover_mean": [45.6]},
+        "b": {"time": ["d0"], "cloud_cover_mean": [52.4]},
+    }
+    p = meteo.build_payload(
+        ["a", "b"], {"a": "A", "b": "B"}, hourly, daily, consensus, {},
+        "2026-08-03T12:00:00+03:00", meteo.LOCATIONS[0],
+    )
+    # не-осадочные переменные не округляются вниз до десятых: mean=49.0 → 49.0
+    assert p["daily"]["cloud_cover_mean"] == pytest.approx([49.0])
+
+
+def test_daily_wind_direction_uses_circular_mean():
+    hourly = {"a": {"time": ["h0"], "data": {"temperature_2m": [1.0]}}}
+    consensus = {
+        "time": ["h0"],
+        "weighted": {"temperature_2m": [1.0]},
+        "mean": {"temperature_2m": [1.0]},
+        "median": {"temperature_2m": [1.0]},
+    }
+    daily = {
+        "a": {"time": ["d0"], "wind_direction_10m_dominant": [350.0]},
+        "b": {"time": ["d0"], "wind_direction_10m_dominant": [10.0]},
+    }
+    p = meteo.build_payload(
+        ["a", "b"], {"a": "A", "b": "B"}, hourly, daily, consensus, {},
+        "2026-08-03T12:00:00+03:00", meteo.LOCATIONS[0],
+    )
+    # линейное среднее дало бы 180°, круговое — ~0°
+    assert p["daily"]["wind_direction_10m_dominant"] == pytest.approx([0.0], abs=0.1)
