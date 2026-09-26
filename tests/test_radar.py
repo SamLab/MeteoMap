@@ -233,6 +233,18 @@ def test_widget_episode_crosses_midnight_with_rel_day():
     assert "times[endIdx].toDateString()===times[rainHour].toDateString()" in w
 
 
+def test_rain_interval_start_labels_day_when_not_today():
+    with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
+        m = f.read()
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+    assert "var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';" in m
+    assert "var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';" in w
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';" in tpl
+
+
 def test_widget_interval_breaks_on_first_dry_hour():
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:

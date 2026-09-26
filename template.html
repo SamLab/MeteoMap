@@ -524,7 +524,7 @@ function buildWeatherHours(){
     }
     const jStartCode=w.weather_code?.[ws];
     const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';
-    const st=D.time[rainHour].slice(11,13)+'ч';
+    const st=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?D.time[rainHour].slice(11,13)+'ч':relDay(D.time[rainHour])+' '+D.time[rainHour].slice(11,13)+'ч';
     const enIdx=Math.min(jLast+1,D.time.length-1);
     const enTs=D.time[enIdx];
     const enDay=enTs.slice(0,10);
