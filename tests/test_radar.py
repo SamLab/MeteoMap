@@ -1182,6 +1182,11 @@ def test_radar_template_knows_nothing_about_sensors():
     )
 
 
+def _lf(blob):
+    """Артефакт с переводами строк, приведёнными к LF."""
+    return blob.replace(b"\r\n", b"\n")
+
+
 def _same_artifact(fresh, committed):
     """Побайтовое сравнение артефакта, не зависящее от перевода строк.
 
@@ -1191,7 +1196,37 @@ def _same_artifact(fresh, committed):
     нормализует переводы строк вместо того, чтобы вводить .gitattributes,
     который изменил бы поведение репозитория целиком.
     """
-    return fresh.replace(b"\r\n", b"\n") == committed.replace(b"\r\n", b"\n")
+    return _lf(fresh) == _lf(committed)
+
+
+def _drift(fresh, committed):
+    """Диагноз расхождения: где именно разошлись два артефакта.
+
+    Длины файлов при настоящем дрейфе почти всегда равны — правится текст той же
+    длины, а не добавляется блок, — поэтому «собрано N байт против M байт» в
+    сообщении падения не говорит ничего: оба числа совпадают и выглядят как
+    «всё хорошо». Поэтому показываем позицию первого различия, оба байта,
+    строку целиком и длины уже после нормализации переводов строк (сырые длины
+    зависят от core.autocrlf машины и в диагностике только мешают).
+    """
+    a, b = _lf(fresh), _lf(committed)
+    limit = min(len(a), len(b))
+    pos = next((i for i in range(limit) if a[i] != b[i]), limit)
+    if pos == limit:
+        shorter = "сборка" if len(a) < len(b) else "закоммиченный артефакт"
+        return ("различие только в длине: %s короче, %d против %d байт после "
+                "нормализации переводов строк, общий префикс %d байт"
+                % (shorter, len(a), len(b), pos))
+    line_no = a.count(b"\n", 0, pos) + 1
+    col_no = pos - (a.rfind(b"\n", 0, pos) + 1) + 1
+    line = a.split(b"\n")[line_no - 1].strip().decode("utf-8", "replace")
+    return ("первое различие — смещение %d, строка %d, столбец %d: в сборке %r, "
+            "в репозитории %r; строка целиком: %s; длины после нормализации "
+            "переводов строк %d и %d"
+            % (pos, line_no, col_no,
+               a[pos:pos + 1].decode("utf-8", "replace"),
+               b[pos:pos + 1].decode("utf-8", "replace"),
+               line[:200], len(a), len(b)))
 
 
 def test_radar_html_is_in_lockstep_with_template(tmp_path):
@@ -1204,10 +1239,8 @@ def test_radar_html_is_in_lockstep_with_template(tmp_path):
     with open(os.path.join(HERE, "radar.html"), "rb") as f:
         committed = f.read()
     assert _same_artifact(fresh, committed), (
-        "radar.html разошёлся с radar_template.html (%d байт собрано против %d в "
-        "репозитории, переводы строк нормализованы). Пересобери и закоммить "
-        "артефакт: python tools/build_radar.py radar"
-        % (len(fresh), len(committed))
+        "radar.html разошёлся с radar_template.html: %s. Пересобери и закоммить "
+        "артефакт: python tools/build_radar.py radar" % _drift(fresh, committed)
     )
 
 
@@ -1224,10 +1257,12 @@ def test_lockstep_survives_a_checkout_with_other_autocrlf(tmp_path):
         committed = f.read()
     checkout = committed.replace(b"\r\n", b"\n")
     assert _same_artifact(fresh, checkout), (
-        "сравнение с артефактом зависит от core.autocrlf: собранный файл (%d байт, "
-        "переводы строк как на этой машине) отличается от закоммиченного на том же "
-        "checkout с autocrlf=false (%d байт). Переводы строк в сравнении должны "
-        "нормализоваться." % (len(fresh), len(checkout))
+        "эмуляция checkout с autocrlf=false не сошлась: сборка и LF-версия "
+        "артефакта различаются. Причина не обязательно перевод строк: если "
+        "radar.html разошёлся с radar_template.html по-настоящему, тест упадёт "
+        "здесь же, и нижеследующий диагноз покажет это как обычное различие "
+        "байтов. %s. Если дело в артефакте — пересобери и закоммить его: "
+        "python tools/build_radar.py radar" % _drift(fresh, checkout)
     )
 
 

@@ -17,6 +17,12 @@ venv/
 # Generated page
 index.html
 
+# Ручная копия сгенерированного index.html: использовалась как эталон рендера,
+# но тесты рендера давно берут tempfile.mkdtemp(), а grep по репозиторию не
+# находит ни одной ссылки. Правило точным именем, а не *.html — иначе под него
+# попадёт radar.html, который как раз ЗАКОММИЧЕН и проверяется на lockstep.
+_test_index.html
+
 # Station snapshot: local diagnostic only, no page reads it.
 # Narrow on purpose — sensors_history.json must stay committable.
 sensors.json

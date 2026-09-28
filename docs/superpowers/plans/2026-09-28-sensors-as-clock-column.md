@@ -669,7 +669,7 @@ def test_sensor_model_fills_past_hours_and_nulls_the_rest(tmp_path):
             "2026-09-28T12:00"]
     model = load_sensor_model(grid, str(p))
     assert model["time"] == grid
-    assert model["data"]["temperature_2m"] == [None, 16.0, None, None]
+    assert model["data"]["temperature_2m"] == [None, 15.5, None, None]
     assert model["data"]["pressure_msl"] == [None, None, 760.0, None]
     assert model["data"]["relative_humidity_2m"] == [None, None, None, None]
 
@@ -706,8 +706,9 @@ def test_sensor_source_flows_through_assemble_consensus():
     out = meteo.assemble_consensus(
         hb, ["temperature_2m"], weights, min_sources=2
     )
-    # Прошедший час: датчик 20 уравновешивает пару моделей, сумма весов 1.5.
-    assert abs(out["weighted"]["temperature_2m"][0] - 13.3333333) < 1e-4
+    # Прошедший час: a 0.0, b 10.0, датчик 20.0, все три веса по 0.5,
+    # сумма весов 1.5, ответ (0·0.5 + 10·0.5 + 20·0.5) / 1.5 = 15 / 1.5 = 10.0.
+    assert abs(out["weighted"]["temperature_2m"][0] - 10.0) < 1e-4
     # Будущий час: у датчика None, consensus его отбросил, остались две модели.
     assert abs(out["weighted"]["temperature_2m"][1] - 5.0) < 1e-6
     assert out["models"]["sensors"]["temperature_2m"] == [20.0, None]
