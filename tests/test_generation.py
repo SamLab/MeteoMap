@@ -138,3 +138,180 @@ def test_generation_files_written():
         import shutil
         shutil.rmtree(outdir, ignore_errors=True)
         os.unlink(path)
+
+
+def _build_city_body():
+    with open(os.path.join(HERE, "meteo.py"), encoding="utf-8") as f:
+        src = f.read()
+    return src.split("def build_city_payload(")[1]
+
+
+def test_build_city_payload_injects_sensors_before_consensus():
+    body = _build_city_body()
+    inject = body.index("load_sensor_model(grid)")
+    assert inject < body.index("assemble_consensus("), (
+        "датчик обязан попасть в hourly_by_model до консенсуса, "
+        "иначе он не получит вес и не попадёт в models"
+    )
+    assert 'if loc["slug"] in SENSOR_LOCATIONS:' in body
+
+
+def test_sensors_not_added_to_verification():
+    body = _build_city_body()
+    verify = body.split("verification")[1]
+    assert "SENSOR_CODE" not in verify
+
+
+# --- сквозной тест: датчик реально доезжает до weighted_consensus ---
+
+
+def _sensor_history_file(tmp_path, grid, value):
+    import json
+    hist = {"hours": {grid[1]: {
+        "samples": 2,
+        "stations": {"penaty": {"temperature_2m": [value]},
+                     "bereg": {"temperature_2m": [value]}},
+    }}}
+    p = tmp_path / "sensors_history.json"
+    p.write_text(json.dumps(hist), encoding="utf-8")
+    return str(p)
+
+
+def _stub_verification(monkeypatch):
+    mae = {code: {v: 1.0 for v in meteo.VERIFICATION_VARIABLES}
+           for code, _n, _e in meteo.FORECAST_MODELS}
+    monkeypatch.setattr(
+        meteo, "verify_windows",
+        lambda *a, **k: {"7d": mae, "30d": mae},
+    )
+
+
+def _raw_everywhere(grid, temps):
+    """build_city_payload берёт ответы по индексу LOCATIONS, а не по слагу.
+
+    Две модели нужно, чтобы консенсус вообще собрался: у него
+    min_sources=2. Одна модель плюс датчик — тоже два источника, но только
+    в тестах, где датчик как раз и должен появиться.
+    """
+    resp = _fake_resp(grid, temp_arr=temps)
+    return {
+        "ecmwf_ifs025": [resp for _ in LOCATIONS],
+        "ncep_gfs_seamless": [resp for _ in LOCATIONS],
+    }
+
+
+def test_sensor_weight_2x_reaches_weighted_consensus_end_to_end(monkeypatch, tmp_path):
+    """Вес датчика 2.0 доезжает до weighted_consensus через настоящие
+    build_city_payload -> apply_sensor_weights -> assemble_consensus.
+
+    Две модели дают 0.0, у каждой make_weights даёт вес 0.5, датчик 20.0
+    получает 2.0*0.5 = 1.0. Сумма весов 2.0, ответ 20.0/2.0 = 10.0.
+    При 1.0*среднее датчик получил бы 0.5 и ответ 20.0/1.5 = 13.33 —
+    расхождение в 3.33 градуса, тест не проходит вхолостую.
+    """
+    grid = _hour_grid(datetime(2026, 9, 28, 9, 0), 3)
+    monkeypatch.setattr(meteo, "SENSOR_HISTORY",
+                        _sensor_history_file(tmp_path, grid, 20.0))
+    _stub_verification(monkeypatch)
+
+    loc = next(l for l in LOCATIONS if l["slug"] == "yaroslavl")
+    p = meteo.build_city_payload(
+        loc, _raw_everywhere(grid, [0.0, 0.0, 0.0]), {},
+        "2026-09-28T12:00:00+03:00", False,
+    )
+
+    assert meteo.SENSOR_CODE in p["model_codes"]
+    assert p["model_names"][meteo.SENSOR_CODE] == meteo.SENSOR_NAME
+    assert p["models"][meteo.SENSOR_CODE]["temperature_2m"] == [None, 20.0, None]
+    got = p["weighted"]["temperature_2m"][1]
+    assert abs(got - 10.0) < 1e-6, got
+    # при 1.0 вместо 2.0 получилось бы 13.33
+    assert abs(got - 20.0 / 1.5) > 1.0
+    # датчик не выдумывает остальные часы: моделей две, датчика там нет
+    assert p["weighted"]["temperature_2m"][0] == 0.0
+    assert p["weighted"]["temperature_2m"][2] == 0.0
+    # и умышленно не участвует в верификации
+    assert meteo.SENSOR_CODE not in p["verification"]["7d"]
+    assert meteo.SENSOR_CODE not in p["verification"]["30d"]
+
+
+def test_sensor_absent_for_other_cities_end_to_end(monkeypatch, tmp_path):
+    grid = _hour_grid(datetime(2026, 9, 28, 9, 0), 3)
+    monkeypatch.setattr(meteo, "SENSOR_HISTORY",
+                        _sensor_history_file(tmp_path, grid, 20.0))
+    _stub_verification(monkeypatch)
+
+    for slug in ("batumi", "rybinsk", "moscow"):
+        loc = next(l for l in LOCATIONS if l["slug"] == slug)
+        p = meteo.build_city_payload(
+            loc, _raw_everywhere(grid, [1.0, 1.0, 1.0]), {},
+            "2026-09-28T12:00:00+03:00", False,
+        )
+        assert meteo.SENSOR_CODE not in p["model_codes"], slug
+        assert meteo.SENSOR_CODE not in p["models"], slug
+
+
+def test_build_city_payload_survives_corrupt_sensor_history(monkeypatch, tmp_path):
+    """Битая sensors_history.json не должна ронять сборку города."""
+    grid = _hour_grid(datetime(2026, 9, 28, 9, 0), 3)
+    p_history = tmp_path / "sensors_history.json"
+    p_history.write_text("{oops", encoding="utf-8")
+    monkeypatch.setattr(meteo, "SENSOR_HISTORY", str(p_history))
+    _stub_verification(monkeypatch)
+
+    loc = next(l for l in LOCATIONS if l["slug"] == "yaroslavl")
+    p = meteo.build_city_payload(
+        loc, _raw_everywhere(grid, [1.0, 1.0, 1.0]), {},
+        "2026-09-28T12:00:00+03:00", False,
+    )
+    assert meteo.SENSOR_CODE not in p["model_codes"]
+    assert p["weighted"]["temperature_2m"] == [1.0, 1.0, 1.0]
+
+
+def test_build_city_payload_survives_hand_edited_sensor_history(monkeypatch, tmp_path):
+    """Руками правленый JSON: плохие часы, читаемые выживают."""
+    import json
+    grid = _hour_grid(datetime(2026, 9, 28, 9, 0), 3)
+    hist = {"hours": {
+        grid[0]: "not a bucket",
+        grid[1]: {"samples": 1, "stations": {
+            "a": {"temperature_2m": [None, "oops"]},
+            "b": {"temperature_2m": [20.0]},
+        }},
+        grid[2]: {"samples": 1, "stations": {"a": "broken"}},
+    }}
+    p_history = tmp_path / "sensors_history.json"
+    p_history.write_text(json.dumps(hist), encoding="utf-8")
+    monkeypatch.setattr(meteo, "SENSOR_HISTORY", str(p_history))
+    _stub_verification(monkeypatch)
+
+    loc = next(l for l in LOCATIONS if l["slug"] == "yaroslavl")
+    p = meteo.build_city_payload(
+        loc, _raw_everywhere(grid, [0.0, 0.0, 0.0]), {},
+        "2026-09-28T12:00:00+03:00", False,
+    )
+    assert p["models"][meteo.SENSOR_CODE]["temperature_2m"] == [None, 20.0, None]
+    assert p["weighted"]["temperature_2m"][1] == 10.0
+
+
+def test_build_city_payload_skips_sensor_without_history(monkeypatch, tmp_path):
+    grid = _hour_grid(datetime(2026, 9, 28, 9, 0), 3)
+    monkeypatch.setattr(meteo, "SENSOR_HISTORY", str(tmp_path / "missing.json"))
+    _stub_verification(monkeypatch)
+
+    loc = next(l for l in LOCATIONS if l["slug"] == "tsedenevo")
+    p = meteo.build_city_payload(
+        loc, _raw_everywhere(grid, [1.0, 1.0, 1.0]), {},
+        "2026-09-28T12:00:00+03:00", False,
+    )
+    assert meteo.SENSOR_CODE not in p["model_codes"]
+    assert p["weighted"]["temperature_2m"] == [1.0, 1.0, 1.0]
+
+
+def test_sensor_values_stay_aligned_to_the_grid(tmp_path):
+    """Псевдо-модель датчика обязана лежать на той же сетке часов."""
+    grid = ["2026-09-28T09:00", "2026-09-28T10:00", "2026-09-28T11:00"]
+    model = meteo.load_sensor_model(grid, _sensor_history_file(tmp_path, grid, 20.0))
+    assert model["time"] == grid
+    for values in model["data"].values():
+        assert len(values) == len(grid)

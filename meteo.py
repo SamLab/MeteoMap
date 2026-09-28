@@ -1096,6 +1096,83 @@ def apply_sensor_weights(weights_by_var, model_codes):
         weights[SENSOR_CODE] = 2.0 * (sum(present) / len(present))
 
 
+# Импорты meteo.py разбросаны по файлу; здесь они нужны раньше, чем
+# перечисленные ниже, потому что SENSOR_HISTORY считается на импорте модуля.
+import json
+import os
+
+SENSOR_LOCATIONS = {"yaroslavl", "tsedenevo"}
+SENSOR_HISTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             "sensors_history.json")
+
+
+def _sensor_hour_value(bucket, var):
+    """Значение часа: среднее по станциям от средних по замерам станции.
+
+    Станции равноправны независимо от того, сколько прогонов их видели.
+    Чужой бакет, чужая stations, не-словарь станции или samples не из чисел —
+    это «нет данных», а не ошибка: meteo.py читает историю при сборке сайта,
+    и руками правленый JSON не должен ронять сборку. Семантика повторяет
+    history_hour_value в tools/collect_sensors.py; расхождение между двумя
+    читателями опаснее, чем дублирование кода.
+    """
+    stations = bucket.get("stations") if isinstance(bucket, dict) else None
+    if not isinstance(stations, dict):
+        return None
+    per_station = []
+    for values in stations.values():
+        samples = values.get(var) if isinstance(values, dict) else None
+        if not isinstance(samples, list) or not samples:
+            continue
+        # bool — подкласс int, но JSON-true замером температуры не является
+        if not all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                   for x in samples):
+            continue
+        per_station.append(sum(samples) / len(samples))
+    if not per_station:
+        return None
+    return round(sum(per_station) / len(per_station), 2)
+
+
+def load_sensor_model(grid, path=None):
+    """Собирает псевдо-модель «Датчик» по оси grid.
+
+    Возвращает None, если истории нет или она нечитаема: столбик тогда просто
+    не появляется, а сборка продолжается. Часы без наблюдений дают None, а не
+    0, чтобы weighted_consensus их отбросил.
+    """
+    try:
+        with open(path or SENSOR_HISTORY, encoding="utf-8") as f:
+            history = json.load(f)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(history, dict) or not isinstance(history.get("hours"), dict):
+        return None
+    # Бакет не той формы отбрасывается здесь, чтобы ниже не проверять его
+    # на каждый час. Отбрасывание, а не исключение: плохой час не должен
+    # обнулять соседние хорошие.
+    hours = {
+        k: v for k, v in history["hours"].items()
+        if isinstance(v, dict) and isinstance(v.get("stations"), dict)
+    }
+    if not hours:
+        return None
+
+    data = {}
+    found = False
+    for var in SENSOR_VARS:
+        column = []
+        for hour in grid:
+            value = _sensor_hour_value(hours.get(hour), var)
+            if value is not None:
+                found = True
+            column.append(value)
+        data[var] = column
+    if not found:
+        return None
+    return {"time": list(grid), "data": data}
+
+
 def force_min_weight(weights, code):
     """Вес `code` приравнивается к минимальному среди остальных моделей."""
     others = [w for c, w in weights.items() if c != code]
@@ -1536,6 +1613,20 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
             )
         city_codes.append(code)
         city_names[code] = name
+
+    # Датчик добавляется до assemble_consensus: тогда он получает вес от
+    # apply_sensor_weights и попадает в models без отдельной постобработки.
+    # Только два города: у остальных нет станций рядом.
+    if loc["slug"] in SENSOR_LOCATIONS:
+        sensor_model = load_sensor_model(grid)
+        if sensor_model:
+            hourly_by_model[SENSOR_CODE] = sensor_model
+            city_codes.append(SENSOR_CODE)
+            city_names[SENSOR_CODE] = SENSOR_NAME
+            apply_sensor_weights(weights_by_var, city_codes)
+            print(f"[info] {loc['name']}: sensor column with "
+                  f"{sum(1 for v in sensor_model['data'].values() if any(x is not None for x in v))} "
+                  f"parameters")
 
     consensus = assemble_consensus(
         hourly_by_model, HOURLY_VARIABLES, weights_by_var

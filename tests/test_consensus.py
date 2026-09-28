@@ -117,3 +117,69 @@ def test_assemble_cape_respects_min_sources():
         hb, ["cape"], {"cape": {}}, min_sources=3
     )
     assert out["weighted"]["cape"][0] is None
+
+
+def test_sensor_source_flows_through_assemble_consensus():
+    hb = {
+        "a": {"time": ["h0", "h1"], "data": {"temperature_2m": [0.0, 10.0]}},
+        "b": {"time": ["h0", "h1"], "data": {"temperature_2m": [10.0, 0.0]}},
+        "sensors": {"time": ["h0", "h1"],
+                    "data": {"temperature_2m": [20.0, None]}},
+    }
+    weights = {"temperature_2m": {"a": 0.5, "b": 0.5, "sensors": 0.5}}
+    out = meteo.assemble_consensus(
+        hb, ["temperature_2m"], weights, min_sources=2
+    )
+    # Прошедший час: равные веса 0.5 у троих, сумма 1.5, среднее 0/10/20 = 10.0.
+    assert abs(out["weighted"]["temperature_2m"][0] - 10.0) < 1e-6
+    # Будущий час: у датчика None, consensus его отбросил, остались две модели.
+    assert abs(out["weighted"]["temperature_2m"][1] - 5.0) < 1e-6
+    assert out["models"]["sensors"]["temperature_2m"] == [20.0, None]
+
+
+def test_sensor_doubles_its_weight_over_the_model_mean():
+    """Контракт apply_sensor_weights: вдвое больше среднего веса модели."""
+    for var in ("temperature_2m", "relative_humidity_2m", "pressure_msl"):
+        wbv = {var: {"a": 0.2, "b": 0.8}}
+        meteo.apply_sensor_weights(wbv, ["a", "b"])
+        mean = 0.5
+        assert wbv[var]["sensors"] == 2.0 * mean
+
+
+def test_sensor_doubled_weight_reaches_weighted_consensus():
+    """Вес 2.0 доезжает до weighted_consensus, а не остаётся в словаре.
+
+    Три источника: модель 0.0, внешний 0.0, датчик 20.0, веса моделей по 1.0.
+    Датчик получает 2.0, сумма весов 4.0, ответ 40/4 = 10.0. При весе 1.0
+    сумма была бы 3.0 и ответ 20/3 = 6.67 — расхождение заметно, поэтому
+    тест не проходит вхолостую.
+    """
+    hb = {
+        "model": {"time": ["h0"], "data": {"temperature_2m": [0.0]}},
+        "ext": {"time": ["h0"], "data": {"temperature_2m": [0.0]}},
+    }
+    weights = {"temperature_2m": {"model": 1.0, "ext": 1.0}}
+    meteo.apply_sensor_weights(weights, ["model", "ext", meteo.SENSOR_CODE])
+    hb[meteo.SENSOR_CODE] = {
+        "time": ["h0"], "data": {"temperature_2m": [20.0]},
+    }
+    out = meteo.assemble_consensus(hb, ["temperature_2m"], weights, min_sources=2)
+    assert out["models"][meteo.SENSOR_CODE]["temperature_2m"] == [20.0]
+    assert abs(out["weighted"]["temperature_2m"][0] - 10.0) < 1e-9
+    # при 1.0 вместо 2.0 среднее было бы 20/3
+    assert abs(out["weighted"]["temperature_2m"][0] - 20.0 / 3.0) > 1.0
+
+
+def test_sensor_none_past_hours_do_not_fabricate_forecast():
+    """Датчик не заполняет будущие часы: consensus там остаётся как был."""
+    hb = {
+        "a": {"time": ["h0", "h1"], "data": {"temperature_2m": [10.0, 10.0]}},
+        "b": {"time": ["h0", "h1"], "data": {"temperature_2m": [12.0, 12.0]}},
+    }
+    plain = meteo.assemble_consensus(hb, ["temperature_2m"], {})
+    hb[meteo.SENSOR_CODE] = {
+        "time": ["h0", "h1"], "data": {"temperature_2m": [5.0, None]},
+    }
+    with_sensor = meteo.assemble_consensus(hb, ["temperature_2m"], {})
+    assert plain["weighted"]["temperature_2m"][1] == with_sensor["weighted"]["temperature_2m"][1]
+    assert with_sensor["weighted"]["temperature_2m"][1] == 11.0

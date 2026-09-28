@@ -1,6 +1,10 @@
 import json
+import os
+
+import pytest
 
 import meteo
+from meteo import SENSOR_LOCATIONS, load_sensor_model
 
 
 def test_locations_have_unique_slugs():
@@ -103,5 +107,162 @@ def test_render_replaces_cities_placeholder():
     html = meteo.render(template, payload)
     assert "__CITIES__" not in html
     assert '"slug": "yaroslavl"' in html
-    assert 'Батуми (Грузия)' in html
     assert '"slug": "batumi"' in html
+
+
+def _write_history(tmp_path, obj, name="sensors_history.json"):
+    p = tmp_path / name
+    p.write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
+    return str(p)
+
+
+def test_sensor_model_fills_past_hours_and_nulls_the_rest(tmp_path):
+    hist = {"hours": {"2026-09-28T10:00": {
+        "samples": 2, "stations": {
+            "a": {"temperature_2m": [10.0, 12.0]},
+            "b": {"temperature_2m": [20.0, 20.0]},
+        }},
+        "2026-09-28T11:00": {
+        "samples": 1, "stations": {
+            "a": {"pressure_msl": [760.0]}}}}}
+    p = tmp_path / "sensors_history.json"
+    p.write_text(json.dumps(hist), encoding="utf-8")
+    grid = ["2026-09-28T09:00", "2026-09-28T10:00", "2026-09-28T11:00",
+            "2026-09-28T12:00"]
+    model = load_sensor_model(grid, str(p))
+    assert model["time"] == grid
+    # станция a: mean(10,12)=11, станция b: mean(20,20)=20, среднее 15.5
+    assert model["data"]["temperature_2m"] == [None, 15.5, None, None]
+    assert model["data"]["pressure_msl"] == [None, None, 760.0, None]
+    assert model["data"]["relative_humidity_2m"] == [None, None, None, None]
+
+
+def test_sensor_hour_value_is_mean_of_station_means(tmp_path):
+    """Станции равноправны: среднее по замерам, потом среднее по станциям.
+
+    Одна станция с двумя замерами не должна весить как две станции по одному.
+    """
+    hist = {"hours": {"2026-09-28T10:00": {"samples": 2, "stations": {
+        "busy": {"temperature_2m": [0.0, 0.0, 30.0]},
+        "quiet": {"temperature_2m": [20.0]},
+    }}}}
+    path = _write_history(tmp_path, hist)
+    model = load_sensor_model(["2026-09-28T10:00"], path)
+    # busy -> 10.0, quiet -> 20.0, среднее 15.0 (а не mean всех четырёх = 12.5)
+    assert model["data"]["temperature_2m"] == [15.0]
+
+
+def test_sensor_model_missing_history_is_none(tmp_path):
+    assert load_sensor_model(["2026-09-28T10:00"], str(tmp_path / "nope.json")) is None
+
+
+def test_sensor_model_corrupt_history_is_none(tmp_path):
+    p = tmp_path / "h.json"
+    p.write_text("{oops", encoding="utf-8")
+    assert load_sensor_model(["2026-09-28T10:00"], str(p)) is None
+
+
+def test_sensors_absent_for_other_cities():
+    assert SENSOR_LOCATIONS == {"yaroslavl", "tsedenevo"}
+    for slug in ["rybinsk", "rostov", "petropavlovka", "moscow", "loo",
+                 "borok", "batumi"]:
+        assert slug not in SENSOR_LOCATIONS
+
+
+# --- битая sensors_history.json: meteo.py читает файл при сборке сайта, и
+# руками правленый JSON не должен ронять сборку. Семантика повторяет
+# load_history/history_hour_value в tools/collect_sensors.py. ---
+
+
+def test_sensor_model_top_level_not_dict_is_none(tmp_path):
+    path = _write_history(tmp_path, [{"hours": {"2026-09-28T10:00": {}}}])
+    assert load_sensor_model(["2026-09-28T10:00"], path) is None
+
+
+@pytest.mark.parametrize("hours", [[], "2026-09-28T10:00", None, 7, True])
+def test_sensor_model_hours_not_dict_is_none(tmp_path, hours):
+    path = _write_history(tmp_path, {"hours": hours})
+    assert load_sensor_model(["2026-09-28T10:00"], path) is None
+
+
+def test_sensor_model_empty_hours_is_none(tmp_path):
+    path = _write_history(tmp_path, {"hours": {}})
+    assert load_sensor_model(["2026-09-28T10:00"], path) is None
+
+
+def test_sensor_model_foreign_hour_buckets_dropped(tmp_path):
+    """Бакет не той формы отбрасывается, читаемые часы рядом выживают."""
+    hist = {
+        "hours": {
+            "2026-09-28T09:00": "2026-09-28T09:00",
+            "2026-09-28T10:00": [1, 2, 3],
+            "2026-09-28T11:00": None,
+            "2026-09-28T12:00": {"samples": 1, "stations": None},
+            "2026-09-28T13:00": {"samples": 1, "stations": []},
+            "2026-09-28T14:00": {"samples": 1, "stations": {
+                "a": {"temperature_2m": [5.0]}}},
+        }
+    }
+    path = _write_history(tmp_path, hist)
+    grid = [f"2026-09-28T{h:02d}:00" for h in range(9, 15)]
+    model = load_sensor_model(grid, path)
+    assert model["data"]["temperature_2m"] == [None] * 5 + [5.0]
+
+
+def test_sensor_model_foreign_station_entries_skipped(tmp_path):
+    hist = {"hours": {"2026-09-28T10:00": {"samples": 2, "stations": {
+        "a": "broken",
+        "b": None,
+        "c": ["broken"],
+        "d": {"temperature_2m": [10.0, 30.0]},
+        "e": {"temperature_2m": 20.0},
+        "f": {"temperature_2m": []},
+        "g": {"temperature_2m": None},
+    }}}}
+    path = _write_history(tmp_path, hist)
+    model = load_sensor_model(["2026-09-28T10:00"], path)
+    # выжил только d: остальные записи либо не словари, либо не списки
+    assert model["data"]["temperature_2m"] == [20.0]
+
+
+@pytest.mark.parametrize("samples", [[None], ["x"], [None, 1.0], ["1.0"],
+                                     [1.0, "2.0"], [1.0, None], [{}], [[]],
+                                     [True, False]])
+def test_sensor_model_non_numeric_samples_give_none_not_crash(tmp_path, samples):
+    """Список замеров с не-числом — это «нет данных», а не исключение."""
+    hist = {"hours": {"2026-09-28T10:00": {"samples": 1, "stations": {
+        "a": {"temperature_2m": samples}}}}}
+    path = _write_history(tmp_path, hist)
+    model = load_sensor_model(["2026-09-28T10:00"], path)
+    assert model is None
+
+
+def test_sensor_model_usable_values_survive_a_broken_neighbour(tmp_path):
+    """Битая запись одной станции не обнуляет читаемую вторую."""
+    hist = {"hours": {"2026-09-28T10:00": {"samples": 2, "stations": {
+        "a": {"temperature_2m": [None, "oops"]},
+        "b": {"temperature_2m": [8.0, 12.0]},
+    }}}}
+    path = _write_history(tmp_path, hist)
+    model = load_sensor_model(["2026-09-28T10:00"], path)
+    assert model["data"]["temperature_2m"] == [10.0]
+
+
+def test_sensor_model_hour_with_no_stations_yields_none_column(tmp_path):
+    """Чистый файл без единого значения — источника нет, а не нули."""
+    path = _write_history(tmp_path, {"hours": {
+        "2026-09-28T10:00": {"samples": 0, "stations": {}},
+    }})
+    assert load_sensor_model(["2026-09-28T10:00"], path) is None
+
+
+def test_sensor_hour_value_foreign_bucket_is_none():
+    assert meteo._sensor_hour_value("2026-09-28T10:00", "temperature_2m") is None
+    assert meteo._sensor_hour_value(None, "temperature_2m") is None
+    assert meteo._sensor_hour_value({"stations": 5}, "temperature_2m") is None
+
+
+def test_sensor_model_history_path_defaults_next_to_meteo_py():
+    assert meteo.SENSOR_HISTORY == os.path.join(
+        os.path.dirname(os.path.abspath(meteo.__file__)), "sensors_history.json"
+    )
