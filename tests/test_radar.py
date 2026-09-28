@@ -1128,6 +1128,29 @@ def test_help_texts_mention_model_range():
     assert "диапазон числа моделей по часам интервала" in tpl or "минимум-максимум по часам" in tpl
 
 
+def _radar_template():
+    with open(os.path.join(HERE, "radar_template.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+def test_radar_template_has_no_station_layer():
+    # Слой станций переехал в столбик «Датчик» таблицы «Часы» (см.
+    # tests/test_locations.py): карта показывает осадки и молнии, измерения —
+    # в часовой сетке. Правка шаблона не должна воскресить слой назад.
+    src = _radar_template()
+    for banned in ["createPane('stations')", "ST_LABELS", "ST_UNIT", "stoggle",
+                   "stations.json", "sensors.json", "stDraw", "stLoad",
+                   "leaflet-stations-pane", "stlabel", "station-pop", "strow",
+                   "stoff", "stationGroup", "pane:'stations'", "bindPopup",
+                   "Датчики", "Метеостанции"]:
+        assert banned not in src, banned
+    with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
+        built = f.read()
+    for banned in ["createPane('stations')", "sensors.json", "stoggle",
+                   "leaflet-stations-pane", "stlabel", "station-pop"]:
+        assert banned not in built, banned
+
+
 def test_main_chart_reused_not_recreated():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

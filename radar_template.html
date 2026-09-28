@@ -27,14 +27,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 #ltoggle{position:absolute;top:10px;right:10px;z-index:1000;background:#42434b;color:#fff;border:0;border-radius:18px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px}
 #ltoggle.on{background:#f29b17;color:#fff}
 #ltoggle .ltdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
-#stoggle{position:absolute;top:48px;right:10px;z-index:1000;background:#42434b;color:#fff;border:0;border-radius:18px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;gap:6px}
-#stoggle.on{background:#36b343}
-#stoggle .stdot{width:8px;height:8px;border-radius:50%;background:#fff;display:inline-block}
-.stlabel{position:absolute;left:9px;bottom:-2px;white-space:nowrap;color:#fff;font-size:12px;font-weight:600;text-shadow:-1px 0 1px rgba(0,0,0,.8),1px 0 1px rgba(0,0,0,.8),0 1px 1px rgba(0,0,0,.8),0 -1px 1px rgba(0,0,0,.8);pointer-events:none}
-.station-pop{font-size:12px;line-height:1.5;color:#42434b}
-.station-pop b{font-size:13px}
-.station-pop .strow{white-space:nowrap}
-.station-pop .stoff{color:#8a8a8a}
 /*__LEAFLET_CSS__*/
 .leaflet-container{background:#acacac}
 .leaflet-bar a,.leaflet-bar a:hover{background-color:#42434b;width:35px;height:35px;line-height:35px;text-align:center;text-decoration:none;color:#fff;margin-bottom:10px;border-radius:50%;font-size:28px}
@@ -42,7 +34,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 .leaflet-container .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.8);color:#666}
 .leaflet-container .leaflet-control-attribution a{color:#415fad}
 .leaflet-labels-pane{z-index:900}
-.leaflet-stations-pane{z-index:1005}
 .label{position:absolute;pointer-events:none}
 .label::before{content:" ";position:absolute;left:-3px;bottom:-3px;border:1px solid #000;border-radius:50%;width:6px;height:6px;background-color:#eee}
 .label>span{position:absolute;left:-9px;bottom:5px;white-space:nowrap;color:#fff;font-weight:500;text-shadow:-1px 0 1px rgba(0,0,0,.7),1px 0 1px rgba(0,0,0,.7),0 1px 1px rgba(0,0,0,.7),0 -1px 1px rgba(0,0,0,.7)}
@@ -61,7 +52,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
 <div id="map"></div>
 <div id="status"></div>
 <button id="ltoggle" title="Молнии: свежие — светло-голубые, постарше — тёмно-голубые"><span class="ltdot"></span>Молнии</button>
-<button id="stoggle" title="Метеостанции сети"><span class="stdot"></span>Датчики</button>
 <div id="legend"><span>Облачность</span><span>Осадки</span><span>Гроза</span><span>Град</span></div>
 <div id="timeline">
   <button id="play" title="Воспроизвести">▶</button>
@@ -131,91 +121,6 @@ body{background:#acacac;color:#42434b;font-family:-apple-system,BlinkMacSystemFo
     }
   });
   map.addLayer(new LabelsLayer());
-
-  // ---- Метеостанции сети ------------------------------------------------
-  // Данные приходят снимком sensors.json, который собирает
-  // tools/collect_sensors.py раз в 15 минут. Снимок содержит только те
-  // значения, что пришли вживую за окно сбора, поэтому age_s честный.
-  map.createPane('stations');
-  var stationGroup=L.layerGroup().addTo(map);
-  var elSt=document.getElementById('stoggle');
-  var stOn=true;
-  elSt.classList.add('on');
-  elSt.addEventListener('click',function(){
-    stOn=!stOn;
-    if(stOn){stationGroup.addTo(map);elSt.classList.add('on');}
-    else{map.removeLayer(stationGroup);elSt.classList.remove('on');}
-  });
-
-  var ST_LABELS={t:'T',t1:'T1',t2:'T2',t3:'T3',t_in:'T внутри',t_out:'T снаружи',
-                 h:'Влажность',p:'Давление',dew:'Точка росы',lux:'Освещённость',
-                 pm25:'PM2.5'};
-  var ST_UNIT={t:'°C',t1:'°C',t2:'°C',t3:'°C',t_in:'°C',t_out:'°C',
-               h:'%',p:'мм',dew:'°C',lux:'лк',pm25:'мкг/м3'};
-
-  function stRadius(z){return z>8?9:(z>5?7:5);}
-
-  function stTemp(st){
-    var keys=Object.keys(st.values||{});
-    for(var i=0;i<keys.length;i++){
-      if(keys[i].charAt(0)==='t') return st.values[keys[i]];
-    }
-    return null;
-  }
-
-  function stAge(s){
-    if(s.age_s===null||s.age_s===undefined) return 'нет данных';
-    var m=Math.round(s.age_s/60);
-    if(m<1) return 'обновлено только что';
-    return 'обновлено '+m+' мин назад';
-  }
-
-  function stPopup(st){
-    var html='<div class="station-pop"><b>'+st.name+'</b>';
-    var v=st.values||{},k=Object.keys(v);
-    for(var i=0;i<k.length;i++){
-      html+='<div class="strow">'+ST_LABELS[k[i]]+': '+v[k[i]]+' '+(ST_UNIT[k[i]]||'')+'</div>';
-    }
-    if(!k.length) html+='<div class="strow">нет данных</div>';
-    html+='<div class="strow stoff">'+stAge(st)+'</div></div>';
-    return html;
-  }
-
-  function stDraw(snap){
-    stationGroup.clearLayers();
-    if(!snap||!snap.stations) return;
-    var z=map.getZoom();
-    for(var i=0;i<snap.stations.length;i++){
-      (function(st){
-        var t=stTemp(st);
-        var m=L.circleMarker([st.lat,st.lon],{
-          pane:'stations',
-          radius:stRadius(z),
-          color:'#1b5e20',
-          weight:2,
-          fillColor:st.online?'#36b343':'#9a9a9a',
-          fillOpacity:0.9
-        });
-        m.bindPopup(stPopup(st));
-        if(t!==null){
-          m.bindTooltip(t.toFixed(1)+'°',{permanent:true,direction:'right',
-            className:'stlabel',offset:[0,0]});
-        }
-        stationGroup.addLayer(m);
-      })(snap.stations[i]);
-    }
-  }
-
-  function stLoad(){
-    fetch('sensors.json?t='+Date.now()).then(function(r){
-      return r.ok?r.json():null;
-    }).then(stDraw).catch(function(){});
-  }
-  stLoad();
-  setInterval(stLoad,15*60*1000);
-  map.on('zoomend',function(){
-    if(stOn) stLoad();
-  });
 
   var frames=[],idx=0,playing=false,timer=null,overlay=null,cur=null;
   var elPlay=document.getElementById('play');
