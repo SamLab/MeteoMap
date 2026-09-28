@@ -95,12 +95,22 @@ def test_sensor_weight_is_double_average_model():
     assert abs(wbv["temperature_2m"]["sensors"] - 2 * 0.05) < 1e-6
 
 
+def test_sensor_weight_uses_mean_not_min_or_max():
+    # Неравномерные веса: 2*среднее=1.0, 2*минимум=0.4, 2*максимум=1.6.
+    # При равномерных весах (остальные тесты) среднее совпадает с обоими
+    # краями, поэтому подмена average→min/max прошла бы незаметно.
+    wbv = {"temperature_2m": {"a": 0.2, "b": 0.8}}
+    meteo.apply_sensor_weights(wbv, ["a", "b"])
+    assert abs(wbv["temperature_2m"]["sensors"] - 1.0) < 1e-6
+
+
 def test_sensor_weight_added_for_variable_without_weights():
-    # relative_humidity_2m нет в weights_by_var: текущий код подставляет
-    # всем моделям fallback 1.0. Датчик должен получить вдвое больше.
+    # relative_humidity_2m и pressure_msl нет в weights_by_var: текущий код
+    # подставляет всем моделям fallback 1.0. Датчик должен получить вдвое больше.
     wbv = {"temperature_2m": {"a": 0.5, "b": 0.5}}
     meteo.apply_sensor_weights(wbv, ["a", "b"])
     assert wbv["relative_humidity_2m"] == {"a": 1.0, "b": 1.0, "sensors": 2.0}
+    assert wbv["pressure_msl"] == {"a": 1.0, "b": 1.0, "sensors": 2.0}
 
 
 def test_sensor_weight_leaves_model_weights_untouched():
@@ -111,7 +121,25 @@ def test_sensor_weight_leaves_model_weights_untouched():
     assert wbv["temperature_2m"]["b"] == before["b"]
 
 
+def test_sensor_weight_is_idempotent_for_both_call_shapes():
+    # (a) повторный вызов не удваивает вес датчика
+    once = {"temperature_2m": {"a": 0.4, "b": 0.6}}
+    meteo.apply_sensor_weights(once, ["a", "b"])
+    twice = {k: dict(v) for k, v in once.items()}
+    meteo.apply_sensor_weights(twice, ["a", "b"])
+    meteo.apply_sensor_weights(twice, ["a", "b"])
+    assert twice == once
+    assert abs(twice["temperature_2m"]["sensors"] - 1.0) < 1e-6
+    # (b) вызов с уже добавленным в model_codes SENSOR_CODE (город дописывает
+    # его в city_codes до вызова) даёт тот же результат, что и без него
+    with_sensor = {"temperature_2m": {"a": 0.4, "b": 0.6}}
+    meteo.apply_sensor_weights(with_sensor, ["a", "b", "sensors"])
+    assert with_sensor == once
+
+
 def test_sensor_weight_untouched_variables_absent():
     wbv = {"precipitation": {"a": 0.5, "b": 0.5}}
     meteo.apply_sensor_weights(wbv, ["a", "b"])
     assert wbv["precipitation"] == {"a": 0.5, "b": 0.5}
+    # ровно исходная переменная плюс SENSOR_VARS — лишних записей не появилось
+    assert set(wbv) == {"precipitation", *meteo.SENSOR_VARS}
