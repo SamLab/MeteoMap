@@ -314,7 +314,7 @@ measures them nowhere, and wiring the dead yarecologia topics in would put
 - Consumes: `average_stations(per_station) -> dict` из Task 1; формат `stations.json` с ключом `history_days`.
 - Produces:
   - `load_history(path) -> dict` — возвращает `{"hours": {...}}`; отсутствующий файл даёт `{"hours": {}}`; нечитаемый JSON даёт `{"hours": {}}` без исключения.
-  - `record_history(hours, hour_key, per_station, now) -> bool` — дописывает значения станций в бакет `hour_key`; возвращает `False` и ничего не пишет, если `per_station` пуст.
+  - `record_history(hours, hour_key, per_station) -> bool` — дописывает значения станций в бакет `hour_key`; возвращает `False` и ничего не пишет, если `per_station` пуст. Час передаётся готовым ключом, поэтому параметра времени нет.
   - `trim_history(hours, history_days, now) -> dict` — удаляет баеты старше `history_days`.
   - `moscow_hour_key(now_ts) -> str` — `%Y-%m-%dT%H:00` в `Europe/Moscow`.
   - Записывает `sensors_history.json` в корень репозитория.
@@ -327,10 +327,10 @@ measures them nowhere, and wiring the dead yarecologia topics in would put
 def test_record_history_merges_same_hour():
     hours = {"hours": {}}
     ok = record_history(hours, "2026-09-28T12:00",
-                        [{"id": "a", "values": {"temperature_2m": 10.0}}], 0)
+                        [{"id": "a", "values": {"temperature_2m": 10.0}}])
     assert ok is True
     ok = record_history(hours, "2026-09-28T12:00",
-                        [{"id": "a", "values": {"temperature_2m": 12.0}}], 0)
+                        [{"id": "a", "values": {"temperature_2m": 12.0}}])
     assert ok is True
     assert hours["hours"]["2026-09-28T12:00"]["samples"] == 2
     assert hours["hours"]["2026-09-28T12:00"]["stations"]["a"]["temperature_2m"] == [10.0, 12.0]
@@ -339,13 +339,21 @@ def test_record_history_merges_same_hour():
 def test_record_history_new_hour_creates_bucket():
     hours = {"hours": {}}
     record_history(hours, "2026-09-28T13:00",
-                   [{"id": "a", "values": {"temperature_2m": 10.0}}], 0)
+                   [{"id": "a", "values": {"temperature_2m": 10.0}}])
     assert list(hours["hours"]) == ["2026-09-28T13:00"]
 
 
 def test_record_history_skips_empty_run():
     hours = {"hours": {}}
-    assert record_history(hours, "2026-09-28T12:00", [], 0) is False
+    assert record_history(hours, "2026-09-28T12:00", []) is False
+    assert hours["hours"] == {}
+
+
+def test_record_history_skips_run_where_no_station_reported():
+    # Станция присутствует, но ни одного живого значения не принесла.
+    hours = {"hours": {}}
+    assert record_history(hours, "2026-09-28T12:00",
+                          [{"id": "a", "values": {}}]) is False
     assert hours["hours"] == {}
 
 
@@ -359,9 +367,9 @@ def test_record_history_keeps_stations_equal_weight():
         {"id": "d", "values": {"temperature_2m": 40.0}},
         {"id": "e", "values": {"temperature_2m": 50.0}},
         {"id": "f", "values": {"temperature_2m": 60.0}},
-    ], 0)
+    ])
     record_history(hours, "2026-09-28T12:00",
-                   [{"id": "a", "values": {"temperature_2m": 100.0}}], 0)
+                   [{"id": "a", "values": {"temperature_2m": 100.0}}])
     got = history_hour_value(hours["hours"]["2026-09-28T12:00"], "temperature_2m")
     # a: (10+100)/2 = 55, остальные 20..60 -> (55+20+30+40+50+60)/6 = 42.5
     assert got["value"] == 42.5
@@ -433,7 +441,7 @@ def load_history(path):
     return data
 
 
-def record_history(hours, hour_key, per_station, _now):
+def record_history(hours, hour_key, per_station):
     """Дописывает значения станций в бакет часа. Пустой прогон не пишется."""
     live = [s for s in per_station if s.get('values')]
     if not live:
@@ -632,7 +640,7 @@ model weights exactly as they were."
 
 **Files:**
 - Modify: `meteo.py` — добавить `SENSOR_LOCATIONS`, `load_sensor_model`; вызов в `build_city_payload` между циклом провайдеров и `assemble_consensus`
-- Test: `tests/test_locations.py`, `tests/test_generation.py`
+- Test: `tests/test_locations.py`, `tests/test_consensus.py`, `tests/test_generation.py`
 
 **Interfaces:**
 - Consumes: `SENSOR_CODE`, `SENSOR_NAME`, `SENSOR_VARS`, `apply_sensor_weights` из Task 3; `history_hour_value` из Task 2 (воспроизводится локально в `meteo.py`).
@@ -683,24 +691,58 @@ def test_sensors_absent_for_other_cities():
         assert slug not in SENSOR_LOCATIONS
 ```
 
-Добавить в `tests/test_generation.py`:
+Добавить в `tests/test_consensus.py` — датчик доходит до `models` и консенсуса
+без отдельной постобработки:
 
 ```python
-def test_yaroslavl_payload_gains_sensors_column(tmp_path):
-    ...
+def test_sensor_source_flows_through_assemble_consensus():
+    hb = {
+        "a": {"time": ["h0", "h1"], "data": {"temperature_2m": [0.0, 10.0]}},
+        "b": {"time": ["h0", "h1"], "data": {"temperature_2m": [10.0, 0.0]}},
+        "sensors": {"time": ["h0", "h1"],
+                    "data": {"temperature_2m": [20.0, None]}},
+    }
+    weights = {"temperature_2m": {"a": 0.5, "b": 0.5, "sensors": 0.5}}
+    out = meteo.assemble_consensus(
+        hb, ["temperature_2m"], weights, min_sources=2
+    )
+    # Прошедший час: датчик 20 уравновешивает пару моделей, сумма весов 1.5.
+    assert abs(out["weighted"]["temperature_2m"][0] - 13.3333333) < 1e-4
+    # Будущий час: у датчика None, consensus его отбросил, остались две модели.
+    assert abs(out["weighted"]["temperature_2m"][1] - 5.0) < 1e-6
+    assert out["models"]["sensors"]["temperature_2m"] == [20.0, None]
 ```
 
-Для последнего теста используй существующий фикстур построения payload в
-`tests/test_generation.py`: собери `raw_by_model` для одного моделя, подложи
-`hourly_by_model` с датчиком через `load_sensor_model` и проверь, что
-`payload["model_codes"]` содержит `SENSOR_CODE`, а
-`payload["model_names"][SENSOR_CODE] == "Датчик"`, и что
-`payload["models"][SENSOR_CODE]["temperature_2m"]` — список длины
-`len(payload["time"])`.
+Добавить в `tests/test_generation.py` — проверка wiring, источник читается в
+`build_city_payload` до `assemble_consensus` и только для двух слагов:
+
+```python
+def test_build_city_payload_injects_sensors_before_consensus():
+    with open(os.path.join(HERE, "meteo.py"), encoding="utf-8") as f:
+        src = f.read()
+    body = src.split("def build_city_payload(")[1]
+    inject = body.index("load_sensor_model(grid)")
+    assert inject < body.index("assemble_consensus("), (
+        "датчик обязан попасть в hourly_by_model до консенсуса, "
+        "иначе он не получит вес и не попадёт в models"
+    )
+    assert 'if loc["slug"] in SENSOR_LOCATIONS:' in body
+
+
+def test_sensors_not_added_to_verification():
+    with open(os.path.join(HERE, "meteo.py"), encoding="utf-8") as f:
+        src = f.read()
+    body = src.split("def build_city_payload(")[1]
+    verify = body.split("verification")[1]
+    assert "SENSOR_CODE" not in verify
+```
+
+`HERE` в `tests/test_generation.py` уже определён; если нет — добавь
+`HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))`.
 
 - [ ] **Step 2: Прогнать и убедиться в падении**
 
-Run: `& ".venv\Scripts\python.exe" -m pytest tests/test_locations.py tests/test_generation.py -q`
+Run: `& ".venv\Scripts\python.exe" -m pytest tests/test_locations.py tests/test_consensus.py tests/test_generation.py -q`
 
 Expected: FAIL — `load_sensor_model`, `SENSOR_LOCATIONS` не существуют.
 
@@ -798,7 +840,7 @@ Expected: PASS, в выводе `meteo.py` при реальной сборке 
 - [ ] **Step 7: Закоммитить**
 
 ```bash
-git add meteo.py tests/test_locations.py tests/test_generation.py
+git add meteo.py tests/test_locations.py tests/test_consensus.py tests/test_generation.py
 git commit -m "feat: add the Dатчик pseudo-source to Yaroslavl and Tsedenevo
 
 Sensors are fed into hourly_by_model as one more source, so assemble_consensus
