@@ -1067,6 +1067,35 @@ def make_weights(mae_by_model, variable):
     return {code: w / total for code, w in inv.items()}
 
 
+SENSOR_CODE = "sensors"
+SENSOR_NAME = "Датчик"
+# Параметры, которые сеть датчиков реально измеряет. Ветер, осадки,
+# облачность, CAPE и WMO недоступны: подставлять их значило бы выдать
+# внешний источник за «Датчик».
+SENSOR_VARS = ("temperature_2m", "relative_humidity_2m", "pressure_msl")
+
+
+def apply_sensor_weights(weights_by_var, model_codes):
+    """Проставляет датчику вес вдвое больше среднего веса модели.
+
+    Вес используется в weighted_consensus только как отношение, поэтому
+    нормировка на единицу не нужна и веса моделей не трогаются.
+
+    Для переменных, которых нет в weights_by_var, текущий assemble_consensus
+    подставляет всем моделям fallback 1.0. Здесь это поведение воспроизводится
+    явно (1.0 на модель), а датчику достаётся 2.0, то есть двойной вес.
+    """
+    for var in SENSOR_VARS:
+        weights = weights_by_var.get(var)
+        if not weights:
+            weights = {code: 1.0 for code in model_codes}
+            weights_by_var[var] = weights
+        present = [w for code, w in weights.items() if code != SENSOR_CODE]
+        if not present:
+            continue
+        weights[SENSOR_CODE] = 2.0 * (sum(present) / len(present))
+
+
 def force_min_weight(weights, code):
     """Вес `code` приравнивается к минимальному среди остальных моделей."""
     others = [w for c, w in weights.items() if c != code]

@@ -87,3 +87,31 @@ def test_build_precip_weights_no_precip_key():
     out = meteo.build_precip_weights(base)
     assert "precipitation" not in out
     assert "precipitation_probability" not in out
+
+
+def test_sensor_weight_is_double_average_model():
+    wbv = {"temperature_2m": {"a": 0.05, "b": 0.05, "c": 0.05}}
+    meteo.apply_sensor_weights(wbv, ["a", "b", "c"])
+    assert abs(wbv["temperature_2m"]["sensors"] - 2 * 0.05) < 1e-6
+
+
+def test_sensor_weight_added_for_variable_without_weights():
+    # relative_humidity_2m нет в weights_by_var: текущий код подставляет
+    # всем моделям fallback 1.0. Датчик должен получить вдвое больше.
+    wbv = {"temperature_2m": {"a": 0.5, "b": 0.5}}
+    meteo.apply_sensor_weights(wbv, ["a", "b"])
+    assert wbv["relative_humidity_2m"] == {"a": 1.0, "b": 1.0, "sensors": 2.0}
+
+
+def test_sensor_weight_leaves_model_weights_untouched():
+    before = {"a": 0.3, "b": 0.7}
+    wbv = {"temperature_2m": dict(before)}
+    meteo.apply_sensor_weights(wbv, ["a", "b"])
+    assert wbv["temperature_2m"]["a"] == before["a"]
+    assert wbv["temperature_2m"]["b"] == before["b"]
+
+
+def test_sensor_weight_untouched_variables_absent():
+    wbv = {"precipitation": {"a": 0.5, "b": 0.5}}
+    meteo.apply_sensor_weights(wbv, ["a", "b"])
+    assert wbv["precipitation"] == {"a": 0.5, "b": 0.5}
