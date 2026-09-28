@@ -1213,6 +1213,9 @@ def _drift(fresh, committed):
     limit = min(len(a), len(b))
     pos = next((i for i in range(limit) if a[i] != b[i]), limit)
     if pos == limit:
+        if len(a) == len(b):
+            return ("различий нет: артефакты совпадают побайтово после "
+                    "нормализации переводов строк, %d байт" % len(a))
         shorter = "сборка" if len(a) < len(b) else "закоммиченный артефакт"
         return ("различие только в длине: %s короче, %d против %d байт после "
                 "нормализации переводов строк, общий префикс %d байт"

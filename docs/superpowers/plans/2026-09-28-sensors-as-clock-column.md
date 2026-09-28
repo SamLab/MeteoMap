@@ -1061,17 +1061,24 @@ layer comes back through a later template edit."
 
 ```python
 def test_sensors_workflow_commits_history():
-    yml = read_workflow("sensors.yml")
-    assert "sensors_history.json" in yml
-    assert "git add sensors.json sensors_history.json" in yml
+    script = step_run(read_workflow("sensors.yml"), COLLECT_STEP)
+    assert "git add sensors_history.json" in script
 
 
-def test_deploy_no_longer_publishes_snapshot():
-    yml = read_workflow("deploy.yml")
-    assert "sensors.json _site/" not in yml
+def test_sensors_commit_checks_the_staged_file_not_the_untracked_one():
+    # git diff молчит на неотслеживаемом файле, а sensors_history.json в чистом
+    # checkout отсутствует: решение «нечего коммитить» по unstaged-diff было бы
+    # верным всегда и история не закоммитилась бы никогда. Сначала add, потом
+    # решение по staged-diff.
+    script = step_run(read_workflow("sensors.yml"), COLLECT_STEP)
+    assert "git diff --cached --quiet -- sensors_history.json" in script
+    assert script.index("git add sensors_history.json") < \
+        script.index("git diff --cached --quiet -- sensors_history.json")
+    assert "git diff --quiet -- sensors_history.json" not in script
 ```
 
-`read_workflow` — чтение `.github/workflows/<name>` относительно корня репозитория.
+`read_workflow` — чтение `.github/workflows/<name>` относительно корня репозитория,
+`step_run` — тело `run:` нужного шага, `COLLECT_STEP` — имя шага с коммитом.
 
 - [ ] **Step 2: Прогнать и убедиться в падении**
 
@@ -1084,18 +1091,28 @@ Expected: FAIL.
 Заменить шаг `Commit snapshot`:
 
 ```yaml
-      - name: Commit snapshot
+      - name: Commit station history
         run: |
-          if git diff --quiet -- sensors.json sensors_history.json; then
-            echo "nothing to commit"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sensors.json sensors_history.json
-          git commit -m "chore: refresh station snapshot"
+          # add до проверки: git diff невидит для неотслеживаемого файла, а на
+          # первом прогоне sensors_history.json в checkout ещё нет — тогда
+          # «нечего коммитить» было бы верным всегда и история не закоммитилась
+          # бы никогда.
+          git add sensors_history.json
+          if git diff --cached --quiet -- sensors_history.json; then
+            echo "sensors_history.json unchanged, nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore: refresh station history"
           git push
 ```
+
+`git add sensors.json` из старого шага убран: снимок читает ноль страниц, и
+коммит его раз в 15 минут — это ~96 коммитов в сутки файлу без
+потребителей. Шаг `git push` внутри workflow — это часть CI, а не пуш
+рабочей ветки: рабочий `git push origin main` выполняется отдельно, после
+ревью, и в задачу не входит.
 
 - [ ] **Step 4: Убрать публикацию из `deploy.yml`**
 
@@ -1163,13 +1180,25 @@ Run: `$env:OPENWEATHER_KEY=""; & ".venv\Scripts\python.exe" meteo.py`
 ключей — важно лишь отсутствие `KeyError`/`NameError` и наличие строки
 `[info] Ярославль: sensor column` либо её отсутствия при пустой истории.
 
-- [ ] **Step 5: Закоммитить и запушить**
+- [ ] **Step 5: Закоммитить**
 
 ```bash
-git add -A
+git rm --cached _test_index.html
+git add .gitignore tests/test_radar.py \
+  docs/superpowers/specs/2026-09-28-sensors-as-clock-column-design.md \
+  docs/superpowers/plans/2026-09-28-sensors-as-clock-column.md
 git commit -m "docs: mark the sensor clock column spec as implemented"
-git push origin main
 ```
+
+Пути перечислены явно, а не через `git add -A`: в рабочем дереве лежат
+`backups/`, неотслеживаемые чужие `docs/superpowers/**` и локальный `bot.php`,
+и `git add -A` затянул бы их в коммит. `data/sensors_yar.json` уже под
+правилом `data/`, поэтому его удаление в индекс не попадает, а
+`sensors_history.json` коммитить нельзя: он остаётся untracked и незаигноренным,
+чтобы первый запуск CI в чистом checkout его создал и закоммитил.
+
+`git push origin main` — **вне задачи**: пуш делается отдельно, после ревью и
+решения контролёра. В этом шаге его нет намеренно.
 
 - [ ] **Step 6: Дождаться деплоя и проверить вживую**
 
