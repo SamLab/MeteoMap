@@ -2,6 +2,7 @@
 import re
 
 import meteo
+from tools import build_radar
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -1133,22 +1134,68 @@ def _radar_template():
         return f.read()
 
 
-def test_radar_template_has_no_station_layer():
-    # Слой станций переехал в столбик «Датчик» таблицы «Часы» (см.
-    # tests/test_locations.py): карта показывает осадки и молнии, измерения —
-    # в часовой сетке. Правка шаблона не должна воскресить слой назад.
+def _fetch_url(src, expr):
+    """Адрес из выражения fetch(<expr>): строковый литерал либо переменная,
+    которой в этом же файле присвоен строковый литерал. None — не распознали."""
+    m = re.match(r"""\s*['"]([^'"]*)['"]""", expr)
+    if m:
+        return m.group(1)
+    m = re.match(r"\s*([A-Za-z_$][\w$]*)", expr)
+    if not m:
+        return None
+    q = re.search(r"(?:^|[^\w$.])" + re.escape(m.group(1)) + r"\s*=\s*['\"]([^'\"]*)['\"]", src)
+    return q.group(1) if q else None
+
+
+def test_radar_template_knows_nothing_about_sensors():
+    # Слой измерений переехал в столбик «Датчик» таблицы «Часы» (tests/test_locations.py):
+    # карта показывает осадки и молнии, измерения — в часовой сетке. Инвариант
+    # структурный, а не список запрещённых имён: радар не знает о датчиках вообще,
+    # поэтому любое упоминание sensor (в любом регистре, в любом написании — sensors,
+    # sensorLayer, sensors_data.json) означает, что слой вернулся на карту. Список
+    # вроде createPane('stations') от этого не спасал: переименованный слой
+    # (createPane('sensors') / sensorLayer / fetch('sensors_data.json')) проходил его
+    # насквозь.
     src = _radar_template()
-    for banned in ["createPane('stations')", "ST_LABELS", "ST_UNIT", "stoggle",
-                   "stations.json", "sensors.json", "stDraw", "stLoad",
-                   "leaflet-stations-pane", "stlabel", "station-pop", "strow",
-                   "stoff", "stationGroup", "pane:'stations'", "bindPopup",
-                   "Датчики", "Метеостанции"]:
-        assert banned not in src, banned
-    with open(os.path.join(HERE, "radar.html"), encoding="utf-8") as f:
-        built = f.read()
-    for banned in ["createPane('stations')", "sensors.json", "stoggle",
-                   "leaflet-stations-pane", "stlabel", "station-pop"]:
-        assert banned not in built, banned
+    hits = [(i + 1, ln.strip()) for i, ln in enumerate(src.splitlines())
+            if re.search("sensor", ln, re.I)]
+    assert not hits, (
+        "radar_template.html снова знает о датчиках: %r.\n"
+        "Измерения живут в столбике «Датчик» таблицы «Часы» (tests/test_locations.py); "
+        "на радаре их быть не должно — правьте таблицу часов, а не карту." % hits[:3]
+    )
+
+    # Второй, независимый от имён признак того же слоя: локальный источник данных.
+    # Снимок датчиков всегда был бы файлом этого сайта, то есть относительным
+    # fetch(), а у радара таких нет — всё, что он грузит, приходит с внешнего
+    # тайлового API rainradar.ru (плитки, подписи, манифест). Поэтому проверяем не
+    # имена файлов, а сам набор адресов: любое отклонение — новый источник данных.
+    targets = [_fetch_url(src, e) for e in re.findall(r"fetch\((.*)", src)]
+    hosts = set()
+    for t in targets:
+        m = re.match(r"https?://([^/]+)", t or "")
+        hosts.add(m.group(1) if m else t)
+    assert hosts == {"rainradar.ru"}, (
+        "радар грузит что-то помимо внешнего API rainradar.ru: %r.\n"
+        "У карты нет своих файлов с измерениями — снимок датчиков живёт в таблице "
+        "«Часы», а не на радаре." % targets
+    )
+
+
+def test_radar_html_is_in_lockstep_with_template(tmp_path):
+    # radar.html — закоммиченный артефакт сборки, и рассинхрон шаблона с артефактом —
+    # историческая поломка этого проекта. Пересобираем шаблон в tmp_path и сравниваем
+    # байт в байт: так ловится дрейф в обе стороны (правка шаблона без пересборки и
+    # правка артефакта без шаблона). Ban-лист по строкам этого не ловил вовсе.
+    build_radar.build("radar", out_dir=str(tmp_path))
+    fresh = (tmp_path / "radar.html").read_bytes()
+    with open(os.path.join(HERE, "radar.html"), "rb") as f:
+        committed = f.read()
+    assert fresh == committed, (
+        "radar.html разошёлся с radar_template.html (%d байт собрано против %d в репозитории). "
+        "Пересобери и закоммиь артефакт: python tools/build_radar.py radar"
+        % (len(fresh), len(committed))
+    )
 
 
 def test_main_chart_reused_not_recreated():
