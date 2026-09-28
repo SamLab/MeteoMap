@@ -224,7 +224,11 @@ def moscow_now_ts(hour_key):
 
 def load_history(path):
     """Читает историю. Отсутствующий или битый файл — пустая история,
-    а не ошибка: сборка сайта не должна зависеть от накопленного."""
+    а не ошибка: сборка сайта не должна зависеть от накопленного.
+
+    Бакет не той формы отбрасывается здесь же, чтобы history_hour_value и
+    meteo.py получали только то, что читается без try/except.
+    """
     try:
         with open(path, encoding='utf-8') as f:
             data = json.load(f)
@@ -232,6 +236,8 @@ def load_history(path):
         return {'hours': {}}
     if not isinstance(data, dict) or not isinstance(data.get('hours'), dict):
         return {'hours': {}}
+    data['hours'] = {k: v for k, v in data['hours'].items()
+                     if isinstance(v, dict) and isinstance(v.get('stations'), dict)}
     return data
 
 
@@ -258,11 +264,15 @@ def history_hour_value(bucket, param):
     """Значение часа: среднее по станциям от средних по замерам станции.
 
     Станции равноправны независимо от того, сколько прогонов их видели.
+    Чужой бакет или чужое значение samples — это «нет данных», а не ошибка.
     """
+    stations = bucket.get('stations') if isinstance(bucket, dict) else None
+    if not isinstance(stations, dict):
+        return None
     per_station = []
-    for sid, values in (bucket.get('stations') or {}).items():
-        samples = values.get(param)
-        if not samples:
+    for values in stations.values():
+        samples = values.get(param) if isinstance(values, dict) else None
+        if not isinstance(samples, list) or not samples:
             continue
         per_station.append(mean(samples))
     if not per_station:
@@ -276,6 +286,36 @@ def trim_history(hours, history_days, now):
     cutoff = moscow_hour_key(now - history_days * 86400)
     hours['hours'] = {k: v for k, v in hours['hours'].items() if k >= cutoff}
     return hours
+
+
+def history_days(settings):
+    """Сколько дней хранить. Мусор в конфиге не должен ронять прогон уже
+    после записи sensors.json, а отрицательное значение — задвигать отсечку
+    в будущее и стирать только что записанный бакет."""
+    try:
+        days = int(settings.get('history_days', HISTORY_DEFAULT_DAYS))
+    except (TypeError, ValueError):
+        return HISTORY_DEFAULT_DAYS
+    return max(1, days)
+
+
+def write_json_atomic(path, payload):
+    """Пишет JSON через временный файл рядом с целью.
+
+    Иначе убитый на середине записи прогон оставляет обрезанный
+    sensors_history.json, который следующая загрузка прочитала бы как пустую
+    историю — и тридцать дней накопления пропали бы молча.
+    """
+    target = os.fspath(path)
+    tmp = target + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        os.replace(tmp, target)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
 
 
 def collect(client, stations, window_s):
@@ -343,16 +383,13 @@ def run(config=DEFAULT_CONFIG, out=DEFAULT_OUT, window_s=None, client_factory=No
     now = time.time()
     snapshot = build_snapshot(stations, received, window_s, now, seen)
 
-    with open(out, 'w', encoding='utf-8') as f:
-        json.dump(snapshot, f, ensure_ascii=False, indent=2)
-        f.write('\n')
-
-    history_days = int(settings.get('history_days', HISTORY_DEFAULT_DAYS))
     accumulated = load_history(history)
     record_history(accumulated, moscow_hour_key(now), snapshot['stations'])
-    trim_history(accumulated, history_days, now)
-    with open(history, 'w', encoding='utf-8') as f:
-        json.dump(accumulated, f, ensure_ascii=False, indent=2)
+    trim_history(accumulated, history_days(settings), now)
+    write_json_atomic(history, accumulated)
+
+    with open(out, 'w', encoding='utf-8') as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
         f.write('\n')
 
     online = sum(1 for s in snapshot['stations'] if s['online'])

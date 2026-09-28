@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -8,6 +9,7 @@ from tools.collect_sensors import (
     history_hour_value,
     load_history,
     load_stations,
+    moscow_hour_key,
     moscow_now_ts,
     record_history,
     trim_history,
@@ -511,3 +513,183 @@ def test_load_history_corrupt_file_is_empty(tmp_path):
     p = tmp_path / "h.json"
     p.write_text("{not json", encoding="utf-8")
     assert load_history(str(p)) == {"hours": {}}
+
+
+def test_load_history_list_top_level_is_empty(tmp_path):
+    # Файл руками отредактирован в чужую форму: сборка сайта получает пустую
+    # историю, а не исключение на генерации.
+    p = tmp_path / "h.json"
+    p.write_text(json.dumps([{"hours": {"2026-09-28T12:00": {}}}]), encoding="utf-8")
+    assert load_history(str(p)) == {"hours": {}}
+
+
+def test_load_history_non_dict_hours_is_empty(tmp_path):
+    p = tmp_path / "h.json"
+    p.write_text(json.dumps({"hours": []}), encoding="utf-8")
+    assert load_history(str(p)) == {"hours": {}}
+
+
+def test_history_hour_value_is_none_when_no_station_reports_param():
+    bucket = {"samples": 1, "stations": {"a": {"temperature_2m": [10.0]}}}
+    assert history_hour_value(bucket, "pressure_msl") is None
+
+
+def test_trim_history_keeps_bucket_at_exact_cutoff():
+    # Граница включительная: бакет ровно в 30 дней назад остаётся, на час старше
+    # отбрасывается. Знак сравнения «>=» вместо «>» — вот что здесь ловится.
+    hours = {"hours": {
+        "2026-08-29T11:00": {"samples": 1, "stations": {}},
+        "2026-08-29T12:00": {"samples": 1, "stations": {}},
+    }}
+    now = moscow_now_ts("2026-09-28T12:00")
+    got = trim_history(hours, 30, now)
+    assert list(got["hours"]) == ["2026-08-29T12:00"]
+
+
+# --- ключ бакета: московский час, а не локальный ---
+
+
+WINTER_TS = datetime(2026, 1, 15, 21, 37, tzinfo=timezone.utc).timestamp()
+SUMMER_TS = datetime(2026, 7, 15, 21, 37, tzinfo=timezone.utc).timestamp()
+
+
+def test_moscow_hour_key_is_utc_plus_3_in_winter_and_summer():
+    # Москва не переводит часы с 2014 года. Пара зима/лето — это и есть
+    # разрешение использовать фиксированный UTC+3 вместо Europe/Moscow:
+    # если бы в зоне оставался DST, эти два ключа разошлись бы.
+    assert moscow_hour_key(WINTER_TS) == "2026-01-16T00:00"
+    assert moscow_hour_key(SUMMER_TS) == "2026-07-16T00:00"
+
+
+def test_history_tz_offset_is_utc_plus_3():
+    # HISTORY_TZ — фиксированный UTC+3 и в системе без базы часовых поясов
+    # (Windows без tzdata), и при её наличии: ключ обязан быть тем же.
+    january = datetime(2026, 1, 15, 12, 0)
+    july = datetime(2026, 7, 15, 12, 0)
+    assert cs.HISTORY_TZ.utcoffset(january) == timedelta(hours=3)
+    assert cs.HISTORY_TZ.utcoffset(july) == timedelta(hours=3)
+
+
+@pytest.mark.parametrize("ts", [WINTER_TS, SUMMER_TS])
+def test_moscow_hour_key_equals_fixed_utc_plus_3_key(ts):
+    # ZoneInfo на этой машине не импортируется, поэтому эквивалентность
+    # fallback проверяем явно посчитанным ключом UTC+3, а не через зону.
+    expected = datetime.fromtimestamp(
+        ts, timezone(timedelta(hours=3))).strftime("%Y-%m-%dT%H:00")
+    assert moscow_hour_key(ts) == expected
+
+
+def test_moscow_hour_key_is_not_machine_local():
+    # 21:37 UTC — это 00:37 следующего дня по Москве, тот же самый момент.
+    # Ключ обязан быть московским, а не тем, что видит машина.
+    utc_key = datetime.fromtimestamp(
+        SUMMER_TS, timezone.utc).strftime("%Y-%m-%dT%H:00")
+    assert utc_key == "2026-07-15T21:00"
+    assert moscow_hour_key(SUMMER_TS) != utc_key
+    assert moscow_hour_key(SUMMER_TS) == "2026-07-16T00:00"
+
+
+def test_load_history_drops_malformed_hour_bucket(tmp_path):
+    # Бакет не той формы отбрасывается здесь же, а не упал бы в meteo.py на
+    # values.get(param) при генерации сайта.
+    p = tmp_path / "h.json"
+    p.write_text(json.dumps({"hours": {
+        "2026-09-28T12:00": {"samples": 1},
+        "2026-09-28T13:00": ["not", "a", "bucket"],
+        "2026-09-28T14:00": {"samples": 1, "stations": {"a": {"temperature_2m": [10.0]}}},
+    }}), encoding="utf-8")
+    got = load_history(str(p))
+    assert list(got["hours"]) == ["2026-09-28T14:00"]
+
+
+def test_history_hour_value_ignores_broken_station_in_good_bucket():
+    # Сломанная станция внутри годного бакета: её данные теряются, но бакет и
+    # данные соседних станций остаются — выкидывать весь час из-за одной
+    # кривой записи в чужом файле незачем.
+    bucket = {"samples": 1, "stations": {
+        "a": "oops",
+        "b": {"temperature_2m": [20.0]},
+    }}
+    assert history_hour_value(bucket, "temperature_2m") == {"value": 20.0, "n": 1}
+
+
+def test_history_hour_value_skips_samples_that_are_not_a_list():
+    # Та же гарантия на уровне чтения: чужое значение в samples — это «нет
+    # данных», а не TypeError внутри sum().
+    bucket = {"samples": 1, "stations": {
+        "a": {"temperature_2m": "oops"},
+        "b": {"pressure_msl": [1.0]},
+        "c": {"temperature_2m": [20.0]},
+    }}
+    assert history_hour_value(bucket, "temperature_2m") == {"value": 20.0, "n": 1}
+
+
+def test_history_hour_value_is_none_for_foreign_stations_shape():
+    assert history_hour_value({"samples": 1, "stations": ["a"]},
+                              "temperature_2m") is None
+    assert history_hour_value({"samples": 1}, "temperature_2m") is None
+
+
+# --- атомарная запись истории ---
+
+
+def test_run_keeps_previous_history_when_write_is_interrupted(tmp_path, monkeypatch):
+    # Прогон, убитый в середине записи, не должен обнулять накопленное:
+    # битый файл load_history читает как пустую историю, и следующий прогон
+    # записал бы в него один свежий бакет вместо тридцати дней.
+    stations = [{"id": "a", "name": "A", "lat": 57.0, "lon": 39.0,
+                 "sensors": {"temperature_2m": "city/out/a"}}]
+    cfg = tmp_path / "st.json"
+    cfg.write_text(json.dumps({"stations": stations}), encoding="utf-8")
+    hist = tmp_path / "h.json"
+    kept = '{"hours": {"2026-09-28T12:00": {"samples": 3, "stations": {}}}}'
+    hist.write_text(kept, encoding="utf-8")
+
+    real_dump = cs.json.dump
+
+    def failing_dump(obj, fp, **kw):
+        # Временный файл лежит рядом с целью, поэтому сверяем по началу пути.
+        if str(getattr(fp, "name", "")).startswith(str(hist)):
+            raise OSError("диск кончился в середине записи")
+        return real_dump(obj, fp, **kw)
+
+    monkeypatch.setattr(cs.json, "dump", failing_dump)
+
+    with pytest.raises(OSError):
+        cs.run(client_factory=lambda *a, **kw: _FakeClient([("city/out/a", "20.4", False)]),
+               config=cfg, out=tmp_path / "s.json", window_s=0, history=str(hist))
+
+    assert hist.read_text(encoding="utf-8") == kept
+
+
+def test_run_leaves_no_temp_file_next_to_history(tmp_path):
+    # history приходит и строкой, и Path — временный файл строится из того же
+    # пути, что и цель, и не остаётся рядом с ней после записи.
+    stations = [{"id": "a", "name": "A", "lat": 57.0, "lon": 39.0,
+                 "sensors": {"temperature_2m": "city/out/a"}}]
+    cfg = tmp_path / "st.json"
+    cfg.write_text(json.dumps({"stations": stations}), encoding="utf-8")
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([("city/out/a", "20.4", False)]),
+           config=cfg, out=tmp_path / "s.json", window_s=0,
+           history=tmp_path / "h.json")
+
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["h.json", "s.json", "st.json"]
+
+
+@pytest.mark.parametrize("bad", ["месяц", None, -5, 0])
+def test_run_survives_garbage_history_days(tmp_path, bad):
+    # history_days не должен ронять прогон уже после записи sensors.json и не
+    # должен отсекать только что записанный бакет.
+    stations = [{"id": "a", "name": "A", "lat": 57.0, "lon": 39.0,
+                 "sensors": {"temperature_2m": "city/out/a"}}]
+    cfg = tmp_path / "st.json"
+    cfg.write_text(json.dumps({"history_days": bad, "stations": stations}),
+                   encoding="utf-8")
+    hist = tmp_path / "h.json"
+
+    code = cs.run(client_factory=lambda *a, **kw: _FakeClient([("city/out/a", "20.4", False)]),
+                  config=cfg, out=tmp_path / "s.json", window_s=0, history=str(hist))
+
+    assert code == 0
+    assert len(json.loads(hist.read_text(encoding="utf-8"))["hours"]) == 1
