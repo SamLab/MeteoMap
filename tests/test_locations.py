@@ -257,10 +257,47 @@ def test_sensor_model_hour_with_no_stations_yields_none_column(tmp_path):
     assert load_sensor_model(["2026-09-28T10:00"], path) is None
 
 
+def test_sensor_hour_value_returns_value_and_station_count():
+    """Пара (значение, n): столбик «Датчик» обязан показывать, по скольким
+    станциям усреднено, иначе среднее по одной станции неотличимо от
+    среднего по четырём.
+    """
+    bucket = {"stations": {
+        "a": {"temperature_2m": [10.0, 20.0]},   # среднее станции 15
+        "b": {"temperature_2m": [40.0]},          # среднее станции 40
+        "c": {"relative_humidity_2m": [55.0]},    # к температуре отношения не имеет
+    }}
+    assert meteo._sensor_hour_value(bucket, "temperature_2m") == (27.5, 2)
+    # станция без замеров по этому параметру в счётчик не идёт
+    assert meteo._sensor_hour_value(bucket, "pressure_msl") == (None, 0)
+
+
+def test_sensor_model_publishes_station_counts_per_hour(tmp_path):
+    """Счётчики едут из истории вместе со значениями, по той же оси grid."""
+    hist = {"hours": {
+        "2026-09-28T10:00": {"samples": 3, "stations": {
+            "a": {"temperature_2m": [10.0]},
+            "b": {"temperature_2m": [20.0]},
+            "c": {"relative_humidity_2m": [50.0]}}},
+        "2026-09-28T11:00": {"samples": 2, "stations": {
+            "a": {"temperature_2m": [7.0, 8.0]}}},
+    }}
+    grid = ["2026-09-28T09:00", "2026-09-28T10:00",
+            "2026-09-28T11:00", "2026-09-28T12:00"]
+    model = load_sensor_model(grid, _write_history(tmp_path, hist))
+    assert model["data"]["temperature_2m"] == [None, 15.0, 7.5, None]
+    # n считается по станциям: «a» с двумя замерами — это одна станция, а не две
+    assert model["station_counts"]["temperature_2m"] == [0, 2, 1, 0]
+    assert model["station_counts"]["relative_humidity_2m"] == [0, 1, 0, 0]
+    # часы без наблюдений дают 0, а не None: ноль станций — факт, а не пробел
+    assert model["station_counts"]["pressure_msl"] == [0, 0, 0, 0]
+    assert set(model["station_counts"]) == set(meteo.SENSOR_VARS)
+
+
 def test_sensor_hour_value_foreign_bucket_is_none():
-    assert meteo._sensor_hour_value("2026-09-28T10:00", "temperature_2m") is None
-    assert meteo._sensor_hour_value(None, "temperature_2m") is None
-    assert meteo._sensor_hour_value({"stations": 5}, "temperature_2m") is None
+    assert meteo._sensor_hour_value("2026-09-28T10:00", "temperature_2m") == (None, 0)
+    assert meteo._sensor_hour_value(None, "temperature_2m") == (None, 0)
+    assert meteo._sensor_hour_value({"stations": 5}, "temperature_2m") == (None, 0)
 
 
 def test_sensor_model_history_path_defaults_next_to_meteo_py():

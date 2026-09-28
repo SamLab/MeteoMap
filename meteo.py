@@ -1107,9 +1107,13 @@ SENSOR_HISTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 def _sensor_hour_value(bucket, var):
-    """Значение часа: среднее по станциям от средних по замерам станции.
+    """Пара (значение, n) для часа: среднее по станциям и число этих станций.
 
-    Станции равноправны независимо от того, сколько прогонов их видели.
+    Станции равноправны независимо от того, сколько прогонов их видели, поэтому
+    n — это число станций, а не число замеров. Без n среднее по одной станции
+    неотличимо от среднего по четырём, а столбик «Датчик» показывает и то, и
+    другое без разбора.
+
     Чужой бакет, чужая stations, не-словарь станции или samples не из чисел —
     это «нет данных», а не ошибка: meteo.py читает историю при сборке сайта,
     и руками правленый JSON не должен ронять сборку. Семантика повторяет
@@ -1118,7 +1122,7 @@ def _sensor_hour_value(bucket, var):
     """
     stations = bucket.get("stations") if isinstance(bucket, dict) else None
     if not isinstance(stations, dict):
-        return None
+        return None, 0
     per_station = []
     for values in stations.values():
         samples = values.get(var) if isinstance(values, dict) else None
@@ -1130,8 +1134,8 @@ def _sensor_hour_value(bucket, var):
             continue
         per_station.append(sum(samples) / len(samples))
     if not per_station:
-        return None
-    return round(sum(per_station) / len(per_station), 2)
+        return None, 0
+    return round(sum(per_station) / len(per_station), 2), len(per_station)
 
 
 def load_sensor_model(grid, path=None):
@@ -1140,6 +1144,11 @@ def load_sensor_model(grid, path=None):
     Возвращает None, если истории нет или она нечитаема: столбик тогда просто
     не появляется, а сборка продолжается. Часы без наблюдений дают None, а не
     0, чтобы weighted_consensus их отбросил.
+
+    Рядом с data едет station_counts — по скольким станциям усреднено каждое
+    значение, 0 там, где наблюдения не было. Счётчики лежат отдельным ключом
+    модели, а не четвёртым элементом data: data читается как параллельные ряды
+    по переменным, и не-массивный элемент там сломал бы график.
     """
     try:
         with open(path or SENSOR_HISTORY, encoding="utf-8") as f:
@@ -1159,18 +1168,22 @@ def load_sensor_model(grid, path=None):
         return None
 
     data = {}
+    counts = {}
     found = False
     for var in SENSOR_VARS:
         column = []
+        ncolumn = []
         for hour in grid:
-            value = _sensor_hour_value(hours.get(hour), var)
+            value, n = _sensor_hour_value(hours.get(hour), var)
             if value is not None:
                 found = True
             column.append(value)
+            ncolumn.append(n)
         data[var] = column
+        counts[var] = ncolumn
     if not found:
         return None
-    return {"time": list(grid), "data": data}
+    return {"time": list(grid), "data": data, "station_counts": counts}
 
 
 def force_min_weight(weights, code):
@@ -1476,7 +1489,7 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
         (m.get("time") for m in daily_by_model.values() if m.get("time")),
         None,
     )
-    return {
+    payload = {
         "generated_at": generated_at,
         "location": location,
         "model_codes": codes,
@@ -1495,6 +1508,14 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
         "daily_time": daily_time,
         "verification": verification,
     }
+    # Счётчики станций — отдельный верхнеуровневый ключ, а не элемент
+    # models["sensors"]: models[code] читается как параллельные ряды по
+    # переменным, и не-массивный элемент там сломал бы сборку графика.
+    # Ключа нет у городов без датчика — у них нет и станций.
+    sensor_counts = (hourly_by_model.get(SENSOR_CODE) or {}).get("station_counts")
+    if sensor_counts:
+        payload["sensor_station_counts"] = sensor_counts
+    return payload
 
 
 def render(template, payload):
