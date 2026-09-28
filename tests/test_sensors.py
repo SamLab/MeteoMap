@@ -630,6 +630,28 @@ def test_history_hour_value_is_none_for_foreign_stations_shape():
     assert history_hour_value({"samples": 1}, "temperature_2m") is None
 
 
+@pytest.mark.parametrize("bad", [
+    [None], ["hot"], [True, False], [{}], [[]], [None, 1.0], [1.0, "2.0"],
+])
+def test_history_hour_value_skips_samples_holding_non_numbers(bad):
+    # Список-контейнер проверен, а его содержимое — нет: sum() внутри mean()
+    # роняет прогон сборщика на TypeError, а meteo.py:_sensor_hour_value на том
+    # же файле молча отдаёт «нет данных». Смысл обоих читателей обязан совпадать,
+    # иначе один из них врёт сайту, а другой — отчёту.
+    bucket = {"samples": 1, "stations": {"a": {"temperature_2m": bad}}}
+    assert history_hour_value(bucket, "temperature_2m") is None
+
+
+def test_history_hour_value_keeps_good_station_next_to_non_numbers():
+    # Отбрасывается станция с чужими samples, а не весь час: кривая запись в
+    # чужом файле не должна обнулять соседние станции.
+    bucket = {"samples": 1, "stations": {
+        "a": {"temperature_2m": [None]},
+        "b": {"temperature_2m": [20.0]},
+    }}
+    assert history_hour_value(bucket, "temperature_2m") == {"value": 20.0, "n": 1}
+
+
 # --- атомарная запись истории ---
 
 

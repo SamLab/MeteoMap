@@ -264,7 +264,9 @@ def history_hour_value(bucket, param):
     """Значение часа: среднее по станциям от средних по замерам станции.
 
     Станции равноправны независимо от того, сколько прогонов их видели.
-    Чужой бакет или чужое значение samples — это «нет данных», а не ошибка.
+    Чужой бакет, чужие stations или samples не из чисел — это «нет данных»,
+    а не ошибка. Набор проверок повторяет meteo.py:_sensor_hour_value: файл
+    один на двоих, и расхождение читателей опаснее дублирования кода.
     """
     stations = bucket.get('stations') if isinstance(bucket, dict) else None
     if not isinstance(stations, dict):
@@ -273,6 +275,10 @@ def history_hour_value(bucket, param):
     for values in stations.values():
         samples = values.get(param) if isinstance(values, dict) else None
         if not isinstance(samples, list) or not samples:
+            continue
+        # bool — подкласс int, но JSON-true замером температуры не является
+        if not all(isinstance(x, (int, float)) and not isinstance(x, bool)
+                   for x in samples):
             continue
         per_station.append(mean(samples))
     if not per_station:

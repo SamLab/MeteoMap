@@ -204,10 +204,12 @@ def test_sensor_weight_2x_reaches_weighted_consensus_end_to_end(monkeypatch, tmp
     """Вес датчика 2.0 доезжает до weighted_consensus через настоящие
     build_city_payload -> apply_sensor_weights -> assemble_consensus.
 
-    Две модели дают 0.0, у каждой make_weights даёт вес 0.5, датчик 20.0
-    получает 2.0*0.5 = 1.0. Сумма весов 2.0, ответ 20.0/2.0 = 10.0.
-    При 1.0*среднее датчик получил бы 0.5 и ответ 20.0/1.5 = 13.33 —
-    расхождение в 3.33 градуса, тест не проходит вхолостую.
+    Две модели дают 0.0, у каждой make_weights даёт 1/12 (MAE=1.0 у всех 12
+    моделей из FORECAST_MODELS), датчик 20.0 получает 2*1/12 = 1/6. Веса
+    [1/12, 1/12, 1/6] в сумме 1/3, ответ (20*1/6)/(1/3) = 10.0.
+    При 1.0*среднее датчик получил бы 1/12, сумма весов 1/4, и ответ
+    (20*1/12)/(3/12) = 20/3 = 6.667 — расхождение в 3.33 градуса,
+    тест не проходит вхолостую.
     """
     grid = _hour_grid(datetime(2026, 9, 28, 9, 0), 3)
     monkeypatch.setattr(meteo, "SENSOR_HISTORY",
@@ -225,8 +227,8 @@ def test_sensor_weight_2x_reaches_weighted_consensus_end_to_end(monkeypatch, tmp
     assert p["models"][meteo.SENSOR_CODE]["temperature_2m"] == [None, 20.0, None]
     got = p["weighted"]["temperature_2m"][1]
     assert abs(got - 10.0) < 1e-6, got
-    # при 1.0 вместо 2.0 получилось бы 13.33
-    assert abs(got - 20.0 / 1.5) > 1.0
+    # при 1.0 вместо 2.0 получилось бы 20/3 = 6.667
+    assert abs(got - 20.0 / 3.0) > 1.0
     # датчик не выдумывает остальные часы: моделей две, датчика там нет
     assert p["weighted"]["temperature_2m"][0] == 0.0
     assert p["weighted"]["temperature_2m"][2] == 0.0

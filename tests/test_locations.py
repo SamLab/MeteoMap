@@ -107,6 +107,7 @@ def test_render_replaces_cities_placeholder():
     html = meteo.render(template, payload)
     assert "__CITIES__" not in html
     assert '"slug": "yaroslavl"' in html
+    assert 'Батуми (Грузия)' in html
     assert '"slug": "batumi"' in html
 
 
@@ -263,6 +264,15 @@ def test_sensor_hour_value_foreign_bucket_is_none():
 
 
 def test_sensor_model_history_path_defaults_next_to_meteo_py():
-    assert meteo.SENSOR_HISTORY == os.path.join(
-        os.path.dirname(os.path.abspath(meteo.__file__)), "sensors_history.json"
-    )
+    # Проверяем не формулу, а куда файл попадает: рядом с meteo.py, в корне
+    # репозитория, а не под data/ — data/ в .gitignore, и накопленная история
+    # обнулялась бы на каждом CI-прогоне. Переписывание os.path.join должно
+    # ломать этот тест, а не только менять его текст.
+    path = os.path.abspath(meteo.SENSOR_HISTORY)
+    root = os.path.dirname(os.path.abspath(meteo.__file__))
+
+    assert os.path.basename(path) == "sensors_history.json"
+    assert os.path.dirname(path) == root, "история обязана лежать рядом с meteo.py"
+    assert "data" not in os.path.relpath(path, root).split(os.sep)
+    # корень репозитория, а не произвольная папка рядом с ним
+    assert os.path.isfile(os.path.join(root, "pytest.ini"))
