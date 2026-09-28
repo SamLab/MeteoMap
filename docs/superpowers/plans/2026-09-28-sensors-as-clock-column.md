@@ -129,22 +129,13 @@ Expected: FAIL — `SENSOR_PARAMS`/`average_stations` не импортирую�
   "history_days": 30,
   "stations": [
     {
-      "id": "yarbatut",
-      "name": "Ярбатут",
-      "lat": 57.64033,
-      "lon": 39.88513,
-      "sensors": {
-        "temperature_2m": "/yarbatut/2054001-1458270/dstmp4_0/status"
-      }
-    },
-    {
       "id": "penaty",
       "name": "Пенаты",
       "lat": 57.6304,
       "lon": 39.91527,
       "sensors": {
-        "temperature_2m": "city/out/zavolga/penaty/temp",
-        "relative_humidity_2m": "city/out/zavolga/penaty/hum"
+        "temperature_2m": "city/out/zavolga/penaty/temp/ws01",
+        "relative_humidity_2m": "city/out/zavolga/penaty/hum/ws01"
       }
     },
     {
@@ -165,17 +156,7 @@ Expected: FAIL — `SENSOR_PARAMS`/`average_stations` не импортирую�
       "lon": 39.92,
       "sensors": {
         "temperature_2m": "city/out/east/temp/ds",
-        "relative_humidity_2m": "city/out/east/hum",
         "pressure_msl": "city/out/east/press"
-      }
-    },
-    {
-      "id": "west",
-      "name": "Запад",
-      "lat": 57.64,
-      "lon": 39.85,
-      "sensors": {
-        "temperature_2m": "city/out/west/temp/ds"
       }
     },
     {
@@ -184,13 +165,18 @@ Expected: FAIL — `SENSOR_PARAMS`/`average_stations` не импортирую�
       "lat": 57.55,
       "lon": 39.76,
       "sensors": {
-        "temperature_2m": "/bereg/2708554-1458260/dstmp17/status",
+        "temperature_2m": "/bereg/2708554-1458260/tmp315/status",
         "relative_humidity_2m": "/bereg/2708554-1458260/Hum339/status"
       }
     }
   ]
 }
 ```
+
+Каналы выбраны пользователем 28.09.2026 по живому срезу. Станций ровно
+четыре: `penaty`, `frunze`, `east`, `bereg`. Влажность `east` исключена
+(38.21 % против 68–87 % у соседей). Станции `yarbatut`, `west`, обе ESPHome и
+Берег-2 исключены целиком; причины — в спеке, раздел «Станции и значение».
 
 - [ ] **Step 4: Переписать валидацию в `tools/collect_sensors.py`**
 
@@ -518,7 +504,7 @@ Expected: PASS.
 
 Run: `& ".venv\Scripts\python.exe" tools\collect_sensors.py --window 60`
 
-Expected: `[ok] ... 6/6 stations online` и создан `sensors_history.json` с одним бакетом. Затем проверить `sensors_history.json` — внутри `hours` ключ вида `2026-09-28T12:00` и `stations` с id из конфига.
+Expected: `[ok] ... 4/4 stations online` и создан `sensors_history.json` с одним бакетом. Затем проверить `sensors_history.json` — внутри `hours` ключ вида `2026-09-28T12:00` и `stations` с id из конфига.
 
 - [ ] **Step 7: Закоммитить**
 
@@ -1122,7 +1108,7 @@ Expected: PASS, ноль падений.
 
 Run: `& ".venv\Scripts\python.exe" tools\collect_sensors.py --window 240`
 
-Expected: `[ok] ... N/6 stations online`, созданные `sensors.json` и
+Expected: `[ok] ... N/4 stations online`, созданные `sensors.json` и
 `sensors_history.json`. Затем проверить, что в `sensors_history.json` ключ бакета
 совпадает с текущим московским часом.
 
