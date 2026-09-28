@@ -3,7 +3,16 @@ import json
 import pytest
 
 from tools import collect_sensors as cs
-from tools.collect_sensors import average_stations, load_stations, validate
+from tools.collect_sensors import (
+    average_stations,
+    history_hour_value,
+    load_history,
+    load_stations,
+    moscow_now_ts,
+    record_history,
+    trim_history,
+    validate,
+)
 
 PENATY_T = 'city/out/zavolga/penaty/temp/ws01'
 EAST_H = 'city/out/east/hum'
@@ -322,7 +331,8 @@ def test_run_writes_snapshot_file(tmp_path, monkeypatch):
     out = tmp_path / 'sensors.json'
     fake = _FakeClient([('city/out/a', '20.4', False)])
 
-    cs.run(client_factory=lambda *a, **kw: fake, config=cfg, out=out, window_s=0)
+    cs.run(client_factory=lambda *a, **kw: fake, config=cfg, out=out, window_s=0,
+           history=str(tmp_path / 'h.json'))
 
     data = json.loads(out.read_text(encoding='utf-8'))
     assert data['stations'][0]['values']['temperature_2m'] == pytest.approx(20.4)
@@ -335,7 +345,8 @@ def test_run_returns_exit_code_zero(tmp_path):
     cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
 
     code = cs.run(client_factory=lambda *a, **kw: _FakeClient([]),
-                  config=cfg, out=tmp_path / 's.json', window_s=0)
+                  config=cfg, out=tmp_path / 's.json', window_s=0,
+                  history=str(tmp_path / 'h.json'))
 
     assert code == 0
 
@@ -349,7 +360,8 @@ def test_run_connects_to_broker_from_config(tmp_path):
     fake = _FakeClient([])
 
     cs.run(client_factory=lambda *a, **kw: fake, config=cfg,
-           out=tmp_path / 's.json', window_s=0)
+           out=tmp_path / 's.json', window_s=0,
+           history=str(tmp_path / 'h.json'))
 
     args, _kw = fake.connect_calls[0]
     assert args[0] == 'test.host'
@@ -423,3 +435,79 @@ def test_average_missing_parameter_is_absent_not_zero():
 def test_validate_rejects_humidity_sentinel():
     assert validate("relative_humidity_2m", 99.99) is not None
     assert validate("relative_humidity_2m", 71.6) is None
+
+
+# --- накопление истории по часам ---
+
+
+def test_record_history_merges_same_hour():
+    hours = {"hours": {}}
+    ok = record_history(hours, "2026-09-28T12:00",
+                        [{"id": "a", "values": {"temperature_2m": 10.0}}])
+    assert ok is True
+    ok = record_history(hours, "2026-09-28T12:00",
+                        [{"id": "a", "values": {"temperature_2m": 12.0}}])
+    assert ok is True
+    assert hours["hours"]["2026-09-28T12:00"]["samples"] == 2
+    assert hours["hours"]["2026-09-28T12:00"]["stations"]["a"]["temperature_2m"] == [10.0, 12.0]
+
+
+def test_record_history_new_hour_creates_bucket():
+    hours = {"hours": {}}
+    record_history(hours, "2026-09-28T13:00",
+                   [{"id": "a", "values": {"temperature_2m": 10.0}}])
+    assert list(hours["hours"]) == ["2026-09-28T13:00"]
+
+
+def test_record_history_skips_empty_run():
+    hours = {"hours": {}}
+    assert record_history(hours, "2026-09-28T12:00", []) is False
+    assert hours["hours"] == {}
+
+
+def test_record_history_skips_run_where_no_station_reported():
+    # Станция присутствует, но ни одного живого значения не принесла.
+    hours = {"hours": {}}
+    assert record_history(hours, "2026-09-28T12:00",
+                          [{"id": "a", "values": {}}]) is False
+    assert hours["hours"] == {}
+
+
+def test_record_history_keeps_stations_equal_weight():
+    hours = {"hours": {}}
+    # Одна станция с одним замером не должна получать вес шести станций.
+    record_history(hours, "2026-09-28T12:00", [
+        {"id": "a", "values": {"temperature_2m": 10.0}},
+        {"id": "b", "values": {"temperature_2m": 20.0}},
+        {"id": "c", "values": {"temperature_2m": 30.0}},
+        {"id": "d", "values": {"temperature_2m": 40.0}},
+        {"id": "e", "values": {"temperature_2m": 50.0}},
+        {"id": "f", "values": {"temperature_2m": 60.0}},
+    ])
+    record_history(hours, "2026-09-28T12:00",
+                   [{"id": "a", "values": {"temperature_2m": 100.0}}])
+    got = history_hour_value(hours["hours"]["2026-09-28T12:00"], "temperature_2m")
+    # a: (10+100)/2 = 55, остальные 20..60 -> (55+20+30+40+50+60)/6 = 42.5
+    assert got["value"] == 42.5
+    assert got["n"] == 6
+
+
+def test_trim_history_drops_old_buckets():
+    hours = {"hours": {
+        "2026-08-01T10:00": {"samples": 1, "stations": {}},
+        "2026-09-28T10:00": {"samples": 1, "stations": {}},
+    }}
+    now = moscow_now_ts("2026-09-28T12:00")
+    got = trim_history(hours, 30, now)
+    assert list(got["hours"]) == ["2026-09-28T10:00"]
+
+
+def test_load_history_missing_file_is_empty(tmp_path):
+    got = load_history(str(tmp_path / "nope.json"))
+    assert got == {"hours": {}}
+
+
+def test_load_history_corrupt_file_is_empty(tmp_path):
+    p = tmp_path / "h.json"
+    p.write_text("{not json", encoding="utf-8")
+    assert load_history(str(p)) == {"hours": {}}

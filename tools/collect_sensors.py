@@ -10,7 +10,8 @@
 import json
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -27,6 +28,16 @@ SENSOR_PARAMS = {
 
 # Влажность 99.5+ — заведомо заглушка, а не измерение.
 HUM_SENTINEL = 99.5
+
+# Ключ бакета истории — локальный московский час, тот же формат, что у time[]
+# в meteo.py. Москва не переводит часы с 2014 года, поэтому фиксированный
+# UTC+3 равнозначен зоне; он же используется, если в системе нет базы часовых
+# поясов (Windows без пакета tzdata).
+HISTORY_DEFAULT_DAYS = 30
+try:
+    HISTORY_TZ = ZoneInfo('Europe/Moscow')
+except ZoneInfoNotFoundError:
+    HISTORY_TZ = timezone(timedelta(hours=3))
 
 
 def parse_payload(raw):
@@ -200,6 +211,73 @@ def load_stations(path):
     return raw
 
 
+def moscow_hour_key(now_ts):
+    """Ключ бакета истории: локальный московский час в формате time[]."""
+    return datetime.fromtimestamp(now_ts, HISTORY_TZ).strftime('%Y-%m-%dT%H:00')
+
+
+def moscow_now_ts(hour_key):
+    """Обратное преобразование ключа в unix-время, для отсечения старого."""
+    return datetime.strptime(hour_key, '%Y-%m-%dT%H:%M').replace(
+        tzinfo=HISTORY_TZ).timestamp()
+
+
+def load_history(path):
+    """Читает историю. Отсутствующий или битый файл — пустая история,
+    а не ошибка: сборка сайта не должна зависеть от накопленного."""
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return {'hours': {}}
+    if not isinstance(data, dict) or not isinstance(data.get('hours'), dict):
+        return {'hours': {}}
+    return data
+
+
+def record_history(hours, hour_key, per_station):
+    """Дописывает значения станций в бакет часа. Пустой прогон не пишется."""
+    live = [s for s in per_station if s.get('values')]
+    if not live:
+        return False
+    bucket = hours['hours'].setdefault(hour_key, {'samples': 0, 'stations': {}})
+    for station in live:
+        entry = bucket['stations'].setdefault(station['id'], {})
+        for param, value in station['values'].items():
+            entry.setdefault(param, []).append(value)
+    bucket['samples'] += 1
+    return True
+
+
+def mean(values):
+    values = list(values)
+    return sum(values) / len(values) if values else None
+
+
+def history_hour_value(bucket, param):
+    """Значение часа: среднее по станциям от средних по замерам станции.
+
+    Станции равноправны независимо от того, сколько прогонов их видели.
+    """
+    per_station = []
+    for sid, values in (bucket.get('stations') or {}).items():
+        samples = values.get(param)
+        if not samples:
+            continue
+        per_station.append(mean(samples))
+    if not per_station:
+        return None
+    return {'value': round(sum(per_station) / len(per_station), 2),
+            'n': len(per_station)}
+
+
+def trim_history(hours, history_days, now):
+    """Удаляет бакеты старше history_days."""
+    cutoff = moscow_hour_key(now - history_days * 86400)
+    hours['hours'] = {k: v for k, v in hours['hours'].items() if k >= cutoff}
+    return hours
+
+
 def collect(client, stations, window_s):
     """Слушает живой эфир window_s секунд. Возвращает (payloads, seen_times).
 
@@ -238,9 +316,11 @@ def collect(client, stations, window_s):
 
 
 DEFAULT_OUT = os.path.join(ROOT, 'sensors.json')
+DEFAULT_HISTORY = os.path.join(ROOT, 'sensors_history.json')
 
 
-def run(config=DEFAULT_CONFIG, out=DEFAULT_OUT, window_s=None, client_factory=None):
+def run(config=DEFAULT_CONFIG, out=DEFAULT_OUT, window_s=None, client_factory=None,
+        history=DEFAULT_HISTORY):
     """Собирает снимок и записывает его в out. Возвращает код выхода."""
     with open(config, encoding='utf-8') as f:
         settings = json.load(f)
@@ -260,10 +340,19 @@ def run(config=DEFAULT_CONFIG, out=DEFAULT_OUT, window_s=None, client_factory=No
     client.connect(settings.get('broker', 'yar.gorod76.ru'),
                    int(settings.get('port', 1883)), 30)
     received, seen = collect(client, stations, window_s)
-    snapshot = build_snapshot(stations, received, window_s, time.time(), seen)
+    now = time.time()
+    snapshot = build_snapshot(stations, received, window_s, now, seen)
 
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
+        f.write('\n')
+
+    history_days = int(settings.get('history_days', HISTORY_DEFAULT_DAYS))
+    accumulated = load_history(history)
+    record_history(accumulated, moscow_hour_key(now), snapshot['stations'])
+    trim_history(accumulated, history_days, now)
+    with open(history, 'w', encoding='utf-8') as f:
+        json.dump(accumulated, f, ensure_ascii=False, indent=2)
         f.write('\n')
 
     online = sum(1 for s in snapshot['stations'] if s['online'])
