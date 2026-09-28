@@ -16,16 +16,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DEFAULT_CONFIG = os.path.join(HERE, 'stations.json')
 
-# Диапазоны допустимых значений. Значения вне диапазона — заглушки или поломки:
-# в сети встречаются hum=99.99 и press=748.9 (тот же сломанный канал повторяется
-# в diesel/petrol/kerosene/turpentine/white_spirit).
-KIND_RANGES = {
-    'temp': (-50.0, 50.0),
-    'hum': (0.0, 100.0),
-    'press': (600.0, 820.0),
-    'illuminance': (0.0, 200000.0),
-    'wind': (0.0, 60.0),
-    'pm': (0.0, 1000.0),
+# Параметры, которые реально измеряет сеть. Ключи совпадают с именами
+# переменных meteo.py, поэтому подстановка в таблицу Часов не требует
+# преобразований. Всё остальное (ветер, осадки, CAPE) датчики не меряют.
+SENSOR_PARAMS = {
+    'temperature_2m': (-50.0, 50.0),
+    'relative_humidity_2m': (0.0, 100.0),
+    'pressure_msl': (600.0, 820.0),
 }
 
 # Влажность 99.5+ — заведомо заглушка, а не измерение.
@@ -64,12 +61,12 @@ def parse_payload(raw):
         return None
 
 
-def validate(kind, value):
+def validate(param, value):
     """Проверяет значение против диапазона. None — значение допустимо,
     иначе строка с причиной отброса."""
-    bounds = KIND_RANGES.get(kind)
+    bounds = SENSOR_PARAMS.get(param)
     if bounds is None:
-        return 'unknown kind %r' % (kind,)
+        return 'unknown parameter %r' % (param,)
     if value is None:
         return 'no value'
     if value != value:  # NaN
@@ -78,7 +75,7 @@ def validate(kind, value):
     low, high = bounds
     if not (low <= value <= high):
         return 'out of range [%g, %g]' % (low, high)
-    if kind == 'hum' and value >= HUM_SENTINEL:
+    if param == 'relative_humidity_2m' and value >= HUM_SENTINEL:
         return 'humidity sentinel'
     return None
 
@@ -99,16 +96,16 @@ def build_snapshot(stations, received, window_s, now, seen=None):
         rejected = []
         last_ts = None
 
-        for key, (kind, topic) in st['sensors'].items():
+        for param, topic in st['sensors'].items():
             if topic not in received:
                 continue
             value = parse_payload(received[topic])
-            reason = validate(kind, value)
+            reason = validate(param, value)
             if reason is not None:
-                rejected.append({'key': key, 'topic': topic, 'raw': received[topic],
-                                 'reason': reason})
+                rejected.append({'param': param, 'topic': topic,
+                                 'raw': received[topic], 'reason': reason})
                 continue
-            values[key] = round(value, 2)
+            values[param] = round(value, 2)
             ts = seen.get(topic)
             if ts is not None and (last_ts is None or ts > last_ts):
                 last_ts = ts
@@ -135,6 +132,27 @@ def build_snapshot(stations, received, window_s, now, seen=None):
         'window_s': window_s,
         'stations': out_stations,
     }
+
+
+def average_stations(per_station):
+    """Среднее по станциям для каждого параметра.
+
+    Станция без живого значения параметра исключается из среднего, а не
+    считается нулём. Возвращает {param: {"value", "n", "stations"}}.
+    """
+    out = {}
+    for station in per_station:
+        for param, value in (station.get('values') or {}).items():
+            if param not in SENSOR_PARAMS:
+                continue
+            entry = out.setdefault(param, {'value': 0.0, 'n': 0, 'stations': []})
+            entry['value'] += value
+            entry['n'] += 1
+            entry['stations'].append(station['id'])
+    for entry in out.values():
+        entry['value'] = round(entry['value'] / entry['n'], 2)
+        entry['stations'].sort()
+    return out
 
 
 def load_stations(path):
@@ -170,16 +188,14 @@ def load_stations(path):
         sensors = st['sensors']
         if not isinstance(sensors, dict) or not sensors:
             raise ValueError('station %r: sensors must be a non-empty object' % sid)
-        for key, spec in sensors.items():
-            if not isinstance(spec, (list, tuple)) or len(spec) != 2:
-                raise ValueError('station %r: sensors[%r] must be [kind, topic]'
-                                 % (sid, key))
-            kind, topic = spec
-            if kind not in KIND_RANGES:
-                raise ValueError('station %r: sensors[%r] unknown kind %r'
-                                 % (sid, key, kind))
+        for param, topic in sensors.items():
+            if param not in SENSOR_PARAMS:
+                raise ValueError(
+                    'station %r: parameter %r is not measured by the network; '
+                    'allowed: %s' % (sid, param, ', '.join(sorted(SENSOR_PARAMS))))
             if not isinstance(topic, str) or not topic.strip():
-                raise ValueError('station %r: sensors[%r] empty topic' % (sid, key))
+                raise ValueError('station %r: sensors[%r] must be a topic string'
+                                 % (sid, param))
 
     return raw
 
@@ -194,7 +210,7 @@ def collect(client, stations, window_s):
     seen = {}
     wanted = set()
     for st in stations:
-        for _kind, topic in st['sensors'].values():
+        for topic in st['sensors'].values():
             wanted.add(topic)
 
     def on_connect(_c, _u, _f, _rc):
