@@ -28,14 +28,23 @@ jobs:
       - name: Collect live station readings
         run: python tools/collect_sensors.py
 
-      - name: Commit snapshot
+      - name: Commit station history
+        # Только history: sensors_history.json читает meteo.py, и это единственное
+        # долговременное хранилище между прогонами (data/ в .gitignore, каждый
+        # запуск CI — чистый checkout). Локальный снимок sensors.json коллектор
+        # продолжает писать, но читает его теперь ноль страниц, поэтому в индекс
+        # он не попадает.
         run: |
-          if git diff --quiet -- sensors.json; then
-            echo "sensors.json unchanged, nothing to commit"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add sensors.json
-          git commit -m "chore: refresh station snapshot"
+          # add до проверки: на первом прогоне файла в checkout ещё нет, и
+          # git diff по неотслеживаемому файлу всегда молчит — решение «нечего
+          # коммитить» было бы верным всегда, и история не закоммитилась бы
+          # никогда.
+          git add sensors_history.json
+          if git diff --cached --quiet -- sensors_history.json; then
+            echo "sensors_history.json unchanged, nothing to commit"
+            exit 0
+          fi
+          git commit -m "chore: refresh station history"
           git push

@@ -1182,6 +1182,18 @@ def test_radar_template_knows_nothing_about_sensors():
     )
 
 
+def _same_artifact(fresh, committed):
+    """Побайтовое сравнение артефакта, не зависящее от перевода строк.
+
+    В репозитории нет .gitattributes, поэтому файл в рабочей копии приходит с
+    CRLF при core.autocrlf=true и с LF при core.autocrlf=false, а свежая сборка
+    всегда пишется текстовым open() и на Windows получает CRLF. Сравнение
+    нормализует переводы строк вместо того, чтобы вводить .gitattributes,
+    который изменил бы поведение репозитория целиком.
+    """
+    return fresh.replace(b"\r\n", b"\n") == committed.replace(b"\r\n", b"\n")
+
+
 def test_radar_html_is_in_lockstep_with_template(tmp_path):
     # radar.html — закоммиченный артефакт сборки, и рассинхрон шаблона с артефактом —
     # историческая поломка этого проекта. Пересобираем шаблон в tmp_path и сравниваем
@@ -1191,10 +1203,31 @@ def test_radar_html_is_in_lockstep_with_template(tmp_path):
     fresh = (tmp_path / "radar.html").read_bytes()
     with open(os.path.join(HERE, "radar.html"), "rb") as f:
         committed = f.read()
-    assert fresh == committed, (
-        "radar.html разошёлся с radar_template.html (%d байт собрано против %d в репозитории). "
-        "Пересобери и закоммиь артефакт: python tools/build_radar.py radar"
+    assert _same_artifact(fresh, committed), (
+        "radar.html разошёлся с radar_template.html (%d байт собрано против %d в "
+        "репозитории, переводы строк нормализованы). Пересобери и закоммить "
+        "артефакт: python tools/build_radar.py radar"
         % (len(fresh), len(committed))
+    )
+
+
+def test_lockstep_survives_a_checkout_with_other_autocrlf(tmp_path):
+    # .gitattributes в репозитории нет, поэтому переводы строк на рабочей копии
+    # задаёт core.autocrlf машины: индекс хранит LF, а checkout с autocrlf=true
+    # раздаёт CRLF, checkout с autocrlf=false — LF. Свежая сборка всегда пишется
+    # текстовым open() и на Windows получает CRLF, так что побайтовое сравнение
+    # зависит от того, где запущен тест, и падает ложно. Эмулируем checkout с
+    # autocrlf=false (LF) и сравниваем с собранным файлом (CRLF).
+    build_radar.build("radar", out_dir=str(tmp_path))
+    fresh = (tmp_path / "radar.html").read_bytes()
+    with open(os.path.join(HERE, "radar.html"), "rb") as f:
+        committed = f.read()
+    checkout = committed.replace(b"\r\n", b"\n")
+    assert _same_artifact(fresh, checkout), (
+        "сравнение с артефактом зависит от core.autocrlf: собранный файл (%d байт, "
+        "переводы строк как на этой машине) отличается от закоммиченного на том же "
+        "checkout с autocrlf=false (%d байт). Переводы строк в сравнении должны "
+        "нормализоваться." % (len(fresh), len(checkout))
     )
 
 

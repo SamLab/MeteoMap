@@ -17,6 +17,10 @@ venv/
 # Generated page
 index.html
 
+# Station snapshot: local diagnostic only, no page reads it.
+# Narrow on purpose — sensors_history.json must stay committable.
+sensors.json
+
 # Generated per-city data
 data/
 
