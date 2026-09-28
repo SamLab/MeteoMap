@@ -286,6 +286,8 @@ const VAR_NAMES={
  wind_speed_10m:'Ветер (м/с)',wind_direction_10m:'Направление ветра (°)',wind_gusts_10m:'Порывы (м/с)',
  visibility:'Видимость (м)',shortwave_radiation:'Радиация (Вт/м²)',cape:'CAPE (Дж/кг)'};
 const CHART_VARS=['temperature_2m','wind_speed_10m','precipitation','precipitation_probability','relative_humidity_2m','pressure_msl','cloud_cover','cape'];
+const SENSOR_CODE='sensors',SENSOR_NAME='Датчик';
+const SENSOR_VARS=['temperature_2m','relative_humidity_2m','pressure_msl'];
 const PALETTE=['#2f6fb5','#7b5fd6','#e07b2f','#3f9e4f','#cf4a4a','#199c9c','#b08d1f','#b04faf','#4168d8','#6faf2f','#cc4f9a','#2f9d8f','#c98a2f'];
 const modelColor=i=>PALETTE[i%PALETTE.length];
 const fmt=v=>v===null||v===undefined?'—':(Math.round(v*10)/10);
@@ -983,7 +985,7 @@ let mainChart,curVar='temperature_2m';
 function setVar(v){
   curVar=v;
   const d=mainChart.data;
-  const cc=cmpColOrder(codes);
+  const cc=cmpColOrder(codes,v);
   d.datasets=cc.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
   d.datasets.push({label:'Консенсус',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#e09b00',borderWidth:3,pointRadius:0,tension:0.2});
   d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#2563eb',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
@@ -1079,7 +1081,7 @@ function makeMainChart(){
 function updateLegend(){
   const el=document.getElementById('legend');
   el.innerHTML='';
-  cmpColOrder(codes).forEach((c,i)=>{
+  cmpColOrder(codes,curVar).forEach((c,i)=>{
     const ds=mainChart.data.datasets[i];
     if(!ds)return;
     const lab=document.createElement('label');
@@ -1095,8 +1097,9 @@ function updateLegend(){
 
 // comparison table
 let cmpVar='temperature_2m';
-function cmpColOrder(codes){
-  const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo'&&c!=='xweather'&&c!=='tomorrow');
+function cmpColOrder(codes,v){
+  const sensorOk=v==null||SENSOR_VARS.indexOf(v)>=0;
+  const out=codes.filter(c=>c!=='vc'&&c!=='mb'&&c!=='wwo'&&c!=='xweather'&&c!=='tomorrow'&&!(c===SENSOR_CODE&&!sensorOk));
   const ins=(after,code)=>{if(!codes.includes(code))return;const i=out.indexOf(after);if(i>=0)out.splice(i+1,0,code);else out.push(code);};
   ins('ncep_gfs_seamless','xweather');
   ins('ncep_gfs_seamless','vc');
@@ -1107,7 +1110,7 @@ function cmpColOrder(codes){
 }
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
-  const cc=cmpColOrder(codes);
+  const cc=cmpColOrder(codes,cmpVar);
   const cols=[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
   const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(1+cc.length)+'</colgroup>';
   const head=colg+'<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
