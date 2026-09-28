@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 
@@ -28,6 +29,33 @@ def test_cmp_col_order_filters_sensor_for_unmeasured_variable():
     assert "c!==SENSOR_CODE" in html or "!(c===SENSOR_CODE" in html
     assert "cmpColOrder(codes,v)" in html
     assert "cmpColOrder(codes,cmpVar)" in html
+
+
+def test_cmp_col_order_has_no_bare_single_argument_call_site():
+    """Every call site must pass the current variable.
+
+    The legend call site ``cmpColOrder(codes,curVar)`` was previously unasserted,
+    and reverting it to the one-argument form leaks the «Датчик» legend entry for
+    every variable while leaving the table and the chart correct.
+    """
+    html = read_template()
+    assert "cmpColOrder(codes,v)" in html
+    assert "cmpColOrder(codes,curVar)" in html
+    assert "cmpColOrder(codes,cmpVar)" in html
+    assert "cmpColOrder(codes)" not in html
+    assert re.findall(r"cmpColOrder\(codes\)", html) == []
+
+
+def test_cmp_col_order_sensor_ok_is_derived_not_hardcoded():
+    """``sensorOk`` must come from SENSOR_VARS, never from a literal.
+
+    Hardcoding it to ``true`` restores the original bug — the «Датчик» column is
+    shown for every variable — while leaving every positive token assertion
+    above green.
+    """
+    html = read_template()
+    assert "const sensorOk=v==null||SENSOR_VARS.indexOf(v)>=0;" in html
+    assert re.search(r"sensorOk\s*=\s*(?:true|false|'1'|'0'|1|0)\b", html) is None
 
 
 def _payload():
