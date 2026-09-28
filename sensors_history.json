@@ -1,0 +1,38 @@
+{
+  "hours": {
+    "2026-09-28T22:00": {
+      "samples": 1,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            5.85
+          ]
+        },
+        "frunze": {
+          "temperature_2m": [
+            9.93
+          ],
+          "pressure_msl": [
+            765.67
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            10.25
+          ],
+          "pressure_msl": [
+            761.51
+          ]
+        },
+        "bereg": {
+          "temperature_2m": [
+            12.8
+          ],
+          "relative_humidity_2m": [
+            66.2
+          ]
+        }
+      }
+    }
+  }
+}
