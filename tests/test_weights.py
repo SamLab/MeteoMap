@@ -105,12 +105,13 @@ def test_sensor_weight_uses_mean_not_min_or_max():
 
 
 def test_sensor_weight_added_for_variable_without_weights():
-    # relative_humidity_2m и pressure_msl нет в weights_by_var: текущий код
-    # подставляет всем моделям fallback 1.0. Датчик должен получить вдвое больше.
-    wbv = {"temperature_2m": {"a": 0.5, "b": 0.5}}
+    # Ветка fallback: переменной нет в weights_by_var, и код подставляет всем
+    # моделям 1.0, а датчику - вдвое больше. apply_sensor_weights обходит
+    # SENSOR_VARS, поэтому проверяется на температуре - единственном
+    # измеряемом параметре.
+    wbv = {}
     meteo.apply_sensor_weights(wbv, ["a", "b"])
-    assert wbv["relative_humidity_2m"] == {"a": 1.0, "b": 1.0, "sensors": 2.0}
-    assert wbv["pressure_msl"] == {"a": 1.0, "b": 1.0, "sensors": 2.0}
+    assert wbv["temperature_2m"] == {"a": 1.0, "b": 1.0, "sensors": 2.0}
 
 
 def test_sensor_weight_leaves_model_weights_untouched():

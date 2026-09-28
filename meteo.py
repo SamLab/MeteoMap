@@ -1072,7 +1072,7 @@ SENSOR_NAME = "Датчик"
 # Параметры, которые сеть датчиков реально измеряет. Ветер, осадки,
 # облачность, CAPE и WMO недоступны: подставлять их значило бы выдать
 # внешний источник за «Датчик».
-SENSOR_VARS = ("temperature_2m", "relative_humidity_2m", "pressure_msl")
+SENSOR_VARS = ("temperature_2m",)
 
 
 def apply_sensor_weights(weights_by_var, model_codes):

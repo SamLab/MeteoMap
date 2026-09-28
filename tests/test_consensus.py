@@ -138,8 +138,13 @@ def test_sensor_source_flows_through_assemble_consensus():
 
 
 def test_sensor_doubles_its_weight_over_the_model_mean():
-    """Контракт apply_sensor_weights: вдвое больше среднего веса модели."""
-    for var in ("temperature_2m", "relative_humidity_2m", "pressure_msl"):
+    """Контракт apply_sensor_weights: вдвое больше среднего веса модели.
+
+    Функция обходит SENSOR_VARS, поэтому контракт проверяется ровно на том
+    множестве, которое реально измеряет сеть, - иначе тест врал бы, проверяя
+    переменные, до которых код не доходит.
+    """
+    for var in meteo.SENSOR_VARS:
         wbv = {var: {"a": 0.2, "b": 0.8}}
         meteo.apply_sensor_weights(wbv, ["a", "b"])
         mean = 0.5

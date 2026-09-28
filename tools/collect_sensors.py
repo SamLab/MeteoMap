@@ -20,14 +20,17 @@ DEFAULT_CONFIG = os.path.join(HERE, 'stations.json')
 # Параметры, которые реально измеряет сеть. Ключи совпадают с именами
 # переменных meteo.py, поэтому подстановка в таблицу Часов не требует
 # преобразований. Всё остальное (ветер, осадки, CAPE) датчики не меряют.
+#
+# Влажность и давление убраны осознанно: влажность деградировала в заглушку
+# 99.99 у Пенатов и ул. Фрунзе, а давление есть только у двух станций и
+# разбросалось на 4 гПа. Подробности в
+# docs/superpowers/specs/2026-09-28-sensors-temperature-only-design.md.
+# Убрать параметр отсюда - значит запретить его и в stations.json: load_stations
+# отвергает всё, чего нет в этой таблице, поэтому вернуть влажность молча
+# не получится.
 SENSOR_PARAMS = {
     'temperature_2m': (-50.0, 50.0),
-    'relative_humidity_2m': (0.0, 100.0),
-    'pressure_msl': (600.0, 820.0),
 }
-
-# Влажность 99.5+ — заведомо заглушка, а не измерение.
-HUM_SENTINEL = 99.5
 
 # Ключ бакета истории — локальный московский час, тот же формат, что у time[]
 # в meteo.py. Москва не переводит часы с 2014 года, поэтому фиксированный
@@ -86,8 +89,6 @@ def validate(param, value):
     low, high = bounds
     if not (low <= value <= high):
         return 'out of range [%g, %g]' % (low, high)
-    if param == 'relative_humidity_2m' and value >= HUM_SENTINEL:
-        return 'humidity sentinel'
     return None
 
 
@@ -104,6 +105,7 @@ def build_snapshot(stations, received, window_s, now, seen=None):
 
     for st in stations:
         values = {}
+        value_hours = {}
         rejected = []
         last_ts = None
 
@@ -118,6 +120,12 @@ def build_snapshot(stations, received, window_s, now, seen=None):
                 continue
             values[param] = round(value, 2)
             ts = seen.get(topic)
+            if ts is not None:
+                # Час прихода, а не час старта прогона: окно в 10 минут может
+                # пересечь границу часа, и без этого замеры следующего часа
+                # молча уезжали бы в предыдущий бакет. Без seen (юнит-тесты,
+                # --dry) часа нет, и record_history возьмёт час прогона.
+                value_hours[param] = moscow_hour_key(ts)
             if ts is not None and (last_ts is None or ts > last_ts):
                 last_ts = ts
 
@@ -134,6 +142,7 @@ def build_snapshot(stations, received, window_s, now, seen=None):
             'online': bool(values),
             'age_s': age,
             'values': values,
+            'value_hours': value_hours,
             'rejected': rejected,
         })
 
@@ -242,17 +251,35 @@ def load_history(path):
 
 
 def record_history(hours, hour_key, per_station):
-    """Дописывает значения станций в бакет часа. Пустой прогон не пишется."""
-    live = [s for s in per_station if s.get('values')]
-    if not live:
-        return False
-    bucket = hours['hours'].setdefault(hour_key, {'samples': 0, 'stations': {}})
-    for station in live:
-        entry = bucket['stations'].setdefault(station['id'], {})
-        for param, value in station['values'].items():
+    """Дописывает значения станций в бакеты часов. Пустой прогон не пишется.
+
+    Замер кладётся в бакет часа, который шёл в момент его прихода
+    (build_snapshot пишет value_hours), а не в час старта прогона: с окном
+    в 10 минут прогон, начавшийся в 22:55, честно набирает замеры часа 23:00,
+    и класть их в 22:00 — тихая ошибка на сайте. hour_key (час старта
+    прогона) остаётся запасным вариантом для прогонов без времени прихода.
+
+    samples считает вклады станций, а не прогоны: в один бакет попадает станция
+    из нескольких прогонов, и старая арифметика "+1 за прогон" перестала бы
+    описывать содержимое. Читатель meteo.py:_sensor_hour_value поле samples
+    не читает - он считает по stations, поэтому смена смысла безопасна.
+    """
+    wrote = False
+    for station in per_station:
+        values = station.get('values')
+        if not values:
+            continue
+        hours_by_param = station.get('value_hours')
+        if not isinstance(hours_by_param, dict):
+            hours_by_param = {}
+        for param, value in values.items():
+            key = hours_by_param.get(param, hour_key)
+            bucket = hours['hours'].setdefault(key, {'samples': 0, 'stations': {}})
+            entry = bucket['stations'].setdefault(station['id'], {})
             entry.setdefault(param, []).append(value)
-    bucket['samples'] += 1
-    return True
+            bucket['samples'] += 1
+            wrote = True
+    return wrote
 
 
 def mean(values):

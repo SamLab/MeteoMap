@@ -1,7 +1,7 @@
 {
   "broker": "yar.gorod76.ru",
   "port": 1883,
-  "window_s": 240,
+  "window_s": 600,
   "history_days": 30,
   "stations": [
     {
@@ -10,8 +10,7 @@
       "lat": 57.6304,
       "lon": 39.91527,
       "sensors": {
-        "temperature_2m": "city/out/zavolga/penaty/temp/ws01",
-        "relative_humidity_2m": "city/out/zavolga/penaty/hum/ws01"
+        "temperature_2m": "city/out/zavolga/penaty/temp/ws01"
       }
     },
     {
@@ -20,9 +19,7 @@
       "lat": 57.58337,
       "lon": 39.90823,
       "sensors": {
-        "temperature_2m": "city/out/frunze/temp/left",
-        "relative_humidity_2m": "city/out/frunze/hum/left",
-        "pressure_msl": "city/out/frunze/press"
+        "temperature_2m": "city/out/frunze/temp/left"
       }
     },
     {
@@ -31,8 +28,7 @@
       "lat": 57.62,
       "lon": 39.92,
       "sensors": {
-        "temperature_2m": "city/out/east/temp/ds",
-        "pressure_msl": "city/out/east/press"
+        "temperature_2m": "city/out/east/temp/ds"
       }
     },
     {
@@ -41,8 +37,7 @@
       "lat": 57.55,
       "lon": 39.76,
       "sensors": {
-        "temperature_2m": "/bereg/2708554-1458260/tmp315/status",
-        "relative_humidity_2m": "/bereg/2708554-1458260/Hum339/status"
+        "temperature_2m": "/bereg/2708554-1458260/tmp315/status"
       }
     }
   ]

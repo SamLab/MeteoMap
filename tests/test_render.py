@@ -25,7 +25,7 @@ def read_template():
 
 def test_cmp_col_order_filters_sensor_for_unmeasured_variable():
     html = read_template()
-    assert "const SENSOR_VARS=['temperature_2m','relative_humidity_2m','pressure_msl'];" in html
+    assert "const SENSOR_VARS=['temperature_2m'];" in html
     assert "c!==SENSOR_CODE" in html or "!(c===SENSOR_CODE" in html
     assert "cmpColOrder(codes,v)" in html
     assert "cmpColOrder(codes,cmpVar)" in html

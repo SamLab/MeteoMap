@@ -18,6 +18,7 @@ from tools.collect_sensors import (
 
 PENATY_T = 'city/out/zavolga/penaty/temp/ws01'
 EAST_H = 'city/out/east/hum'
+EAST_T = 'city/out/east/temp/ds'
 
 
 def test_parse_json_status_object_yields_value():
@@ -49,28 +50,21 @@ def test_validate_accepts_temperature_in_range():
     assert cs.validate('temperature_2m', 20.4) is None
 
 
-def test_validate_rejects_humidity_above_range():
-    assert cs.validate('relative_humidity_2m', 120.0) is not None
+def test_validate_rejects_humidity_not_measured_anymore():
+    # Влажность убрана из измерений сети. Правдоподобное значение всё равно
+    # не проходит, потому что relative_humidity_2m больше нет в allowlist:
+    # это делает stations.json строгим - вернуть влажность молча нельзя.
+    reason = cs.validate('relative_humidity_2m', 71.6)
+    assert reason is not None
+    assert 'unknown parameter' in reason
 
 
-def test_validate_accepts_plausible_pressure_around_749():
-    # 748.9 — нормальное давление для сети; сломанные каналы diesel/petrol
-    # исключаются тем, что их топики не внесены в конфиг, а не диапазоном.
-    assert cs.validate('pressure_msl', 748.93) is None
-
-
-def test_validate_rejects_pressure_wildly_out_of_range():
-    assert cs.validate('pressure_msl', 48.0) is not None
-
-
-def test_validate_rejects_gps_speed_sentinel_as_humidity():
-    # city/gps/*/speed держит ~99.9 — если такой топик ошибочно отобразить
-    # на влажность, заглушка должна быть отброшена
-    assert cs.validate('relative_humidity_2m', 99.9709625244141) is not None
-
-
-def test_validate_accepts_pressure_in_range():
-    assert cs.validate('pressure_msl', 765.5) is None
+def test_validate_rejects_pressure_not_measured_anymore():
+    # Давление убрано по той же причине: заглушек не было, но станций было
+    # всего две, разброс 4 гПа - сигнала меньше, чем шума от лишней колонки.
+    reason = cs.validate('pressure_msl', 765.5)
+    assert reason is not None
+    assert 'unknown parameter' in reason
 
 
 def test_validate_rejects_temperature_below_range():
@@ -104,7 +98,7 @@ STATIONS = [
     {'id': 'penaty', 'name': 'Пенаты', 'lat': 57.6304, 'lon': 39.91527,
      'sensors': {'temperature_2m': PENATY_T}},
     {'id': 'east', 'name': 'Восток', 'lat': 57.62, 'lon': 39.92,
-     'sensors': {'relative_humidity_2m': EAST_H}},
+     'sensors': {'temperature_2m': EAST_T}},
 ]
 
 
@@ -125,13 +119,15 @@ def test_snapshot_marks_station_offline_without_live_messages():
 
 
 def test_snapshot_records_rejected_value_with_reason():
-    snap = cs.build_snapshot(STATIONS, {EAST_H: '99.99'},
+    # Температура вне диапазона -50..50 отбрасывается с внятной причиной,
+    # и станция остаётся offline: лучше пусто, чем правдоподобная дичь.
+    snap = cs.build_snapshot(STATIONS, {EAST_T: '99.99'},
                              window_s=240, now=1000.0)
     st = {s['id']: s for s in snap['stations']}['east']
     assert st['online'] is False
     assert st['rejected']
-    assert 'humidity sentinel' in st['rejected'][0]['reason']
-    assert st['rejected'][0]['param'] == 'relative_humidity_2m'
+    assert 'out of range' in st['rejected'][0]['reason']
+    assert st['rejected'][0]['param'] == 'temperature_2m'
 
 
 def test_snapshot_age_reflects_window_end():
@@ -229,6 +225,46 @@ def test_repository_stations_config_is_valid():
     stations = cs.load_stations(cs.DEFAULT_CONFIG)
     assert stations, 'stations.json must not be empty'
     assert len({s['id'] for s in stations}) == len(stations)
+    # Сеть меряет только температуру. Влажность и давление убраты из
+    # stations.json и из allowlist коллектора, поэтому load_stations не даст
+    # вернуть их молча - проверка ниже это отдельно закрепляет.
+    for st in stations:
+        assert set(st['sensors']) == {'temperature_2m'}, st['id']
+
+
+def test_repository_stations_config_window_is_ten_minutes():
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    # Окно 10 минут: запас в четыре периода публикации самой медленной
+    # станции (~2.5 мин) вместо полутора при 240 с, из-за которого
+    # «2/4 online» означало «эти двое не заговорили в мою минуту эфира».
+    assert settings['window_s'] == 600
+
+
+def test_repository_stations_config_subscribes_only_four_topics():
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    topics = [t for st in settings['stations'] for t in st['sensors'].values()]
+    # Температуру отдают все четыре станции, поэтому отказ от влажности и
+    # давления не обесценил ни одну: 4 топика вместо 9.
+    assert len(settings['stations']) == 4
+    assert len(topics) == 4
+    assert len(set(topics)) == 4
+
+
+def test_load_stations_rejects_humidity_now_unmeasured(tmp_path):
+    """Вернуть влажность в конфиг нельзя молча.
+
+    SENSOR_PARAMS в коллекторе - единственный allowlist. Убрать из него
+    параметр значит запретить его и в stations.json, так что возврат
+    влажности падает на загрузке, а не всплывает на сайте.
+    """
+    bad = [{'id': 'a', 'name': 'A', 'lat': 57.0, 'lon': 39.0,
+            'sensors': {'relative_humidity_2m': 'city/out/a/hum'}}]
+    p = tmp_path / 'st.json'
+    p.write_text(json.dumps({'stations': bad}), encoding='utf-8')
+    with pytest.raises(ValueError, match='not measured by the network'):
+        cs.load_stations(p)
 
 
 class _FakeClient:
@@ -434,11 +470,6 @@ def test_average_missing_parameter_is_absent_not_zero():
     assert "pressure_msl" not in got
 
 
-def test_validate_rejects_humidity_sentinel():
-    assert validate("relative_humidity_2m", 99.99) is not None
-    assert validate("relative_humidity_2m", 71.6) is None
-
-
 # --- накопление истории по часам ---
 
 
@@ -459,6 +490,100 @@ def test_record_history_new_hour_creates_bucket():
     record_history(hours, "2026-09-28T13:00",
                    [{"id": "a", "values": {"temperature_2m": 10.0}}])
     assert list(hours["hours"]) == ["2026-09-28T13:00"]
+
+
+# --- граница часа: замер раскладывается по часу прихода, а не старта прогона ---
+
+
+def test_record_history_uses_hour_of_arrival_not_run_start():
+    """Замер кладётся в бакет часа, который шёл в момент его прихода.
+
+    Окно в 10 минут пересекает границу часа, и прогон, стартовавший в 22:55,
+    честно добирает замеры часа 23:00. Класть их в 22:00 - тихая ошибка:
+    на сайте час сдвинут на пять минут данных, и заметить это нельзя.
+    """
+    hours = {"hours": {}}
+    late = cs.moscow_hour_key(cs.moscow_now_ts("2026-09-28T23:04"))
+    assert late == "2026-09-28T23:00"
+    record_history(hours, "2026-09-28T22:00", [
+        {"id": "a", "values": {"temperature_2m": 10.0},
+         "value_hours": {"temperature_2m": late}}])
+    assert list(hours["hours"]) == ["2026-09-28T23:00"]
+    assert hours["hours"]["2026-09-28T23:00"]["stations"]["a"]["temperature_2m"] == [10.0]
+
+
+def test_record_history_keeps_early_sample_in_run_hour():
+    """Замер до границы остаётся в часе старта прогона."""
+    hours = {"hours": {}}
+    early = cs.moscow_hour_key(cs.moscow_now_ts("2026-09-28T22:57"))
+    assert early == "2026-09-28T22:00"
+    record_history(hours, "2026-09-28T22:00", [
+        {"id": "a", "values": {"temperature_2m": 10.0},
+         "value_hours": {"temperature_2m": early}}])
+    assert list(hours["hours"]) == ["2026-09-28T22:00"]
+
+
+def test_record_history_splits_one_station_across_two_buckets():
+    """Граница часа прошла между двумя прогонами.
+
+    У станции по одному замеру в каждом бакете, и часовые значения не должны
+    слиться в один - иначе на часовом графике появится ступенька там, где
+    её не было.
+    """
+    hours = {"hours": {}}
+    record_history(hours, "2026-09-28T22:00", [
+        {"id": "a", "values": {"temperature_2m": 10.0},
+         "value_hours": {"temperature_2m": "2026-09-28T22:00"}}])
+    record_history(hours, "2026-09-28T22:00", [
+        {"id": "a", "values": {"temperature_2m": 12.0},
+         "value_hours": {"temperature_2m": "2026-09-28T23:00"}}])
+    early = hours["hours"]["2026-09-28T22:00"]["stations"]["a"]["temperature_2m"]
+    late = hours["hours"]["2026-09-28T23:00"]["stations"]["a"]["temperature_2m"]
+    assert early == [10.0]
+    assert late == [12.0]
+    assert history_hour_value(hours["hours"]["2026-09-28T22:00"],
+                              "temperature_2m")["value"] == 10.0
+    assert history_hour_value(hours["hours"]["2026-09-28T23:00"],
+                              "temperature_2m")["value"] == 12.0
+
+
+def test_record_history_falls_back_to_run_hour_without_arrival_hours():
+    """Прогон без времени прихода - прежнее поведение, час берётся у прогона.
+
+    Так работают юнит-тесты и любой вызов без seen; молча разложить не по
+    чему значило бы потерять замеры, а не получить более точные.
+    """
+    hours = {"hours": {}}
+    record_history(hours, "2026-09-28T22:00", [
+        {"id": "a", "values": {"temperature_2m": 10.0}}])
+    assert list(hours["hours"]) == ["2026-09-28T22:00"]
+
+
+def test_record_history_counts_station_contributions_not_runs():
+    """samples описывает содержимое бакета: три станции - это три вклада.
+
+    Старая арифметика "+1 за прогон" перестала бы описывать бакет, в который
+    одна станция попала из трёх прогонов.
+    """
+    hours = {"hours": {}}
+    record_history(hours, "2026-09-28T12:00", [
+        {"id": "a", "values": {"temperature_2m": 10.0}},
+        {"id": "b", "values": {"temperature_2m": 20.0}},
+        {"id": "c", "values": {"temperature_2m": 30.0}}])
+    assert hours["hours"]["2026-09-28T12:00"]["samples"] == 3
+
+
+def test_snapshot_records_hour_of_arrival_per_param():
+    """Снимок помнит час прихода по каждому параметру.
+
+    Без этого record_history не сможет разложить замеры по бакетам: у него
+    на руках только снимок станций, а не топики.
+    """
+    snap = cs.build_snapshot(
+        STATIONS, {PENATY_T: "20.4"}, window_s=600, now=1000.0,
+        seen={PENATY_T: cs.moscow_now_ts("2026-09-28T23:04")})
+    st = {s["id"]: s for s in snap["stations"]}["penaty"]
+    assert st["value_hours"]["temperature_2m"] == "2026-09-28T23:00"
 
 
 def test_record_history_skips_empty_run():

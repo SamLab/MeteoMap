@@ -134,8 +134,11 @@ def test_sensor_model_fills_past_hours_and_nulls_the_rest(tmp_path):
     assert model["time"] == grid
     # станция a: mean(10,12)=11, станция b: mean(20,20)=20, среднее 15.5
     assert model["data"]["temperature_2m"] == [None, 15.5, None, None]
-    assert model["data"]["pressure_msl"] == [None, None, 760.0, None]
-    assert model["data"]["relative_humidity_2m"] == [None, None, None, None]
+    # Влажность и давление убраны из измерений, поэтому старые бакеты с ними
+    # в модель не попадают вообще - в том числе из уже накопленной истории,
+    # которую мы намеренно не вычищали.
+    assert "pressure_msl" not in model["data"]
+    assert "relative_humidity_2m" not in model["data"]
 
 
 def test_sensor_hour_value_is_mean_of_station_means(tmp_path):
@@ -288,10 +291,11 @@ def test_sensor_model_publishes_station_counts_per_hour(tmp_path):
     assert model["data"]["temperature_2m"] == [None, 15.0, 7.5, None]
     # n считается по станциям: «a» с двумя замерами — это одна станция, а не две
     assert model["station_counts"]["temperature_2m"] == [0, 2, 1, 0]
-    assert model["station_counts"]["relative_humidity_2m"] == [0, 1, 0, 0]
     # часы без наблюдений дают 0, а не None: ноль станций — факт, а не пробел
-    assert model["station_counts"]["pressure_msl"] == [0, 0, 0, 0]
     assert set(model["station_counts"]) == set(meteo.SENSOR_VARS)
+    # Станция «c» осталась в старом бакете с влажностью - она не превращается
+    # ни во что, потому что влажность больше не измеряется.
+    assert meteo.SENSOR_VARS == ("temperature_2m",)
 
 
 def test_sensor_hour_value_foreign_bucket_is_none():
