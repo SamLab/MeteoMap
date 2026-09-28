@@ -91,3 +91,22 @@ def test_indoor_and_outdoor_sensors_get_distinct_labels():
     tpl = _tpl()
     assert "t_in:'T внутри'" in tpl
     assert "t_out:'T снаружи'" in tpl
+
+
+def _deploy_yml():
+    with open(os.path.join(HERE, ".github", "workflows", "deploy.yml"),
+              encoding="utf-8") as f:
+        return f.read()
+
+
+def test_deploy_copies_snapshot_into_site():
+    # deploy.yml copies an explicit file list into _site/; anything missing
+    # there never reaches GitHub Pages.
+    yml = _deploy_yml()
+    assert "sensors.json _site/" in yml
+
+
+def test_deploy_tolerates_absent_snapshot():
+    yml = _deploy_yml()
+    assert "-f sensors.json" in yml
+    assert "||" in yml, 'missing snapshot must not fail the deploy'

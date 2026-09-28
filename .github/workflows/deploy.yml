@@ -66,6 +66,9 @@ jobs:
           cp meteo.html _site/
           cp meteow.html _site/
           cp -r data _site/
+          # Station snapshot lives at the repo root; it is absent until the
+          # sensors workflow first runs, so a miss must not fail the deploy.
+          cp -f sensors.json _site/ || echo "no station snapshot yet"
           echo "" > _site/.nojekyll
 
       - uses: actions/configure-pages@v5
