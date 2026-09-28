@@ -1,0 +1,92 @@
+{
+  "generated_at": "2026-09-28T08:57:22Z",
+  "window_s": 120,
+  "stations": [
+    {
+      "id": "yarbatut",
+      "name": "Ярбатут",
+      "lat": 57.64033,
+      "lon": 39.88513,
+      "online": true,
+      "age_s": 0.0,
+      "values": {
+        "t1": 20.4,
+        "t2": 20.9,
+        "t3": 28.0
+      },
+      "rejected": []
+    },
+    {
+      "id": "penaty",
+      "name": "Пенаты",
+      "lat": 57.6304,
+      "lon": 39.91527,
+      "online": true,
+      "age_s": 15.0,
+      "values": {
+        "h": 87.68,
+        "lux": 1287.0,
+        "dew": 13.45
+      },
+      "rejected": []
+    },
+    {
+      "id": "frunze",
+      "name": "Фрунзе",
+      "lat": 57.58337,
+      "lon": 39.90823,
+      "online": true,
+      "age_s": 11.3,
+      "values": {
+        "t1": 14.77,
+        "t2": 19.8,
+        "h": 73.81,
+        "p": 765.35,
+        "pm25": 1.7
+      },
+      "rejected": []
+    },
+    {
+      "id": "east",
+      "name": "Восток",
+      "lat": 57.62,
+      "lon": 39.92,
+      "online": true,
+      "age_s": 52.2,
+      "values": {
+        "t1": 15.31,
+        "t2": 21.92,
+        "h": 41.67,
+        "p": 761.37
+      },
+      "rejected": []
+    },
+    {
+      "id": "west",
+      "name": "Запад",
+      "lat": 57.64,
+      "lon": 39.85,
+      "online": true,
+      "age_s": 42.7,
+      "values": {
+        "t_in": 16.06,
+        "t_out": 14.94
+      },
+      "rejected": []
+    },
+    {
+      "id": "bereg",
+      "name": "Берег",
+      "lat": 57.55,
+      "lon": 39.76,
+      "online": true,
+      "age_s": 2.9,
+      "values": {
+        "t": 14.1,
+        "h": 68.0,
+        "t2": 23.88
+      },
+      "rejected": []
+    }
+  ]
+}

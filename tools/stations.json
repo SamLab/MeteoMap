@@ -1,0 +1,76 @@
+{
+  "broker": "yar.gorod76.ru",
+  "port": 1883,
+  "window_s": 240,
+  "stations": [
+    {
+      "id": "yarbatut",
+      "name": "Ярбатут",
+      "lat": 57.64033,
+      "lon": 39.88513,
+      "sensors": {
+        "t1": ["temp", "/yarbatut/2054001-1458270/dstmp4_0/status"],
+        "t2": ["temp", "/yarbatut/2054001-1458270/dstmp4_1/status"],
+        "t3": ["temp", "/yarbatut/2054001-1458270/dstmp5_0/status"]
+      }
+    },
+    {
+      "id": "penaty",
+      "name": "Пенаты",
+      "lat": 57.6304,
+      "lon": 39.91527,
+      "sensors": {
+        "t": ["temp", "city/out/zavolga/penaty/tempavg"],
+        "h": ["hum", "city/out/zavolga/penaty/humavg"],
+        "lux": ["illuminance", "city/out/zavolga/penaty/illuminance"],
+        "dew": ["temp", "city/out/zavolga/penaty/dewpoint"]
+      }
+    },
+    {
+      "id": "frunze",
+      "name": "Фрунзе",
+      "lat": 57.58337,
+      "lon": 39.90823,
+      "sensors": {
+        "t1": ["temp", "city/out/frunze/temp/left"],
+        "t2": ["temp", "city/out/frunze/temp/right"],
+        "h": ["hum", "city/out/frunze/hum_avg"],
+        "p": ["press", "city/out/frunze/press"],
+        "pm25": ["pm", "city/out/frunze/pm2_5"]
+      }
+    },
+    {
+      "id": "east",
+      "name": "Восток",
+      "lat": 57.62,
+      "lon": 39.92,
+      "sensors": {
+        "t1": ["temp", "city/out/east/temp/ds"],
+        "t2": ["temp", "city/out/east/temp/bme"],
+        "h": ["hum", "city/out/east/hum"],
+        "p": ["press", "city/out/east/press"]
+      }
+    },
+    {
+      "id": "west",
+      "name": "Запад",
+      "lat": 57.64,
+      "lon": 39.85,
+      "sensors": {
+        "t_in": ["temp", "city/in/west/temp/ds"],
+        "t_out": ["temp", "city/out/west/temp/ds"]
+      }
+    },
+    {
+      "id": "bereg",
+      "name": "Берег",
+      "lat": 57.55,
+      "lon": 39.76,
+      "sensors": {
+        "t": ["temp", "/bereg/2708554-1458260/tmp315/status"],
+        "h": ["hum", "/bereg/2708554-1458260/Hum339/status"],
+        "t2": ["temp", "/dbereg_2/5438543-1458270/tmpwifi1/status"]
+      }
+    }
+  ]
+}

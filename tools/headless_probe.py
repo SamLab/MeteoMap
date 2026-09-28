@@ -29,6 +29,11 @@ def main():
     data_dir = os.path.join(os.path.dirname(os.path.abspath(src)), "data")
     if os.path.isdir(data_dir):
         shutil.copytree(data_dir, os.path.join(tmp, "data"))
+    # sensors.json lives at repo root (data/ is gitignored), so copy it too
+    # when probing a page that fetches it.
+    snapshot = os.path.join(os.path.dirname(os.path.abspath(src)), "sensors.json")
+    if os.path.isfile(snapshot):
+        shutil.copy2(snapshot, os.path.join(tmp, "sensors.json"))
     handler = functools.partial(http.server.SimpleHTTPRequestHandler,
                                 directory=tmp)
     with socketserver.TCPServer(("127.0.0.1", 0), handler) as httpd:
