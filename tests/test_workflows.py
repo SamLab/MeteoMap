@@ -119,6 +119,25 @@ def test_sensors_workflow_does_not_commit_the_snapshot_nobody_reads():
     )
 
 
+def test_sensors_push_retries_against_a_moved_main():
+    # Прогон живёт 10 минут: сначала 600 с слушает MQTT, потом коммитит. За это
+    # окно в main успевает прилететь любой чужой коммит — и не только от другого
+    # прогона CI, но и от живого человека. Наблюдалось дважды: прогоны
+    # 36603661593 и 36605470404 упали с "! [rejected] main -> main (fetch first)",
+    # потому что checkout взял вершину в начале окна, а push делался на десять
+    # минут позже. Одного `ref: main` мало: он спасает от гонки CI-против-CI,
+    # но не от коммита, сделанного человеком в это же окно. Перед push ветка
+    # обязана перечитываться, а отказ — повторяться, иначе один заход человека
+    # в main роняет сбор показаний.
+    script = step_run(read_workflow("sensors.yml"), COLLECT_STEP)
+    assert "git pull --rebase origin main" in script
+    assert "git pull --rebase origin main" not in script.split("git push")[0], (
+        "ветку перечитывают ПОСЛЕ отклонённого push, а не до него: push и "
+        "ребейз не атомарны, нужен повтор"
+    )
+    assert "exit 1" in script, "после исчерпания попыток прогон обязан упасть явно"
+
+
 def test_deploy_does_not_publish_the_snapshot_nobody_reads():
     # Инверсия потерянного с Task 6 теста (test_deploy_copies_snapshot_into_site).
     # deploy.yml копирует в _site/ явный список файлов, и снимок был в нём
