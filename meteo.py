@@ -1107,12 +1107,18 @@ SENSOR_HISTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 def _sensor_hour_value(bucket, var):
-    """Пара (значение, n) для часа: среднее по станциям и число этих станций.
+    """Тройка (среднее, минимум, n) для часа: обе статистики и число станций.
 
     Станции равноправны независимо от того, сколько прогонов их видели, поэтому
     n — это число станций, а не число замеров. Без n среднее по одной станции
     неотличимо от среднего по четырём, а столбик «Датчик» показывает и то, и
     другое без разбора.
+
+    Минимум берётся по пер-станционным средним, а не по сырым замерам: иначе
+    станция с двумя замерами перевесила бы станцию с одним, и «минимум»
+    зависел бы от числа прогонов, а не от погоды. Среднее и минимум выходят из
+    одного и того же списка per_station — иначе ночная строка могла бы
+    сравнивать среднее по четырём станциям с минимумом по двум.
 
     Чужой бакет, чужая stations, не-словарь станции или samples не из чисел —
     это «нет данных», а не ошибка: meteo.py читает историю при сборке сайта,
@@ -1122,7 +1128,7 @@ def _sensor_hour_value(bucket, var):
     """
     stations = bucket.get("stations") if isinstance(bucket, dict) else None
     if not isinstance(stations, dict):
-        return None, 0
+        return None, None, 0
     per_station = []
     for values in stations.values():
         samples = values.get(var) if isinstance(values, dict) else None
@@ -1134,8 +1140,10 @@ def _sensor_hour_value(bucket, var):
             continue
         per_station.append(sum(samples) / len(samples))
     if not per_station:
-        return None, 0
-    return round(sum(per_station) / len(per_station), 2), len(per_station)
+        return None, None, 0
+    return (round(sum(per_station) / len(per_station), 2),
+            round(min(per_station), 2),
+            len(per_station))
 
 
 def load_sensor_model(grid, path=None):
@@ -1145,10 +1153,11 @@ def load_sensor_model(grid, path=None):
     не появляется, а сборка продолжается. Часы без наблюдений дают None, а не
     0, чтобы weighted_consensus их отбросил.
 
-    Рядом с data едет station_counts — по скольким станциям усреднено каждое
-    значение, 0 там, где наблюдения не было. Счётчики лежат отдельным ключом
-    модели, а не четвёртым элементом data: data читается как параллельные ряды
-    по переменным, и не-массивный элемент там сломал бы график.
+    Рядом с data едут station_counts — по скольким станциям усреднено каждое
+    значение, 0 там, где наблюдения не было, и station_min — минимум по тем
+    же станциям, None там же, где нет данных. Оба лежат отдельными ключами
+    модели, а не элементами data: data читается как параллельные ряды по
+    переменным, и не-массивный элемент там сломал бы график.
     """
     try:
         with open(path or SENSOR_HISTORY, encoding="utf-8") as f:
@@ -1169,21 +1178,26 @@ def load_sensor_model(grid, path=None):
 
     data = {}
     counts = {}
+    minimums = {}
     found = False
     for var in SENSOR_VARS:
         column = []
         ncolumn = []
+        mcolumn = []
         for hour in grid:
-            value, n = _sensor_hour_value(hours.get(hour), var)
+            value, minimum, n = _sensor_hour_value(hours.get(hour), var)
             if value is not None:
                 found = True
             column.append(value)
             ncolumn.append(n)
+            mcolumn.append(minimum)
         data[var] = column
         counts[var] = ncolumn
+        minimums[var] = mcolumn
     if not found:
         return None
-    return {"time": list(grid), "data": data, "station_counts": counts}
+    return {"time": list(grid), "data": data, "station_counts": counts,
+            "station_min": minimums}
 
 
 def force_min_weight(weights, code):
@@ -1512,9 +1526,15 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     # models["sensors"]: models[code] читается как параллельные ряды по
     # переменным, и не-массивный элемент там сломал бы сборку графика.
     # Ключа нет у городов без датчика — у них нет и станций.
-    sensor_counts = (hourly_by_model.get(SENSOR_CODE) or {}).get("station_counts")
+    sensor_model = hourly_by_model.get(SENSOR_CODE) or {}
+    sensor_counts = sensor_model.get("station_counts")
     if sensor_counts:
         payload["sensor_station_counts"] = sensor_counts
+    # Минимум по станциям едет тем же способом и по той же причине: клиент
+    # выбирает между средним и минимумом сам, потому что знает время суток.
+    sensor_min = sensor_model.get("station_min")
+    if sensor_min:
+        payload["sensor_station_min"] = sensor_min
     return payload
 
 

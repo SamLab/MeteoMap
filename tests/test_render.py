@@ -154,6 +154,7 @@ def _sensor_payload():
             "time": ["h0", "h1"],
             "data": {"temperature_2m": [20.0, None]},
             "station_counts": {"temperature_2m": [4, 0]},
+            "station_min": {"temperature_2m": [8.0, None]},
         },
     }
     consensus = {
@@ -181,9 +182,23 @@ def test_payload_publishes_sensor_station_counts_at_top_level():
     assert set(p["models"][meteo.SENSOR_CODE]) == {"temperature_2m"}
 
 
+def test_payload_publishes_sensor_station_min_at_top_level():
+    """Минимум по станциям едет в payload тем же способом, что и счётчики.
+
+    Отдельный верхнеуровневый ключ, а не элемент ``models["sensors"]``: там
+    читают параллельные ряды по переменным, и не-массивный элемент сломал бы
+    график. Ключ верхнего уровня — по той же причине, что и
+    ``sensor_station_counts``.
+    """
+    p = _sensor_payload()
+    assert p["sensor_station_min"] == {"temperature_2m": [8.0, None]}
+    assert "station_min" not in p["models"][meteo.SENSOR_CODE]
+
+
 def test_payload_without_sensor_has_no_station_counts():
     """Город без датчика не получает ключа: двух станций рядом с ним нет."""
     assert "sensor_station_counts" not in _payload()
+    assert "sensor_station_min" not in _payload()
 
 
 def test_sensor_column_header_comes_from_model_names():
@@ -464,6 +479,87 @@ def test_weather_now_sensor_line_shows_hour_of_the_reading():
     body = _sensor_now_js()
     # опциональная цепочка допустима: массив time может оказаться короче ряда
     assert re.search(r"D\.time\[j\]\??\.slice\(11,16\)", body)
+
+
+# --- ночной минимум для Цеденево
+
+
+def _sensor_daynight_js():
+    """Помощники выбора значения: день/ночь и что именно показать."""
+    html = read_template()
+    start = html.index("function sensorIsDayAt(")
+    return html[start:html.index("function lastSensorHour(", start)]
+
+
+def _sensor_pick_js():
+    html = read_template()
+    start = html.index("function sensorValueFor(")
+    return html[start:html.index("function lastSensorHour(", start)]
+
+
+def test_sensor_is_day_compares_the_reading_hour_against_its_own_day():
+    """Рассвет и закат берутся для дня показания, а не для сегодняшнего.
+
+    День часа ищется в daily_time, поэтому на границе суток час не получит
+    чужой закат. Без этого поиска сравнение шлось бы по индексу 0 и ночь
+    последнего часа суток считалась бы по закату первого дня.
+    """
+    body = _sensor_daynight_js()
+    assert "daily_time" in body
+    assert re.search(r"indexOf\(\s*\w+\.slice\(0,10\)\s*\)", body), (
+        "индекс дня должен искаться по дате самого часа"
+    )
+    assert "sunrise" in body and "sunset" in body
+
+
+def test_sensor_is_day_boundaries_match_the_agreed_rule():
+    """День — это sunrise <= час < sunset: рассвет включительно, закат нет.
+
+    Проверяется структура сравнения, а не наличие подстрок: перевёрнутое
+    условие даёт ночь днём на тех же данных, и любой тест на вхождение слова
+    «sunrise» при этом проходит. Регулярка требует один и тот же левый
+    операнд в обеих границах — иначе «день» вёл бы себя как «час не раньше
+    рассвета ИЛИ час раньше заката», то есть почти всегда был бы днём.
+    """
+    body = _sensor_daynight_js()
+    m = re.search(r"(\w+)>=(\w+)\.slice\(11,16\)&&\1<(\w+)\.slice\(11,16\)", body)
+    assert m, (
+        "ожидалось сравнение вида hh>=sr.slice(11,16)&&hh<ss.slice(11,16), с одним "
+        "и тем же часом в обеих границах"
+    )
+    assert m.group(2) != m.group(3), "нижняя и верхняя границы не должны совпадать"
+
+
+def test_sensor_is_day_defaults_to_day_without_solar_data():
+    """Нет данных о солнце — показываем среднее, то есть день.
+
+    Обратный дефолт переключил бы поведение там, где данных просто не
+    хватает: страница поменяла бы значение не из-за погоды.
+    """
+    body = _sensor_daynight_js()
+    assert re.search(r"if\([^)]*<0[^)]*\)\s*return true|!\w+\)\s*return true", body), (
+        "отсутствие рассвета/заката должно давать дефолт «день»"
+    )
+
+
+def test_tsedenevo_takes_minimum_at_night_and_yaroslavl_always_mean():
+    """Цеденево переключается на минимум ночью, Ярославль — никогда."""
+    body = _sensor_pick_js()
+    assert "tsedenevo" in body
+    assert "sensor_station_min" in _sensor_now_js() or "min" in body
+    # Ярославль не упоминается в ветке выбора: там только slug Цеденево,
+    # всё остальное — среднее по умолчанию
+    assert "yaroslavl" not in body, (
+        "у Ярославля ночного минимума нет, упоминать его в выборе незачем"
+    )
+
+
+def test_sensor_min_missing_falls_back_to_mean():
+    """Нет ряда минимумов — строка показывает среднее, а не исчезает."""
+    body = _sensor_pick_js()
+    assert re.search(r"min\s*!=\s*null|\.min\s*!=\s*null", body), (
+        "минимум берётся только когда он есть, иначе — среднее"
+    )
 
 
 def test_daily_wind_direction_uses_circular_mean():

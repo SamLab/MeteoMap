@@ -391,6 +391,37 @@ function buildConditions(){
   if(pr!==undefined&&pr!==null)list.push(['Осадки за день',(pr<0.1?0:fmtP(pr))+' мм']);
   document.getElementById('conditions').innerHTML=list.map(([l,v])=>`<div class="cond"><div class="val">${v}</div><div class="lab">${l}</div></div>`).join('');
 }
+function sensorIsDayAt(j){
+  // День или ночь для часа j. Рассвет и закат берутся для того дня, к
+  // которому принадлежит сам час: сравнение с сегодняшним закатом на границе
+  // суток посчитало бы ночь последнего часа по закату первого дня.
+  //
+  // Дефолт — день, то есть среднее. Обратный дефолт переключил бы значение
+  // там, где данных просто не хватает: страница поменяла бы показание не из-за
+  // погоды, а из-за отсутствующего прогноза, и никто бы не понял почему.
+  const iso=D.time?.[j];
+  if(!iso)return true;
+  const k=(D.daily_time||[]).indexOf(iso.slice(0,10));
+  if(k<0)return true;
+  const sr=D.daily?.sunrise?.[k],ss=D.daily?.sunset?.[k];
+  if(!sr||!ss)return true;
+  // Обе стороны — «ЧЧ:ММ» с ведущими нулями в одном часовом поясе, поэтому
+  // строковое сравнение корректно. Границы: час, начинающийся до рассвета, —
+  // ещё ночь, а час, не переваливший закат, — ещё день.
+  const hh=iso.slice(11,16);
+  return hh>=sr.slice(11,16)&&hh<ss.slice(11,16);
+}
+function sensorValueFor(sn){
+  // Ярославль — среднее круглосуточно. Цеденево — среднее днём и минимум
+  // ночью: ночью вопрос практический, «насколько холодно в низине», и
+  // городское среднее его не отвечает — между самыми тихими и самыми
+  // открытыми станциями Ярославля разрыв в несколько градусов.
+  //
+  // У Цеденево своих станций нет, «датчики» там — те же четыре, что и
+  // у Ярославля; меняется только то, какая статистика из них показывается.
+  if(D.location?.slug==='tsedenevo'&&!sensorIsDayAt(sn.index)&&sn.min!=null)return sn.min;
+  return sn.value;
+}
 function lastSensorHour(){
   // Последний час с наблюдением датчиков, не новее текущего.
   //
@@ -404,13 +435,17 @@ function lastSensorHour(){
   // скрывает строку целиком, чтобы не занимать место пустотой.
   const n=D.sensor_station_counts?.temperature_2m;
   const v=D.models?.[SENSOR_CODE]?.temperature_2m;
+  // Минимум нужен только Цеденеве ночью, но едет в обоих города: собирать
+  // его по slug означало бы завести спецслучай ради двух килобайт.
+  const mn=D.sensor_station_min?.temperature_2m;
   if(!n||!v)return null;
   for(let j=curIdx;j>=0;j--){
     // Обе проверки обязательны: счётчик без значения и значение без
     // счётчика одинаково плохо описывают наблюдение. Ноль - замер,
     // поэтому сравнение на null, а не на истинность.
     const x=v[j];
-    if(n[j]>0&&x!=null)return{value:x,hour:D.time[j]?.slice(11,16)||'',index:j};
+    if(n[j]>0&&x!=null)return{value:x,min:mn?mn[j]:null,
+      hour:D.time[j]?.slice(11,16)||'',index:j};
   }
   return null;
 }
@@ -457,6 +492,10 @@ function buildWeatherNow(){
   }
   const prSum=D.daily.precipitation_sum?.[0];
   const sn=lastSensorHour();
+  // Значение выбирается здесь, а не в строке вывода: Цеденево ночью показывает
+  // минимум по станциям вместо среднего, а подпись у строки одна и та же —
+  // она описывает источник, а не статистику.
+  const sv=sn?sensorValueFor(sn):null;
   let apt=0,apn=0;
   for(let j=0;j<D.time.length;j++){
     if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
@@ -485,7 +524,7 @@ function buildWeatherNow(){
     '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
     // Только когда показание есть: строка без данных молчала бы о том, что
     // станции рядом есть, но молчат. Пустота на странице полезнее вранья.
-    (sn?'<div class="wfeel">По датчику '+(sn.value>0?'+':'')+fmt(sn.value)+'° ('+sn.hour+')</div>':'')+
+    (sv!=null?'<div class="wfeel">По датчику '+(sv>0?'+':'')+fmt(sv)+'° ('+sn.hour+')</div>':'')+
     '<div class="wcond">'+wtext+degreeText(w.weather_code?.[curIdx],wtext)+'</div></div>'+
     '<div class="wdet"><table class="wnowtbl"><tr>'+cells.map((c,i)=>'<td class="wcol'+i+'">'+c.val+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' lab">'+c.lab+'</td>').join('')+'</tr>'+
