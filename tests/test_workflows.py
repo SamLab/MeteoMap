@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 
 import pytest
@@ -116,6 +117,25 @@ def test_sensors_workflow_does_not_commit_the_snapshot_nobody_reads():
         "sensors.yml снова коммитит снимок sensors.json, который не читает ни "
         "одна страница. Долговременное хранилище — sensors_history.json, "
         "снимок остаётся локальным диагностическим файлом."
+    )
+
+
+def test_sensors_cron_is_less_often_than_the_listening_window():
+    # Окно 350 с + ~23 с на установку и коммит даёт прогон ~6.2 мин
+    # (замерено: 610-623 с на прогонах с окном 600). Триггер должен оставаться
+    # заметно длиннее прогона: прогоны, наехавшие друг на друга, встают в
+    # очередь concurrency-group, а GitHub держит в очереди ровно один
+    # pending-run и остальные отбрасывает без единой ошибки в логе. 7 минут
+    # давали запас 47 с при загрузке 89% — цена одного задержавшегося старта;
+    # 10 минут дают запас 227 с и 62% загрузки.
+    yml = read_workflow("sensors.yml")
+    m = re.search(r"cron: '\*/(\d+) \* \* \* \*'", yml)
+    assert m, "в sensors.yml нет ожидаемого cron-расписания"
+    period_min = int(m.group(1))
+    assert period_min >= 10, (
+        "триггер короче 10 минут короче окна прослушивания (350 с + overhead): "
+        "запас сжимается до десятков секунд, прогоны начнут наезжать, очередь "
+        "concurrency переполнится, и замеры начнут теряться молча"
     )
 
 

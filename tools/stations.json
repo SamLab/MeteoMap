@@ -1,7 +1,7 @@
 {
   "broker": "yar.gorod76.ru",
   "port": 1883,
-  "window_s": 600,
+  "window_s": 350,
   "history_days": 30,
   "stations": [
     {

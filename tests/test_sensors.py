@@ -232,13 +232,20 @@ def test_repository_stations_config_is_valid():
         assert set(st['sensors']) == {'temperature_2m'}, st['id']
 
 
-def test_repository_stations_config_window_is_ten_minutes():
+def test_repository_stations_config_window_covers_the_slowest_station():
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
-    # Окно 10 минут: запас в четыре периода публикации самой медленной
-    # станции (~2.5 мин) вместо полутора при 240 с, из-за которого
-    # «2/4 online» означало «эти двое не заговорили в мою минуту эфира».
-    assert settings['window_s'] == 600
+    # Живой замер 700 с подписки (broker narodmon-mqtt public, tools/stations.json):
+    # bereg публикует раз в 30 с, east раз в 60 с, а frunze и penaty — раз в
+    # 300 с. Период был принят за ~2.5 мин, и на этом держалось обоснование
+    # окна в 600 с. Окно должно быть не меньше периода самой медленной станки:
+    # в любом интервале длиной >= периода гарантированно есть хотя бы одна
+    # публикация, поэтому «молчание» в окне значит «станция молчит», а не
+    # «мимо окна». 350 с — 50 с запаса сверх 300 с.
+    assert settings['window_s'] >= 300, (
+        "окно короче 300 с: frunze и penaty публикуют раз в 5 минут, и такие "
+        "станции начнут выпадать из замеров"
+    )
 
 
 def test_repository_stations_config_subscribes_only_four_topics():
