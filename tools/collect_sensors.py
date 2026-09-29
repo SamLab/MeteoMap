@@ -11,6 +11,7 @@ import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -37,6 +38,26 @@ SENSOR_PARAMS = {
 # UTC+3 равнозначен зоне; он же используется, если в системе нет базы часовых
 # поясов (Windows без пакета tzdata).
 HISTORY_DEFAULT_DAYS = 30
+
+# Транспорт станции. Поле source в stations.json: отсутствует - значит mqtt,
+# потому что так записаны все станции брокера. Явный "http" означает, что в
+# sensors лежит URL, а не топик, и станция опрашивается, а не слушается.
+VALID_SOURCES = ('mqtt', 'http')
+
+# Порог свежести HTTP-замера. Сам yartemp обновляет данные раз в 5 минут и не
+# гарантирует круглосуточной доступности, поэтому 15 минут - это запас на три
+# пропущенных обновления подряд. Протухшее значение не попадает в словари
+# вообще, поэтому станция честно молчит, а не портит среднее вчерашним числом.
+HTTP_MAX_AGE_S = 900
+
+# Таймаут HTTP-источника. Прогон живёт ~6 минут, но источник не должен этим
+# пользоваться: сетевой сбой внешнего сайта обязан кончаться, а не висеть.
+HTTP_TIMEOUT_S = 20
+
+# Источник не документирован и не требует авторизации. Единственное, что мы
+# шлём, - тот же Referer, что шлёт сам сайт, и cache-busting query, без
+# которого ответы могут кэшироваться посередине.
+YARTEMP_REFERER = 'https://yartemp.com/'
 try:
     HISTORY_TZ = ZoneInfo('Europe/Moscow')
 except ZoneInfoNotFoundError:
@@ -73,6 +94,96 @@ def parse_payload(raw):
         return float(text)
     except ValueError:
         return None
+
+
+def http_stations(stations):
+    """Станции, которые опрашиваются по HTTP, а не слушаются по MQTT.
+
+    Отсутствие поля source - это mqtt, поэтому существующие станции в
+    stations.json не меняются и не обязаны знать про этот выбор.
+    """
+    return [st for st in stations if st.get('source', 'mqtt') == 'http']
+
+
+def fetch_yartemp(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
+    """Опрашивает HTTP-источник. Возвращает (payload, reading_ts) или (None, None).
+
+    Ответ - одна строка, поля разделены ";". Берутся ровно два: [0] температура
+    и [1] unix-время САМОГО ЗАМЕРА. Оно, а не время нашего запроса, становится
+    меткой прихода, поэтому age_s на сайте показывает свежесть показания.
+
+    Не бросает исключений ни при каком ответе. Публикация sensors_history.json
+    не должна зависеть от чужого сайта: сеть отвалилась, сайт отдал HTML вместо
+    данных, автор сменил формат - всё это «нет данных», а не падение прогона.
+    Худший исход при смене формата - станция молча перестаёт давать значение.
+    """
+    now = time.time() if now is None else now
+    if session is None:
+        import requests
+
+        session = requests.Session()
+    # Cache-busting: без него ответ может прийти из кэша, и мы запишем в бакет
+    # показание, которого никто не измерял.
+    query = urlencode({'_': int(now * 1000)})
+    try:
+        response = session.get('%s?%s' % (url, query),
+                               timeout=timeout_s,
+                               headers={'Referer': YARTEMP_REFERER})
+        response.raise_for_status()
+        text = response.text
+    except Exception:
+        return None, None
+
+    if not text:
+        return None, None
+    fields = text.strip().split(';')
+    if len(fields) < 2:
+        return None, None
+    try:
+        reading_ts = float(fields[1])
+    except (TypeError, ValueError):
+        return None, None
+    if reading_ts != reading_ts or reading_ts <= 0:
+        return None, None
+    value = fields[0].strip()
+    if not value:
+        return None, None
+    # Значение проверяется здесь, а не в validate(), потому что validate()
+    # живёт в общем для обоих транспортов снимке и не знает, откуда пришли
+    # данные. Мусор вместо числа не должен доходить до словарей: иначе он
+    # попал бы в бакет истории и тихо испортил среднее.
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None, None
+    if number != number:
+        return None, None
+    return value, reading_ts
+
+
+def collect_http(received, seen, stations, now, fetcher=None, timeout_s=HTTP_TIMEOUT_S):
+    """Опрашивает HTTP-станции и кладёт ответы в те же словари, что и MQTT.
+
+    Ключом служит URL из sensors - ровно то, что лежит в конфиге, поэтому
+    build_snapshot не различает транспорты и не меняется. Протухший или
+    непригодный ответ в словари не попадает: станция станет offline сама.
+    """
+    fetcher = fetcher or fetch_yartemp
+    for st in http_stations(stations):
+        for param, url in st['sensors'].items():
+            payload, reading_ts = fetcher(url, now=now, timeout_s=timeout_s)
+            if payload is None:
+                continue
+            # Часы источника могут спешить на несколько секунд (замерено: -5 с).
+            # Метка из будущего прошла бы проверку свежести и выглядела бы
+            # свежее прогона, поэтому она прижимается к времени опроса.
+            if reading_ts > now:
+                reading_ts = now
+            if now - reading_ts > HTTP_MAX_AGE_S:
+                continue
+            received[url] = payload
+            seen[url] = reading_ts
+            break
 
 
 def validate(param, value):
@@ -208,6 +319,10 @@ def load_stations(path):
         sensors = st['sensors']
         if not isinstance(sensors, dict) or not sensors:
             raise ValueError('station %r: sensors must be a non-empty object' % sid)
+        source = st.get('source', 'mqtt')
+        if source not in VALID_SOURCES:
+            raise ValueError('station %r: unknown source %r; allowed: %s'
+                             % (sid, source, ', '.join(VALID_SOURCES)))
         for param, topic in sensors.items():
             if param not in SENSOR_PARAMS:
                 raise ValueError(
@@ -361,6 +476,10 @@ def collect(client, stations, window_s):
     seen = {}
     wanted = set()
     for st in stations:
+        # Только mqtt-станции: у http-станции в sensors лежит URL, и подписка
+        # на него была бы молчаливым мусором в брокере.
+        if st.get('source', 'mqtt') != 'mqtt':
+            continue
         for topic in st['sensors'].values():
             wanted.add(topic)
 
@@ -413,6 +532,10 @@ def run(config=DEFAULT_CONFIG, out=DEFAULT_OUT, window_s=None, client_factory=No
     client.connect(settings.get('broker', 'yar.gorod76.ru'),
                    int(settings.get('port', 1883)), 30)
     received, seen = collect(client, stations, window_s)
+    # HTTP-станции опрашиваются после прослушки, но до снимка: и MQTT, и HTTP
+    # должны описывать один и тот же момент времени, иначе age_s у разных
+    # станций означал бы разное.
+    collect_http(received, seen, stations, time.time())
     now = time.time()
     snapshot = build_snapshot(stations, received, window_s, now, seen)
 

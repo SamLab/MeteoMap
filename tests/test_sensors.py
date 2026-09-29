@@ -5,8 +5,11 @@ import pytest
 
 from tools import collect_sensors as cs
 from tools.collect_sensors import (
+    HTTP_MAX_AGE_S,
     average_stations,
+    fetch_yartemp,
     history_hour_value,
+    http_stations,
     load_history,
     load_stations,
     moscow_hour_key,
@@ -251,10 +254,14 @@ def test_repository_stations_config_window_covers_the_slowest_station():
 def test_repository_stations_config_subscribes_only_four_topics():
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
-    topics = [t for st in settings['stations'] for t in st['sensors'].values()]
-    # Температуру отдают все четыре станции, поэтому отказ от влажности и
-    # давления не обесценил ни одну: 4 топика вместо 9.
-    assert len(settings['stations']) == 4
+    # Считаются только mqtt-станции: у http-станции в sensors лежит URL, а не
+    # топик, и в подписку он не попадает.
+    mqtt = [st for st in settings['stations']
+            if st.get('source', 'mqtt') == 'mqtt']
+    topics = [t for st in mqtt for t in st['sensors'].values()]
+    # Температуру отдают все четыре станции брокера, поэтому отказ от
+    # влажности и давления не обесценил ни одну: 4 топика вместо 9.
+    assert len(mqtt) == 4
     assert len(topics) == 4
     assert len(set(topics)) == 4
 
@@ -847,3 +854,247 @@ def test_run_survives_garbage_history_days(tmp_path, bad):
 
     assert code == 0
     assert len(json.loads(hist.read_text(encoding="utf-8"))["hours"]) == 1
+
+
+# --- yartemp.com: пятая станция, только температура -----------------------
+# Формат ответа: одна строка, поля через ";". Поле [0] - температура,
+# поле [1] - unix-время САМОГО ЗАМЕРА (не время отдачи страницы).
+
+YARTEMP_URL = 'https://yartemp.com/webdata/'
+YARTEMP_BODY = '8.090;1790708310;-0.146;3.193;9.819;-1;-1;-0.864;21.825;06:19;18:02;11:43;-29.172;0.883;18.096;5;3;766.8;0;-1;730.0;770.0;0.1'
+
+
+class _FakeResponse:
+    def __init__(self, text, status=200):
+        self.text = text
+        self.status_code = status
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError('HTTP %d' % self.status_code)
+
+
+class _FakeSession:
+    """Записывает запросы и отдаёт заготовленный ответ."""
+
+    def __init__(self, text='8.090;1790708310', status=200, raises=None):
+        self.text = text
+        self.status = status
+        self.raises = raises
+        self.calls = []
+
+    def get(self, url, **kw):
+        self.calls.append((url, kw))
+        if self.raises is not None:
+            raise self.raises
+        return _FakeResponse(self.text, self.status)
+
+
+def test_fetch_yartemp_takes_temperature_and_reading_time():
+    """Берутся только поле [0] как значение и поле [1] как метка замера."""
+    payload, reading_ts = fetch_yartemp(
+        YARTEMP_URL, now=1790708310.0, session=_FakeSession(YARTEMP_BODY))
+    assert payload == '8.090'
+    assert reading_ts == 1790708310.0
+
+
+def test_fetch_yartemp_sends_cache_busting_query_and_referer():
+    """Сайт сам так ходит: query с меняющимся числом и Referer на главную."""
+    session = _FakeSession(YARTEMP_BODY)
+    fetch_yartemp(YARTEMP_URL, now=1790708310.0, session=session)
+    url, kw = session.calls[0]
+    assert url.startswith(YARTEMP_URL + '?')
+    assert kw['headers']['Referer'] == 'https://yartemp.com/'
+
+
+def test_fetch_yartemp_returns_none_for_garbage():
+    """Мусор вместо числа - это «нет данных», а не исключение."""
+    assert fetch_yartemp(YARTEMP_URL, now=1.0,
+                         session=_FakeSession('nope;123')) == (None, None)
+
+
+def test_fetch_yartemp_returns_none_when_body_has_no_timestamp():
+    """Без поля [1] свежесть неизвестна, поэтому значение не принимается."""
+    assert fetch_yartemp(YARTEMP_URL, now=1.0,
+                         session=_FakeSession('8.090')) == (None, None)
+
+
+def test_fetch_yartemp_returns_none_on_empty_body():
+    assert fetch_yartemp(YARTEMP_URL, now=1.0,
+                         session=_FakeSession('')) == (None, None)
+
+
+def test_fetch_yartemp_survives_network_error():
+    """Чужой сайт не должен ронять публикацию sensors_history.json."""
+    assert fetch_yartemp(
+        YARTEMP_URL, now=1.0,
+        session=_FakeSession(raises=OSError('connection reset'))) == (None, None)
+
+
+def test_fetch_yartemp_survives_http_error():
+    assert fetch_yartemp(
+        YARTEMP_URL, now=1.0,
+        session=_FakeSession('oops', status=503)) == (None, None)
+
+
+def test_fetch_yartemp_survives_html_instead_of_data():
+    """Если вместо данных придёт HTML (смена формата) - тихо None."""
+    assert fetch_yartemp(
+        YARTEMP_URL, now=1.0,
+        session=_FakeSession('<html><body>404</body></html>')) == (None, None)
+
+
+def test_http_stations_selects_only_explicit_http_sources():
+    stations = [
+        {'id': 'a', 'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'b', 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+        {'id': 'c', 'source': 'mqtt', 'sensors': {'temperature_2m': 'x/y'}},
+    ]
+    assert [st['id'] for st in http_stations(stations)] == ['b']
+
+
+def test_stale_yartemp_reading_is_not_injected(tmp_path, monkeypatch):
+    """Замер старше порога не попадает в среднее: станция молчит."""
+    now = 1790708310.0
+    stale = now - HTTP_MAX_AGE_S - 1
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp', lambda url, **kw: ('8.090', stale))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    assert data['stations'][0]['online'] is False
+    assert data['stations'][0]['values'] == {}
+
+
+def test_fresh_yartemp_reading_is_counted_like_an_mqtt_station(tmp_path, monkeypatch):
+    """Свежий HTTP-чтение проходит ровно тем же путём, что и MQTT."""
+    now = 1790708310.0
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+    hist = tmp_path / 'h.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp',
+                        lambda url, **kw: ('8.09', now - 60))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(hist))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    st = data['stations'][0]
+    assert st['online'] is True
+    assert st['values']['temperature_2m'] == pytest.approx(8.09)
+    # age считается от метки ЗАМЕРА, а не от времени нашего запроса
+    assert st['age_s'] == pytest.approx(60.0, abs=1)
+    # и значение попало в историю
+    hours = json.loads(hist.read_text(encoding='utf-8'))['hours']
+    assert hours
+
+
+def test_failing_yartemp_does_not_break_mqtt_stations(tmp_path, monkeypatch):
+    """Падение одного источника не должно обнулить остальные станции."""
+    now = 1790708310.0
+    stations = [
+        {'id': 'a', 'name': 'A', 'lat': 57.0, 'lon': 39.0,
+         'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+         'source': 'http', 'sensors': {'temperature_2m': YARTEMP_URL}},
+    ]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+    fake = _FakeClient([('city/out/a', '20.4', False)])
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp', lambda url, **kw: (None, None))
+
+    cs.run(client_factory=lambda *a, **kw: fake, config=cfg, out=out, window_s=0,
+           history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    assert data['stations'][0]['values']['temperature_2m'] == pytest.approx(20.4)
+    assert data['stations'][1]['online'] is False
+
+
+def test_http_station_is_never_subscribed_over_mqtt():
+    """URL не должен попадать в подписку: collect берёт только mqtt-станции."""
+    stations = [
+        {'id': 'a', 'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'yt', 'source': 'http', 'sensors': {'temperature_2m': YARTEMP_URL}},
+    ]
+    client = _FakeClient([('city/out/a', '20.4', False)])
+    cs.collect(client, stations, 0)
+    assert client.subs == ['city/out/a']
+
+
+def test_repository_config_has_five_stations_with_one_http():
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    stations = settings['stations']
+    assert len(stations) == 5
+    http = [st for st in stations if st.get('source') == 'http']
+    assert len(http) == 1
+    assert http[0]['id'] == 'yartemp'
+    # у всех станций только температура, как и у MQTT-станций
+    for st in stations:
+        assert list(st['sensors']) == ['temperature_2m']
+
+
+def test_load_stations_accepts_source_field(tmp_path):
+    """Явный source=http валиден; отсутствие поля означает mqtt."""
+    stations = [
+        {'id': 'a', 'name': 'A', 'lat': 57.0, 'lon': 39.0,
+         'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9, 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+    ]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    loaded = load_stations(cfg)
+    assert loaded[0].get('source', 'mqtt') == 'mqtt'
+    assert loaded[1]['source'] == 'http'
+
+
+def test_load_stations_rejects_unknown_source(tmp_path):
+    stations = [{'id': 'a', 'name': 'A', 'lat': 57.0, 'lon': 39.0,
+                 'source': 'carrier-pigeon',
+                 'sensors': {'temperature_2m': 'city/out/a'}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    with pytest.raises(ValueError, match='source'):
+        load_stations(cfg)
+
+
+def test_future_timestamp_is_clamped_to_poll_time(tmp_path, monkeypatch):
+    """Часы источника спешат: метка из будущего не должна выглядеть свежее прогона."""
+    now = 1790708310.0
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    # источник на 5 секунд впереди нас
+    monkeypatch.setattr(cs, 'fetch_yartemp',
+                        lambda url, **kw: ('8.09', now + 5))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    st = data['stations'][0]
+    assert st['online'] is True
+    assert st['age_s'] >= 0

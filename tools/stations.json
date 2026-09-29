@@ -39,6 +39,16 @@
       "sensors": {
         "temperature_2m": "/bereg/2708554-1458260/tmp315/status"
       }
+    },
+    {
+      "id": "yartemp",
+      "name": "Ярославль, yartemp.com",
+      "lat": 57.62,
+      "lon": 39.92,
+      "source": "http",
+      "sensors": {
+        "temperature_2m": "https://yartemp.com/webdata/"
+      }
     }
   ]
 }
