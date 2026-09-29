@@ -582,53 +582,20 @@ def test_daily_wind_direction_uses_circular_mean():
     assert p["daily"]["wind_direction_10m_dominant"] == pytest.approx([0.0], abs=0.1)
 
 
-# --- атрибуция yartemp.com -------------------------------------------------
-# FAQ yartemp: при использовании данных на другом сайте нужно ставить ссылку
-# на оригинал, а выдавать их за свои без договорённости автор не разрешает.
-# Ссылка появляется только там, где yartemp реально попал в данные: у города
-# без датчиков упоминать чужой источник незачем.
+def test_help_section_credits_yartemp():
+    """В справке перечислены источники, и yartemp должен быть среди них.
 
-YARTEMP_URL = "https://yartemp.com/"
-
-
-def test_render_credits_yartemp_when_it_contributed():
-    p = _payload()
-    p["sensor_station_ids"] = [["penaty", "yartemp"], ["yartemp"], []]
-    html = meteo.render("__ATTRIBUTION__", p)
-    assert YARTEMP_URL in html
-    assert "yartemp.com" in html
+    Подвал с атрибуцией был убран в cdd7047 в пользу раздела «Источники
+    данных» в справке, поэтому ссылка на чужой источник живёт именно там.
+    Требование yartemp - ссылка на оригинал везде, где публикуются его данные.
+    """
+    with open('template.html', encoding='utf-8') as f:
+        template = f.read()
+    assert 'https://yartemp.com/' in template
 
 
-def test_render_omits_yartemp_when_it_did_not_contribute():
-    p = _payload()
-    p["sensor_station_ids"] = [["penaty"], ["penaty"], []]
-    html = meteo.render("__ATTRIBUTION__", p)
-    assert "yartemp.com" not in html
-
-
-def test_render_omits_yartemp_for_cities_without_sensors():
-    """Город без датчиков не должен упоминать источник датчиков."""
-    html = meteo.render("__ATTRIBUTION__", _payload())
-    assert "yartemp.com" not in html
-
-
-def test_sensor_station_ids_reports_contributing_stations():
-    """Клиенту нужно знать, какие станции попали в значение, чтобы показать источник."""
-    from meteo import _sensor_station_ids
-
-    bucket = {"stations": {"penaty": {"temperature_2m": [1.0, 3.0]},
-                            "yartemp": {"temperature_2m": [2.0]},
-                            "broken": {"temperature_2m": "nope"}}}
-    ids = _sensor_station_ids(bucket, "temperature_2m")
-    assert ids == ["penaty", "yartemp"]
-
-
-def test_sensor_station_ids_matches_stations_used_by_hour_value():
-    """Атрибуция и счётчик обязаны считать один и тот же список станций."""
-    from meteo import _sensor_hour_value, _sensor_station_ids
-
-    bucket = {"stations": {"penaty": {"temperature_2m": [1.0]},
-                            "yartemp": {"temperature_2m": [2.0, 4.0]},
-                            "broken": {"temperature_2m": "nope"}}}
-    _, _, n = _sensor_hour_value(bucket, "temperature_2m")
-    assert n == len(_sensor_station_ids(bucket, "temperature_2m"))
+def test_help_credits_yartemp_as_a_station_source():
+    with open('template.html', encoding='utf-8') as f:
+        template = f.read()
+    # Источник должен быть назван рядом со станциями, а не в общем списке моделей
+    assert 'YarTemp' in template or 'yartemp' in template

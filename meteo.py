@@ -1146,31 +1146,6 @@ def _sensor_hour_value(bucket, var):
             len(per_station))
 
 
-def _sensor_station_ids(bucket, var):
-    """Отсортированные id станций, которые реально попали в значение часа.
-
-    Нужен клиенту для атрибуции: yartemp просит ссылку на себя там, где его
-    данные публикуются. Возвращает ровно те же станции, что и
-    _sensor_hour_value, поэтому надстрочный счётчик и подпись источника не
-    могут разойтись: оба считают один и тот же список.
-    """
-    stations = bucket.get("stations") if isinstance(bucket, dict) else None
-    if not isinstance(stations, dict):
-        return []
-    ids = []
-    for sid, values in stations.items():
-        if not isinstance(values, dict):
-            continue
-        samples = values.get(var)
-        if not isinstance(samples, list) or not samples:
-            continue
-        if not all(isinstance(x, (int, float)) and not isinstance(x, bool)
-                   for x in samples):
-            continue
-        ids.append(str(sid))
-    return sorted(ids)
-
-
 def load_sensor_model(grid, path=None):
     """Собирает псевдо-модель «Датчик» по оси grid.
 
@@ -1204,13 +1179,11 @@ def load_sensor_model(grid, path=None):
     data = {}
     counts = {}
     minimums = {}
-    ids_by_var = {}
     found = False
     for var in SENSOR_VARS:
         column = []
         ncolumn = []
         mcolumn = []
-        icolumn = []
         for hour in grid:
             value, minimum, n = _sensor_hour_value(hours.get(hour), var)
             if value is not None:
@@ -1218,15 +1191,13 @@ def load_sensor_model(grid, path=None):
             column.append(value)
             ncolumn.append(n)
             mcolumn.append(minimum)
-            icolumn.append(_sensor_station_ids(hours.get(hour), var))
         data[var] = column
         counts[var] = ncolumn
         minimums[var] = mcolumn
-        ids_by_var[var] = icolumn
     if not found:
         return None
     return {"time": list(grid), "data": data, "station_counts": counts,
-            "station_min": minimums, "station_ids": ids_by_var}
+            "station_min": minimums}
 
 
 def force_min_weight(weights, code):
@@ -1564,29 +1535,7 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     sensor_min = sensor_model.get("station_min")
     if sensor_min:
         payload["sensor_station_min"] = sensor_min
-    # Список станций по часам нужен для атрибуции: yartemp требует ссылку на
-    # себя там, где его данные публикуются. Ключ верхнеуровневый: у клиента
-    # ровно одна переменная датчика - температура, поэтому плоский список по
-    # часам читается проще вложенного словаря.
-    sensor_ids = sensor_model.get("station_ids")
-    for rows in (sensor_ids or {}).values():
-        payload["sensor_station_ids"] = rows
-        break
     return payload
-
-
-def _payload_uses_station(payload, station_id):
-    """Участвовала ли станция хотя бы в одном часе данных.
-
-    Обход не по всему payload, а по ключу station_ids: он единственный, где
-    перечислены станции, и он выровнен по часам, поэтому «участвовала» значит
-    «есть хоть один непустой список».
-    """
-    rows = (payload or {}).get("sensor_station_ids")
-    if not isinstance(rows, list):
-        return False
-    return any(isinstance(row, (list, tuple)) and station_id in row
-               for row in rows)
 
 
 def render(template, payload):
@@ -1613,11 +1562,6 @@ def render(template, payload):
         attribs.append('<a href="https://www.meteoblue.com/">Meteoblue</a>')
     if TT_CODE in codes:
         attribs.append('<a href="https://www.7timer.info/">7Timer</a>')
-    # yartemp.com просит ссылку на себя везде, где публикуются его данные.
-    # Ссылка ставится по факту участия в данных, а не всегда: у города без
-    # датчиков и в часы, когда станция молчала, упоминать её незачем.
-    if _payload_uses_station(payload, "yartemp"):
-        attribs.append('<a href="https://yartemp.com/">YarTemp</a>')
     html = html.replace("__ATTRIBUTION__", " · ".join(attribs))
     return html
 
