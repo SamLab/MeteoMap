@@ -392,6 +392,80 @@ def test_daily_nonprecip_keeps_precision():
     assert p["daily"]["cloud_cover_mean"] == pytest.approx([49.0])
 
 
+# --- строка «По датчику» под «Ощущается как» в блоке «Сейчас»
+
+
+def _sensor_now_js():
+    """Тело функции, ищущей последний непустой бакет датчиков."""
+    html = read_template()
+    start = html.index("function lastSensorHour(")
+    return html[start:html.index("function buildWeatherNow(", start)]
+
+
+def test_weather_now_renders_sensor_line_under_apparent():
+    """Строка «По датчику» обязана стоять под «Ощущается как», а не рядом.
+
+    Пользователь просил именно это место: порядок в разметке — единственное,
+    что отличает новую строку от любой другой подписи в том же блоке.
+    """
+    html = read_template()
+    start = html.index("function buildWeatherNow(){")
+    body = html[start:html.index("function buildWeatherHours(", start)]
+    feel = body.index("Ощущается как")
+    sensor = body.index("По датчику")
+    assert feel < sensor, "«По датчику» должен идти после «Ощущается как»"
+    # та же строка ощущается как у соседней подписи: без нового CSS-правила
+    assert 'class="wfeel"' in body[feel - 40:feel]
+    assert 'class="wfeel"' in body[sensor - 40:sensor]
+
+
+def test_last_sensor_hour_walks_back_from_current_hour():
+    """Значение ищется назад от текущего часа, а не в будущем.
+
+    Датчики пишут только за прошедшие часы, поэтому «последний непустой бакет»
+    почти всегда старше curIdx.
+    """
+    body = _sensor_now_js()
+    assert re.search(r"for\(let j=curIdx;\s*j>=0;\s*j--\)", body)
+    # счётчик станций и значение проверяются вместе: одно без другого
+    # описывает не наблюдение
+    assert "sensor_station_counts" in body
+
+
+def test_last_sensor_hour_treats_zero_as_a_reading():
+    """Ноль градусов — замер, а не отсутствие данных.
+
+    Проверка на истинность (``if(!v)``) убрала бы строку в морозы, когда
+    показание самое интересное.
+    """
+    body = _sensor_now_js()
+    assert re.search(r"!=\s*null", body), "проверка на null, а не на истинность"
+    assert re.search(r"if\(!v\)", body) is None
+
+
+def test_last_sensor_hour_returns_null_when_grid_is_empty():
+    """Пустая сетка — это «нет данных», а не необработанное исключение."""
+    body = _sensor_now_js()
+    assert re.search(r"return\s+null", body)
+
+
+def test_weather_now_omits_sensor_line_without_station_counts():
+    """Город вне SENSOR_LOCATIONS не получает строки вовсе."""
+    body = read_template()
+    start = body.index("function buildWeatherNow(){")
+    b = body[start:body.index("function buildWeatherHours(", start)]
+    assert re.search(r"if\(sn\)\{?[^}]*По датчику", b) or \
+        re.search(r"По датчику[^;]*sn", b) or "sensorNowLine" in b, \
+        "строка не обёрнута в проверку наличия данных датчиков"
+
+
+def test_weather_now_sensor_line_shows_hour_of_the_reading():
+    """Час в скобках берётся из найденного бакета, а не из текущего."""
+    body = _sensor_now_js()
+    # опциональная цепочка допустима: массив time может оказаться короче ряда
+    assert re.search(r"D\.time\[j\]\??\.slice\(11,16\)", body)
+
+
 def test_daily_wind_direction_uses_circular_mean():
     hourly = {"a": {"time": ["h0"], "data": {"temperature_2m": [1.0]}}}
     consensus = {

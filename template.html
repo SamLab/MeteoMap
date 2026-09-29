@@ -391,6 +391,29 @@ function buildConditions(){
   if(pr!==undefined&&pr!==null)list.push(['Осадки за день',(pr<0.1?0:fmtP(pr))+' мм']);
   document.getElementById('conditions').innerHTML=list.map(([l,v])=>`<div class="cond"><div class="val">${v}</div><div class="lab">${l}</div></div>`).join('');
 }
+function lastSensorHour(){
+  // Последний час с наблюдением датчиков, не новее текущего.
+  //
+  // Датчики пишут только за прошедшие часы, поэтому искать надо назад от
+  // curIdx: текущий час пуст до первого прогона нового часа и после любого
+  // пропущенного. Сетка начинается с полуночи сегодняшнего дня, поэтому
+  // вчерашние бакеты в неё не попадают и найтись не могут — это осознанно,
+  // так же устроен столбик «Датчик» в таблице часов.
+  //
+  // null, а не прочерк, означает «показать нечего»: вызывающая сторона
+  // скрывает строку целиком, чтобы не занимать место пустотой.
+  const n=D.sensor_station_counts?.temperature_2m;
+  const v=D.models?.[SENSOR_CODE]?.temperature_2m;
+  if(!n||!v)return null;
+  for(let j=curIdx;j>=0;j--){
+    // Обе проверки обязательны: счётчик без значения и значение без
+    // счётчика одинаково плохо описывают наблюдение. Ноль - замер,
+    // поэтому сравнение на null, а не на истинность.
+    const x=v[j];
+    if(n[j]>0&&x!=null)return{value:x,hour:D.time[j]?.slice(11,16)||'',index:j};
+  }
+  return null;
+}
 function buildWeatherNow(){
   const nt=document.getElementById('nowtitle');
   const cp=cityDateParts();
@@ -433,6 +456,7 @@ function buildWeatherNow(){
     if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
   }
   const prSum=D.daily.precipitation_sum?.[0];
+  const sn=lastSensorHour();
   let apt=0,apn=0;
   for(let j=0;j<D.time.length;j++){
     if(!D.time[j]||D.time[j].slice(0,10)!==today)continue;
@@ -459,6 +483,9 @@ function buildWeatherNow(){
   document.getElementById('weather-now').innerHTML=
     '<div class="wnow"><div class="wmain">'+we+' <span class="wbig">'+temp(w.temperature_2m?.[curIdx])+'</span>'+
     '<div class="wfeel">Ощущается как '+temp(w.apparent_temperature?.[curIdx])+'</div>'+
+    // Только когда показание есть: строка без данных молчала бы о том, что
+    // станции рядом есть, но молчат. Пустота на странице полезнее вранья.
+    (sn?'<div class="wfeel">По датчику '+(sn.value>0?'+':'')+fmt(sn.value)+'° ('+sn.hour+')</div>':'')+
     '<div class="wcond">'+wtext+degreeText(w.weather_code?.[curIdx],wtext)+'</div></div>'+
     '<div class="wdet"><table class="wnowtbl"><tr>'+cells.map((c,i)=>'<td class="wcol'+i+'">'+c.val+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' lab">'+c.lab+'</td>').join('')+'</tr>'+
