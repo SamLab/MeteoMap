@@ -1485,6 +1485,20 @@ def test_fetch_metar_survives_html_instead_of_json():
         session=_FakeSession('<html>maintenance</html>')) == (None, None)
 
 
+def test_fetch_metar_survives_integer_too_large_for_float():
+    """Огромное целое из JSON не должно вылетать из fetch_metar.
+
+    float() на строке к такому не готовит, а целое длиннее ~309 цифр
+    превращается в OverflowError, который не ловится TypeError/ValueError.
+    Ветка нужна именно здесь: fetch_yartemp всегда преобразует строку и
+    OverflowError не возникает, а collect_http вызывает адаптеры без
+    собственной защиты.
+    """
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(temp=10 ** 400))) == (None, None)
+
+
 def test_fetch_metar_survives_network_error():
     assert fetch_metar(
         METAR_URL, now=1.0,

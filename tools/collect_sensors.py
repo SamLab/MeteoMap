@@ -257,7 +257,10 @@ def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
         return None, None
     try:
         number = float(temp)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # OverflowError — это целое JSON-число длиннее ~309 цифр: float(temp)
+        # падает, хотя TypeError/ValueError здесь не срабатывают. У fetch_yartemp
+        # такой ветки нет, он всегда преобразует строку.
         return None, None
     low, high = SENSOR_PARAMS['temperature_2m']
     if not (low <= number <= high):
