@@ -8,6 +8,7 @@
 """
 
 import json
+import math
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -355,11 +356,18 @@ def load_stations(path):
         if 'max_age_s' in st:
             raw_age = st['max_age_s']
             if isinstance(raw_age, bool) or not isinstance(raw_age, (int, float)):
-                raise ValueError('station %r: max_age_s must be a number'
-                                 % (sid,))
-            if raw_age <= 0:
-                raise ValueError('station %r: max_age_s must be positive: %s'
+                raise ValueError('station %r: max_age_s must be a number: %r'
                                  % (sid, raw_age))
+            # json.load берёт литералы NaN и Infinity без кавычек, а json.dump
+            # пишет их без кавычек же, поэтому такое значение может прийти в
+            # конфиг из любого скрипта, который правит stations.json. Оба
+            # проходят проверку типа, а проверка знака их не видит: nan <= 0
+            # ложно, и inf > 0 истинно. Дальше порог не превышается никогда,
+            # станция не протухает никогда, и в среднее сайта попадают замеры
+            # любой давности - то есть порог свежести выключен молча.
+            if not math.isfinite(raw_age) or raw_age <= 0:
+                raise ValueError('station %r: max_age_s must be a positive '
+                                 'finite number: %s' % (sid, raw_age))
         for param, topic in sensors.items():
             if param not in SENSOR_PARAMS:
                 raise ValueError(

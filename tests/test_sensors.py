@@ -1296,8 +1296,46 @@ def test_load_stations_rejects_boolean_max_age(tmp_path):
                  'sensors': {'temperature_2m': YARTEMP_URL}}]
     cfg = tmp_path / 'st.json'
     cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
-    with pytest.raises(ValueError, match='max_age_s'):
+    with pytest.raises(ValueError, match='max_age_s') as err:
         load_stations(cfg)
+    # Причина обязана называть то, что оператор написал в конфиге: строка
+    # про «не число» без значения сама по себе ни о чём не говорит.
+    assert 'True' in str(err.value)
+
+
+def test_load_stations_rejects_nan_max_age(tmp_path):
+    """NaN проходит и проверку типа, и проверку знака, а порог не работает.
+
+    json.load по умолчанию берёт литерал NaN, а json.dump пишет его без
+    кавычек, поэтому такое значение может появиться в конфиге из любого
+    скрипта, который правит stations.json. Дальше `now - reading_ts > nan`
+    всегда False: станция не протухает никогда, и в среднее копятся замеры
+    любой давности - ровно то, ради чего порог и существует.
+    """
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'max_age_s': float('nan'),
+                 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    with pytest.raises(ValueError, match='max_age_s') as err:
+        load_stations(cfg)
+    assert 'nan' in str(err.value)
+
+
+def test_load_stations_rejects_infinite_max_age(tmp_path):
+    """Бесконечность ломает порог так же, как NaN, но иначе проходит.
+
+    `nan <= 0` ложно, так что знака тут не хватает; зато `inf > 0` истинно,
+    и бесконечность отсекает только проверка конечности.
+    """
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'max_age_s': float('inf'),
+                 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    with pytest.raises(ValueError, match='max_age_s') as err:
+        load_stations(cfg)
+    assert 'inf' in str(err.value)
 
 
 def test_metar_station_is_polled_over_the_network_not_mqtt():
