@@ -21,6 +21,8 @@
 - В справку (`template.html`) не упоминается суточное расхождение аэропорта и городских станций — решение пользователя.
 - Тесты запускаются интерпретатором проекта: `.venv\Scripts\python.exe -m pytest`. Системный `python` не содержит pytest.
 - `git add` — только явные пути. Untracked-файлы (`tools/collect_narodmon.py`, `tests/test_narodmon.py`, `backups/`, `remote.git/`) в коммиты не попадают.
+- `sensors_history.json` отслеживается git, но коммитит его только workflow `sensors`. Ни одна задача этого плана его не меняет и не коммитит: локальная копия расходится с CI, и коммит поверх неё затёр бы опубликованную историю.
+- `tools/collect_sensors.py` целиком не запускать. Живой источник проверяется прямым вызовом `fetch_metar` — он сет ходит, но историю не пишет.
 
 ---
 
@@ -830,11 +832,17 @@ Expected: FAIL — `assert 5 == 6`.
 Run: `.venv\Scripts\python.exe -m pytest tests/test_sensors.py -v`
 Expected: все PASS, включая `test_repository_stations_config_is_valid` и `test_repository_stations_config_window_covers_the_slowest_station`.
 
-- [ ] **Step 5: Проверить на настоящем источнике**
+- [ ] **Step 5: Проверить на настоящем источнике, не трогая историю**
 
-Run: `.venv\Scripts\python.exe tools/collect_sensors.py`
+Run: `.venv\Scripts\python.exe -c "import json,time; from tools import collect_sensors as cs; print(cs.fetch_metar('https://aviationweather.gov/api/data/metar?format=json&ids=UUDL&hours=1', now=time.time()))"`
 
-Expected в выводе: строка `uudl` со значением температуры и `age` не больше ~1800 секунд. Если станция молчит, запустить ещё раз и проверить, что ответил NOAA: скорее всего, это ограничение частоты запросов.
+Expected: пара вида `('16.0', 1759...)` — температура строкой и метка наблюдения
+числом. Если `(None, None)`, запустить ещё раз: скорее всего, это ограничение
+частоты запросов NOAA.
+
+**Не запускать `tools/collect_sensors.py` целиком.** Файл `sensors_history.json`
+отслеживается git, и локальный прогон перезапишет его расходящейся с CI копией.
+Проверка живого адаптера через прямой вызов безопасна: история не пишется.
 
 - [ ] **Step 6: Закоммитить**
 
@@ -957,14 +965,25 @@ git commit -m "docs(help): list the airport METAR as the sixth station"
 Run: `git status --short`
 Expected: только untracked-файлы, которые были до задачи (`backups/`, `remote.git/`, `tools/collect_narodmon.py`, `tests/test_narodmon.py`, старые планы и спеки). Ни одного изменённого отслеживаемого файла.
 
-- [ ] **Step 2: Прогнать коллектор на живом источнике**
+- [ ] **Step 2: Прогнать адаптер на живом источнике**
 
-Run: `.venv\Scripts\python.exe tools/collect_sensors.py`
-Expected: строка `uudl` со значением и `age` меньше 2400 секунд. В `sensors.json` у `uudl` непустое `values`.
+Run: `.venv\Scripts\python.exe -c "import json,time; from tools import collect_sensors as cs; stations=cs.load_stations(cs.DEFAULT_CONFIG); st=[s for s in stations if s.get('source')=='metar'][0]; p,ts=cs.fetch_metar(st['sensors']['temperature_2m'], now=time.time()); print(p, ts, int(time.time()-ts))"`
 
-- [ ] **Step 3: Убедиться, что бакет пришёл в час наблюдения**
+Expected: температура строкой, метка числом, возраст меньше `2400` — то есть
+сводка не старше собственного порога станции.
 
-Открыть `sensors_history.json`, найти последний непустой бакет и проверить, что ключ `uudl` в нём есть, а `stations.uudl.temperature_2m` содержит одно число. Если ключ бакета не совпадает с часом METAR, вернуться к Task 4 Step 1.
+**Не запускать `tools/collect_sensors.py` целиком.** `sensors_history.json`
+отслеживается git, а локальная копия уже расходится с той, что коммитит CI;
+полный прогон перезаписал бы файл и в следующем коммите продвинул бы в
+историю мусор. Живой коллектор всё равно отработает в workflow `sensors`.
+
+- [ ] **Step 3: Проверить, что бакет пришёл в час наблюдения**
+
+Запустить workflow `sensors` вручную и дождаться его коммита, затем посмотреть
+`git log -1 --stat -- sensors_history.json` и открыть добавленный бакет: в
+`hours` должен появиться ключ `uudl`, а `stations.uudl.temperature_2m` —
+список из одного числа. Ключ бакета должен совпадать с часом METAR, а не с
+часом прогона. Если не совпадает, вернуться к Task 4 Step 1.
 
 - [ ] **Step 4: Отправить в main и задеплоить**
 
