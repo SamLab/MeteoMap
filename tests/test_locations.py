@@ -345,3 +345,17 @@ def test_sensor_model_history_path_defaults_next_to_meteo_py():
     assert "data" not in os.path.relpath(path, root).split(os.sep)
     # корень репозитория, а не произвольная папка рядом с ним
     assert os.path.isfile(os.path.join(root, "pytest.ini"))
+
+
+def test_sensor_model_publishes_last_reading_time_per_hour(tmp_path):
+    """Клиенту нужно время последнего замера, а не ключ бакета."""
+    hist = {"hours": {
+        "2026-09-28T10:00": {"samples": 1, "updated_at": "2026-09-28T10:53:00+03:00",
+                             "stations": {"a": {"temperature_2m": [10.0]}}},
+        "2026-09-28T11:00": {"samples": 1, "stations": {"a": {"temperature_2m": [7.0]}}},
+    }}
+    grid = ["2026-09-28T10:00", "2026-09-28T11:00"]
+    model = load_sensor_model(grid, _write_history(tmp_path, hist))
+    # старый бакет без updated_at остаётся None, чтобы клиент откатился на час
+    assert model["updated_at"]["temperature_2m"] == ["2026-09-28T10:53:00+03:00", None]
+    assert set(model["updated_at"]) == set(meteo.SENSOR_VARS)

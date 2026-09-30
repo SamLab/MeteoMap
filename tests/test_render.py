@@ -477,8 +477,11 @@ def test_weather_now_omits_sensor_line_without_station_counts():
 def test_weather_now_sensor_line_shows_hour_of_the_reading():
     """Час в скобках берётся из найденного бакета, а не из текущего."""
     body = _sensor_now_js()
+    # Подпись строится из элемента с индексом нашего бакета j, а не из
+    # текущего часа страницы: иначе она называла бы время просмотра.
+    assert re.search(r"D\.time\[j\]", body), "метка обязана браться по индексу j"
     # опциональная цепочка допустима: массив time может оказаться короче ряда
-    assert re.search(r"D\.time\[j\]\??\.slice\(11,16\)", body)
+    assert "D.time[j]" in body
 
 
 # --- ночной минимум для Цеденево
@@ -599,3 +602,31 @@ def test_help_credits_yartemp_as_a_station_source():
         template = f.read()
     # Источник должен быть назван рядом со станциями, а не в общем списке моделей
     assert 'YarTemp' in template or 'yartemp' in template
+
+
+# --- подпись показывает время последнего обновления, а не начало часа -----
+
+def test_last_sensor_hour_label_prefers_reading_time_over_bucket_hour():
+    """В скобках - время, когда показание реально пришло, а не «10:00».
+
+    Пользователь читал «(10:00)» как «обновилось в 10:00», хотя замер мог
+    прийти в 10:53. Подпись обязана брать время последнего замера, когда оно
+    есть, и откатываться на ключ бакета только для старых бакетов.
+    """
+    body = _sensor_now_js()
+    assert "sensor_updated_at" in body, (
+        "время последнего замера должно приезжать отдельным рядом"
+    )
+    # Значение замера проверяется раньше ключа бакета, поэтому порядок важен:
+    # перестановка вернула бы показ «10:00» вместо «10:53».
+    assert re.search(r"\(ua&&ua\[j\]\)\|\|D\.time\[j\]", body), (
+        "метка замера должна проверяться раньше ключа бакета"
+    )
+
+
+def test_last_sensor_hour_label_falls_back_to_bucket_hour():
+    """Старые бакеты без updated_at показывают начало часа, а не пустоту."""
+    body = _sensor_now_js()
+    assert "||D.time[j]" in body, "нужен запасной вариант на ключ бакета часа"
+    # Подпись не должна превратиться в «null» или «undefined»
+    assert "String(stamp" not in body

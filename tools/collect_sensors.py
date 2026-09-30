@@ -217,6 +217,7 @@ def build_snapshot(stations, received, window_s, now, seen=None):
     for st in stations:
         values = {}
         value_hours = {}
+        value_ts = {}
         rejected = []
         last_ts = None
 
@@ -237,6 +238,10 @@ def build_snapshot(stations, received, window_s, now, seen=None):
                 # молча уезжали бы в предыдущий бакет. Без seen (юнит-тесты,
                 # --dry) часа нет, и record_history возьмёт час прогона.
                 value_hours[param] = moscow_hour_key(ts)
+                # Сам момент прихода. Из него на сайте получается подпись
+                # «обновлено в 10:53», а из ключа бакета - только «10:00»,
+                # что читается как время обновления и вводит в заблуждение.
+                value_ts[param] = ts
             if ts is not None and (last_ts is None or ts > last_ts):
                 last_ts = ts
 
@@ -254,6 +259,7 @@ def build_snapshot(stations, received, window_s, now, seen=None):
             'age_s': age,
             'values': values,
             'value_hours': value_hours,
+            'value_ts': value_ts,
             'rejected': rejected,
         })
 
@@ -346,6 +352,17 @@ def moscow_now_ts(hour_key):
         tzinfo=HISTORY_TZ).timestamp()
 
 
+def moscow_iso(ts):
+    """Unix-время в локальный московский ISO с явным смещением.
+
+    Формат тот же, что у ключей бакетов, но с минутами и часовым поясом:
+    такой stamp сортируется как строка, поэтому в record_history достаточно
+    сравнения '>', а разбор часовых поясов на стороне сайта не нужен.
+    """
+    return datetime.fromtimestamp(ts, HISTORY_TZ).replace(
+        second=0, microsecond=0).isoformat(timespec='seconds')
+
+
 def load_history(path):
     """Читает историю. Отсутствующий или битый файл — пустая история,
     а не ошибка: сборка сайта не должна зависеть от накопленного.
@@ -387,12 +404,24 @@ def record_history(hours, hour_key, per_station):
         hours_by_param = station.get('value_hours')
         if not isinstance(hours_by_param, dict):
             hours_by_param = {}
+        ts_by_param = station.get('value_ts')
+        if not isinstance(ts_by_param, dict):
+            ts_by_param = {}
         for param, value in values.items():
             key = hours_by_param.get(param, hour_key)
             bucket = hours['hours'].setdefault(key, {'samples': 0, 'stations': {}})
             entry = bucket['stations'].setdefault(station['id'], {})
             entry.setdefault(param, []).append(value)
             bucket['samples'] += 1
+            # Метка последнего обновления бакета - время самого позднего
+            # пришедшего замера, а не ключ часа: именно её показывает сайт.
+            # max(), а не присваивание, потому что в бакет попадают замеры
+            # нескольких прогонов и поздний прогон не должен откатывать
+            # метку на часы, если после него пришёл более ранний замер часа.
+            ts = ts_by_param.get(param)
+            stamp = moscow_iso(ts) if ts is not None else key
+            if bucket.get('updated_at') is None or stamp > bucket['updated_at']:
+                bucket['updated_at'] = stamp
             wrote = True
     return wrote
 

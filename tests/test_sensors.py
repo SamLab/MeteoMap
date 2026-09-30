@@ -1098,3 +1098,72 @@ def test_future_timestamp_is_clamped_to_poll_time(tmp_path, monkeypatch):
     st = data['stations'][0]
     assert st['online'] is True
     assert st['age_s'] >= 0
+
+
+# --- время последнего обновления вместо начала часа ----------------------
+# Раньше строка показывала D.time[j] - ключ бакета, то есть начало часа.
+# Пользователь читает это как "данные обновились в 10:00", что неправда:
+# показание могло прийти в 10:53.
+
+def test_snapshot_records_arrival_timestamp_per_param():
+    """Время прихода замера не должно теряться: из него делается метка часа."""
+    st = {"id": "a", "name": "A", "lat": 57.0, "lon": 39.0,
+          "sensors": {"temperature_2m": "city/out/a"}}
+    ts = 1790708310.0
+    snap = cs.build_snapshot([st], {"city/out/a": "20.4"}, 350, ts,
+                             {"city/out/a": ts})
+    assert snap["stations"][0]["value_ts"]["temperature_2m"] == ts
+
+
+def test_record_history_stores_latest_reading_time_in_bucket():
+    """В бакет пишется ISO-время последнего пришедшего замера."""
+    hours = {"hours": {}}
+    # 10:53 МСК = 07:53 UTC
+    ts = datetime(2026, 9, 28, 7, 53, tzinfo=timezone.utc).timestamp()
+    per_station = [{"id": "a", "values": {"temperature_2m": 20.4},
+                    "value_hours": {"temperature_2m": "2026-09-28T10:00"},
+                    "value_ts": {"temperature_2m": ts}}]
+    cs.record_history(hours, "2026-09-28T10:00", per_station)
+    assert hours["hours"]["2026-09-28T10:00"]["updated_at"].startswith(
+        "2026-09-28T10:53")
+
+
+def test_record_history_keeps_the_newest_of_two_runs():
+    """Поздний прогон дописывает замер и двигает метку, ранний - не откатывает."""
+    hours = {"hours": {}}
+    early = datetime(2026, 9, 28, 7, 5, tzinfo=timezone.utc).timestamp()
+    late = datetime(2026, 9, 28, 7, 53, tzinfo=timezone.utc).timestamp()
+    for ts in (late, early):
+        cs.record_history(hours, "2026-09-28T10:00", [
+            {"id": "a", "values": {"temperature_2m": 20.4},
+             "value_hours": {"temperature_2m": "2026-09-28T10:00"},
+             "value_ts": {"temperature_2m": ts}}])
+    bucket = hours["hours"]["2026-09-28T10:00"]
+    assert bucket["updated_at"].startswith("2026-09-28T10:53")
+    assert len(bucket["stations"]["a"]["temperature_2m"]) == 2
+
+
+def test_record_history_falls_back_to_bucket_hour_without_arrival_time():
+    """Прогон без времени прихода (юнит-тесты, --dry) даёт начало часа."""
+    hours = {"hours": {}}
+    cs.record_history(hours, "2026-09-28T10:00", [
+        {"id": "a", "values": {"temperature_2m": 20.4},
+         "value_hours": {"temperature_2m": "2026-09-28T10:00"}}])
+    assert hours["hours"]["2026-09-28T10:00"]["updated_at"].startswith(
+        "2026-09-28T10:00")
+
+
+def test_record_history_uses_max_across_stations():
+    """Метка бакета - время самого позднего замера из всех станций."""
+    hours = {"hours": {}}
+    fast = datetime(2026, 9, 28, 7, 10, tzinfo=timezone.utc).timestamp()
+    slow = datetime(2026, 9, 28, 7, 40, tzinfo=timezone.utc).timestamp()
+    cs.record_history(hours, "2026-09-28T10:00", [
+        {"id": "a", "values": {"temperature_2m": 20.4},
+         "value_hours": {"temperature_2m": "2026-09-28T10:00"},
+         "value_ts": {"temperature_2m": fast}},
+        {"id": "b", "values": {"temperature_2m": 19.0},
+         "value_hours": {"temperature_2m": "2026-09-28T10:00"},
+         "value_ts": {"temperature_2m": slow}}])
+    assert hours["hours"]["2026-09-28T10:00"]["updated_at"].startswith(
+        "2026-09-28T10:40")

@@ -1146,6 +1146,22 @@ def _sensor_hour_value(bucket, var):
             len(per_station))
 
 
+def _sensor_hour_updated(bucket):
+    """Время последнего замера в бакете или None.
+
+    Подпись «По датчику» показывает именно его, а не ключ бакета: «10:00»
+    читается как «обновилось в 10:00», хотя замер пришёл в 10:53. Бакеты,
+    накопленные до появления метки, поля не содержат - там None, и клиент
+    откатывается на час, как и раньше.
+    """
+    if not isinstance(bucket, dict):
+        return None
+    value = bucket.get("updated_at")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
 def load_sensor_model(grid, path=None):
     """Собирает псевдо-модель «Датчик» по оси grid.
 
@@ -1179,11 +1195,13 @@ def load_sensor_model(grid, path=None):
     data = {}
     counts = {}
     minimums = {}
+    updated = {}
     found = False
     for var in SENSOR_VARS:
         column = []
         ncolumn = []
         mcolumn = []
+        ucolumn = []
         for hour in grid:
             value, minimum, n = _sensor_hour_value(hours.get(hour), var)
             if value is not None:
@@ -1191,13 +1209,15 @@ def load_sensor_model(grid, path=None):
             column.append(value)
             ncolumn.append(n)
             mcolumn.append(minimum)
+            ucolumn.append(_sensor_hour_updated(hours.get(hour)))
         data[var] = column
         counts[var] = ncolumn
         minimums[var] = mcolumn
+        updated[var] = ucolumn
     if not found:
         return None
     return {"time": list(grid), "data": data, "station_counts": counts,
-            "station_min": minimums}
+            "station_min": minimums, "updated_at": updated}
 
 
 def force_min_weight(weights, code):
@@ -1535,6 +1555,12 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     sensor_min = sensor_model.get("station_min")
     if sensor_min:
         payload["sensor_station_min"] = sensor_min
+    # Время последнего замера по часам едет третьим рядом и нужно клиенту
+    # для подписи «По датчику». Ряд может состоять из None там, где бакет
+    # старый и метки в нём ещё нет: это не ошибка, а сигнал откатиться на час.
+    sensor_updated = sensor_model.get("updated_at")
+    if sensor_updated:
+        payload["sensor_updated_at"] = sensor_updated
     return payload
 
 
