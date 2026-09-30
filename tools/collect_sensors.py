@@ -105,6 +105,18 @@ def http_stations(stations):
     return [st for st in stations if st.get('source', 'mqtt') == 'http']
 
 
+def station_max_age_s(station):
+    """Порог свежести станции в секундах.
+
+    Общий HTTP_MAX_AGE_S описывает yartemp, который обновляется раз в 5 минут.
+    Источник с другим ритмом требует другого допуска: METAR выходит раз в 30
+    минут, и при общем пороге в 15 минут он протухал бы в каждом прогоне,
+    то есть не дал бы ни одного числа. Поле необязательное, поэтому станции
+    без него сохраняют прежнее поведение.
+    """
+    return station.get('max_age_s', HTTP_MAX_AGE_S)
+
+
 def fetch_yartemp(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     """Опрашивает HTTP-источник. Возвращает (payload, reading_ts) или (None, None).
 
@@ -179,7 +191,8 @@ def collect_http(received, seen, stations, now, fetcher=None, timeout_s=HTTP_TIM
             # свежее прогона, поэтому она прижимается к времени опроса.
             if reading_ts > now:
                 reading_ts = now
-            if now - reading_ts > HTTP_MAX_AGE_S:
+            max_age_s = station_max_age_s(st)
+            if now - reading_ts > max_age_s:
                 continue
             received[url] = payload
             seen[url] = reading_ts

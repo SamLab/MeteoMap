@@ -15,6 +15,7 @@ from tools.collect_sensors import (
     moscow_hour_key,
     moscow_now_ts,
     record_history,
+    station_max_age_s,
     trim_history,
     validate,
 )
@@ -1167,3 +1168,66 @@ def test_record_history_uses_max_across_stations():
          "value_ts": {"temperature_2m": slow}}])
     assert hours["hours"]["2026-09-28T10:00"]["updated_at"].startswith(
         "2026-09-28T10:40")
+
+
+# --- порог свежести у каждой станции свой -------------------------------
+# METAR обновляется раз в 30 минут, поэтому общий порог в 15 минут убил бы
+# его полностью: станция молчала бы в каждом прогоне. Порог становится
+# свойством станции, а не свойством транспорта.
+
+
+def test_station_max_age_s_defaults_to_the_shared_constant():
+    assert station_max_age_s({'id': 'a'}) == HTTP_MAX_AGE_S
+
+
+def test_station_max_age_s_is_taken_from_the_station():
+    assert station_max_age_s({'id': 'a', 'max_age_s': 2400}) == 2400
+
+
+def test_station_without_max_age_s_keeps_the_old_freshness_behaviour(tmp_path, monkeypatch):
+    """Станция без нового поля ведёт себя ровно как раньше: 15 минут."""
+    now = 1790708310.0
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    # чуть старше общей границы: станция обязана промолчать, как раньше
+    monkeypatch.setattr(cs, 'fetch_yartemp',
+                        lambda url, **kw: ('8.09', now - HTTP_MAX_AGE_S - 60))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    assert data['stations'][0]['online'] is False
+
+
+def test_station_with_own_max_age_s_keeps_a_reading_older_than_the_shared_one(tmp_path, monkeypatch):
+    """Собственный порог реально применяется, а не просто хранится в конфиге.
+
+    Замер на 20 минут старше для yartemp протух бы, а METAR выходит раз в
+    30 минут: без собственного порога такая станция молчала бы в каждом прогоне
+    и не дала бы ни одного числа.
+    """
+    now = 1790708310.0
+    stations = [{'id': 'metar', 'name': 'M', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'max_age_s': 2400,
+                 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp',
+                        lambda url, **kw: ('8.09', now - HTTP_MAX_AGE_S - 300))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    st = data['stations'][0]
+    assert st['online'] is True
+    assert st['values']['temperature_2m'] == pytest.approx(8.09)
