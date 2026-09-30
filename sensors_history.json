@@ -735,31 +735,36 @@
       }
     },
     "2026-09-30T03:00": {
-      "samples": 5,
+      "samples": 10,
       "stations": {
         "penaty": {
           "temperature_2m": [
-            5.83
+            5.83,
+            5.98
           ]
         },
         "frunze": {
           "temperature_2m": [
+            8.29,
             8.29
           ]
         },
         "east": {
           "temperature_2m": [
-            9.0
+            9.0,
+            9.19
           ]
         },
         "bereg": {
           "temperature_2m": [
+            8.8,
             8.8
           ]
         },
         "yartemp": {
           "temperature_2m": [
-            5.56
+            5.56,
+            5.45
           ]
         }
       }
