@@ -646,6 +646,27 @@ def test_help_credits_yartemp_as_a_station_source():
     assert 'YarTemp' in template or 'yartemp' in template
 
 
+def test_help_lists_six_stations_and_credits_noaa_metar():
+    """В справке шесть станций, аэропорт назван, источник данных указан.
+
+    NOAA отдаёт открытые данные без требования атрибуции, но ссылка нужна
+    пользователю, чтобы проверить, откуда взялось число.
+    """
+    with open('template.html', encoding='utf-8') as f:
+        template = f.read()
+    assert 'Станций шесть' in template
+    assert 'https://aviationweather.gov/' in template
+    assert 'METAR' in template
+    assert 'раз в 30 минут' in template
+
+
+def test_help_does_not_promise_a_five_station_network():
+    """Старое «пять станций» должно уйти вместе со сменой состава сети."""
+    with open('template.html', encoding='utf-8') as f:
+        template = f.read()
+    assert 'Станций пять' not in template
+
+
 # --- подпись показывает время последнего обновления, а не начало часа -----
 
 def test_last_sensor_hour_label_prefers_reading_time_over_bucket_hour():
