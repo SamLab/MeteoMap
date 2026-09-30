@@ -60,6 +60,12 @@ HTTP_TIMEOUT_S = 20
 # шлём, - тот же Referer, что шлёт сам сайт, и cache-busting query, без
 # которого ответы могут кэшироваться посередине.
 YARTEMP_REFERER = 'https://yartemp.com/'
+
+# Идентификация, которую NOAA требует от автоматических запросов. Без неё
+# ответ может прийти 403. Referer не шлём: источник его не требует и он
+# ничего не значит для API.
+NOAA_USER_AGENT = 'meteomap-yaroslavl/1.0 (github.com/meteomap)'
+
 try:
     HISTORY_TZ = ZoneInfo('Europe/Moscow')
 except ZoneInfoNotFoundError:
@@ -176,6 +182,89 @@ def fetch_yartemp(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     if number != number:
         return None, None
     return value, reading_ts
+
+
+def parse_metar_report_time(text):
+    """Разбирает reportTime NOAA в unix-время. None - если разобрать нельзя.
+
+    Строка приходит с миллисекундами ('2026-09-30T09:30:00.000Z'), которые
+    datetime.fromisoformat не принимает, поэтому хвост отсекается до разбора.
+    Метка наблюдения нужна и для бакета часа, и для проверки свежести,
+    поэтому неразобранное время означает отказ от показания.
+    """
+    if not isinstance(text, str) or not text.strip():
+        return None
+    cleaned = text.strip()
+    if cleaned.endswith('Z'):
+        cleaned = cleaned[:-1]
+    if '.' in cleaned:
+        cleaned = cleaned.split('.', 1)[0]
+    try:
+        moment = datetime.fromisoformat(cleaned)
+    except ValueError:
+        return None
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.timestamp()
+
+
+def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
+    """Опрашивает METAR-сводку аэропорта. Возвращает (payload, reading_ts).
+
+    Ответ - JSON-массив, свежая сводка первая. Берутся ровно два поля: temp
+    как значение и reportTime как метка наблюдения. Время отдачи ответа не
+    годится: между сводками проходит полчаса, и подставь мы его вместо
+    reportTime, прогон объявил бы получасовую давность свежим замером.
+
+    Не бросает исключений ни при каком ответе - публикация sensors_history.json
+    не должна зависеть от чужого сервиса. Смена формата, HTML вместо JSON,
+    обрыв сети - всё это «нет данных», станция просто молчит.
+    """
+    now = time.time() if now is None else now
+    if session is None:
+        import requests
+
+        session = requests.Session()
+    try:
+        response = session.get(url, timeout=timeout_s,
+                               headers={'User-Agent': NOAA_USER_AGENT})
+        response.raise_for_status()
+        text = response.text
+    except Exception:
+        return None, None
+
+    if not text:
+        return None, None
+    try:
+        report = json.loads(text)
+    except ValueError:
+        return None, None
+    if not isinstance(report, list) or not report:
+        return None, None
+    newest = report[0]
+    if not isinstance(newest, dict):
+        return None, None
+
+    reading_ts = parse_metar_report_time(newest.get('reportTime'))
+    if reading_ts is None:
+        return None, None
+
+    # Температура проверяется здесь, а не в validate(): validate() живёт в
+    # общем снимке и не знает, откуда пришли данные. Мусор или физически
+    # невозможное число не должны попасть в бакет истории.
+    temp = newest.get('temp')
+    if temp is None or isinstance(temp, bool):
+        return None, None
+    try:
+        number = float(temp)
+    except (TypeError, ValueError):
+        return None, None
+    low, high = SENSOR_PARAMS['temperature_2m']
+    if not (low <= number <= high):
+        return None, None
+    # Значение возвращается строкой, как у fetch_yartemp, чтобы build_snapshot
+    # не различал транспорты.
+    return str(number), reading_ts
 
 
 def collect_http(received, seen, stations, now, fetcher=None, timeout_s=HTTP_TIMEOUT_S):

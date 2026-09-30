@@ -7,6 +7,7 @@ from tools import collect_sensors as cs
 from tools.collect_sensors import (
     HTTP_MAX_AGE_S,
     average_stations,
+    fetch_metar,
     fetch_yartemp,
     history_hour_value,
     http_stations,
@@ -1360,3 +1361,146 @@ def test_metar_station_is_never_subscribed_over_mqtt():
     client = _FakeClient([('city/out/a', '20.4', False)])
     cs.collect(client, stations, 0)
     assert client.subs == ['city/out/a']
+
+
+# --- METAR аэропорта: NOAA, JSON, раз в 30 минут --------------------------
+# Ответ - JSON-массив сводок, свежая первая. Берётся temp как значение и
+# reportTime как метка наблюдения: время отдачи ответа не годится, оно
+# ничего не говорит о свежести показания.
+
+# 2026-09-30T09:30:00Z = 12:30 МСК
+METAR_REPORT_ISO = '2026-09-30T09:30:00.000Z'
+
+
+def _metar_body(temp='16.0', report_time=METAR_REPORT_ISO):
+    return json.dumps([{'icaoId': 'UUDL',
+                        'temp': temp,
+                        'reportTime': report_time,
+                        'rawOb': 'UUDL 093000Z 09004MPS 060V110 9999 FEW045 16/09 Q1011'}])
+
+
+def test_fetch_metar_takes_temperature_and_observation_time():
+    """temp - значение, reportTime - метка наблюдения в unix-времени."""
+    want_ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
+    payload, reading_ts = fetch_metar(
+        METAR_URL, now=want_ts, session=_FakeSession(_metar_body()))
+    assert payload == '16.0'
+    assert reading_ts == pytest.approx(want_ts)
+
+
+def test_fetch_metar_sends_a_user_agent():
+    """NOAA требует представиться; Referer не нужен и не шлётся."""
+    session = _FakeSession(_metar_body())
+    fetch_metar(METAR_URL, now=1.0, session=session)
+    url, kw = session.calls[0]
+    assert url == METAR_URL
+    assert 'User-Agent' in kw['headers']
+    assert 'Referer' not in kw['headers']
+
+
+def test_fetch_metar_parses_report_time_without_milliseconds():
+    """reportTime приходит с миллисекундами; datetime.fromisoformat их не ест."""
+    ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
+    payload, reading_ts = fetch_metar(
+        METAR_URL, now=ts, session=_FakeSession(_metar_body()))
+    assert reading_ts == pytest.approx(ts)
+
+
+def test_fetch_metar_returns_none_on_empty_list():
+    assert fetch_metar(METAR_URL, now=1.0,
+                       session=_FakeSession('[]')) == (None, None)
+
+
+def test_fetch_metar_returns_none_on_missing_temperature():
+    body = json.dumps([{'icaoId': 'UUDL', 'reportTime': METAR_REPORT_ISO}])
+    assert fetch_metar(METAR_URL, now=1.0,
+                       session=_FakeSession(body)) == (None, None)
+
+
+def test_fetch_metar_returns_none_on_missing_report_time():
+    body = json.dumps([{'icaoId': 'UUDL', 'temp': '16.0'}])
+    assert fetch_metar(METAR_URL, now=1.0,
+                       session=_FakeSession(body)) == (None, None)
+
+
+def test_fetch_metar_returns_none_on_unparsable_report_time():
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(report_time='вчера'))) == (None, None)
+
+
+def test_fetch_metar_rejects_temperature_out_of_range():
+    """За пределами физики значение не должно доходить до словарей."""
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(temp='99.0'))) == (None, None)
+
+
+def test_fetch_metar_survives_html_instead_of_json():
+    """Смена формата на сайте - тишина, а не падение публикации."""
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession('<html>maintenance</html>')) == (None, None)
+
+
+def test_fetch_metar_survives_network_error():
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(raises=OSError('connection reset'))) == (None, None)
+
+
+def test_fetch_metar_survives_http_error():
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession('oops', status=503)) == (None, None)
+
+
+def test_fetch_metar_returns_none_on_empty_body():
+    assert fetch_metar(METAR_URL, now=1.0,
+                       session=_FakeSession('')) == (None, None)
+
+
+def test_fetch_metar_returns_none_when_json_is_not_a_list():
+    """Словарь вместо массива - тоже смена формата, а не повод падать."""
+    body = json.dumps({'error': 'no data for UUDL'})
+    assert fetch_metar(METAR_URL, now=1.0,
+                       session=_FakeSession(body)) == (None, None)
+
+
+def test_fetch_metar_returns_none_when_first_report_is_not_an_object():
+    """Строка или число вместо сводки: полями от неё не пахнет."""
+    assert fetch_metar(METAR_URL, now=1.0,
+                       session=_FakeSession('["16.0"]')) == (None, None)
+
+
+def test_fetch_metar_returns_none_on_boolean_temperature():
+    """bool - подкласс int, поэтому float(true) дал бы тихие 1.0 градуса.
+
+    JSON-true на месте temp означал бы правдоподобное число в бакет истории,
+    и виноват выглядел бы аэропорт, а не разбор ответа.
+    """
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(temp=True))) == (None, None)
+
+
+@pytest.mark.parametrize('temp', ['M02', 'NaN', '', 'Infinity'])
+def test_fetch_metar_returns_none_on_non_numeric_temperature(temp):
+    """Мусор вместо числа не должен ни падать, ни попасть в историю."""
+    assert fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(temp=temp))) == (None, None)
+
+
+def test_fetch_metar_reads_naive_report_time_as_utc():
+    """Без смещения в reportTime время считается московским, а не UTC.
+
+    Сводка приходит в UTC, поэтому метка без часового пояса читается как UTC:
+    иначе показание уезжало бы на три часа в бакет истории.
+    """
+    want_ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
+    body = _metar_body(report_time='2026-09-30T09:30:00')
+    payload, reading_ts = fetch_metar(METAR_URL, now=want_ts,
+                                      session=_FakeSession(body))
+    assert payload == '16.0'
+    assert reading_ts == pytest.approx(want_ts)
