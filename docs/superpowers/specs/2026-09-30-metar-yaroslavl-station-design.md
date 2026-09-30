@@ -103,8 +103,8 @@ https://aviationweather.gov/api/data/metar?format=json&ids=UUDL&hours=1
 
 `http_stations()` берёт и `http`, и `metar` — оба опрашиваются по сети.
 `collect_http()` выбирает адаптер по `source`: `fetch_yartemp` для `http`,
-`fetch_metar` для `metar`. Словари `received`/`seen` и весь код ниже остаются
-без изменений.
+`metar_fetcher` (обёртка над `fetch_metar`, разворачивающая код аэропорта в адрес)
+для `metar`. Словари `received`/`seen` и весь код ниже остаются без изменений.
 
 ### 2. Поле `max_age_s`
 
@@ -125,19 +125,26 @@ https://aviationweather.gov/api/data/metar?format=json&ids=UUDL&hours=1
 
 - GET с заголовком `User-Agent`, без `Referer` — источник его не требует.
 - Ответ — JSON-массив. Берётся первая запись, у неё `temp` и `reportTime`.
-- `reportTime` разбирается в unix-время: формат `2026-09-30T09:30:00.000Z`
-  содержит миллисекунды, которые не понимает `datetime.fromisoformat`, поэтому
-  миллисекунды отбрасываются перед разбором.
+- `reportTime` разбирается в unix-время штатным `datetime.fromisoformat`.
+  Формат источника — `2026-09-30T09:30:00.000Z`; на Python 3.11+ (PEP 615) и
+  дробные секунды, и `Z` разбираются сами, поэтому ничего отбрасывать не надо.
+  Отбрасывать нельзя: точка стоит и в смещении (`+03:00`), и наивная обрезка
+  молча потеряла бы смещение и увела показание на три часа в неверный бакет.
 - `temp` проверяется на число и на попадание в диапазон `SENSOR_PARAMS`.
 - Значение возвращается строкой, как у `fetch_yartemp`, чтобы
   `build_snapshot` оставался единым.
+
+Адрес собирает не `fetch_metar`, а `metar_fetcher`: в конфиге лежит короткий
+код аэропорта `UUDL`, он же служит ключом словаря `received`. Сам по себе код —
+не адрес, и `requests` на нём падает с `MissingSchema`, который адаптер
+проглатывает: станция молчала бы при каждом прогоне, не оставив следов.
 
 ### 4. Свежесть
 
 `collect_http()` применяет порог станции:
 
 ```python
-max_age_s = st.get('max_age_s', HTTP_MAX_AGE_S)
+max_age_s = station_max_age_s(st)
 if now - reading_ts > max_age_s:
     continue
 ```

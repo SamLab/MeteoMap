@@ -43,7 +43,8 @@ HISTORY_DEFAULT_DAYS = 30
 # Транспорт станции. Поле source в stations.json: отсутствует - значит mqtt,
 # потому что так записаны все станции брокера. Явный "http" означает, что в
 # sensors лежит URL, а не топик, и станция опрашивается, а не слушается.
-# "metar" - тот же опрос, но ответом идёт JSON-сводка аэропорта.
+# "metar" - тот же опрос, но в sensors лежит код аэропорта, а ответом идёт
+# JSON-сводка.
 VALID_SOURCES = ('mqtt', 'http', 'metar')
 
 # Порог свежести HTTP-замера. Сам yartemp обновляет данные раз в 5 минут и не
@@ -66,9 +67,9 @@ YARTEMP_REFERER = 'https://yartemp.com/'
 # ничего не значит для API.
 NOAA_USER_AGENT = 'meteomap-yaroslavl/1.0 (github.com/meteomap)'
 
-# Адрес METAR-сводки по коду аэропорта. hours=1 - суточная сводка NOAA
-# обновляется раз в полчаса, поэтому часа достаточно; ids= вместо отдельного
-# запроса на каждую станцию оставляет возможность опросить несколько кодов.
+# Адрес METAR-сводки по коду аэропорта. Сводка NOAA обновляется раз в полчаса,
+# поэтому окно в час - с запасом на половину периода. ids= выбран потому, что
+# это форма адреса самого сервиса; подставляется ровно один код на запрос.
 METAR_ENDPOINT = ('https://aviationweather.gov/api/data/metar'
                   '?format=json&ids=%s&hours=1')
 
@@ -212,7 +213,8 @@ def parse_metar_report_time(text):
     return moment.timestamp()
 
 
-def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
+def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None,
+                expect_icao=None):
     """Опрашивает METAR-сводку аэропорта. Возвращает (payload, reading_ts).
 
     Ответ - JSON-массив, свежая сводка первая. Берутся ровно два поля: temp
@@ -251,6 +253,18 @@ def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     if not isinstance(newest, dict):
         return None, None
 
+    # NOAA молча отвечает 204 с пустым телом на несуществующий код аэропорта.
+    # Без сверки с запрошенным кодом опечатка в конфиге выглядела бы ровно как
+    # «аэропорт сегодня не отвечает»: станция молчала бы при каждом прогоне,
+    # и разгадать причину можно было бы только вручную. Тот же случай с
+    # несуществующим ULLK уже однажды дал ложный вывод, что аэропорт не
+    # отдаёт METAR. Проверка опциональна: collect_http зовёт адаптеры одним
+    # вызовом и expect_icao не передаёт, код известен только metar_fetcher.
+    if expect_icao is not None:
+        icao = newest.get('icaoId')
+        if not isinstance(icao, str) or icao.strip().upper() != expect_icao.upper():
+            return None, None
+
     reading_ts = parse_metar_report_time(newest.get('reportTime'))
     if reading_ts is None:
         return None, None
@@ -287,7 +301,7 @@ def metar_fetcher(icao, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     на границе конфига и транспорта, а адаптеру достаётся готовый URL.
     """
     return fetch_metar(METAR_ENDPOINT % icao, timeout_s=timeout_s,
-                       now=now, session=session)
+                       now=now, session=session, expect_icao=icao)
 
 
 def station_fetcher(station):
@@ -305,9 +319,10 @@ def station_fetcher(station):
 def collect_http(received, seen, stations, now, timeout_s=HTTP_TIMEOUT_S):
     """Опрашивает сетевые станции и кладёт ответы в те же словари, что и MQTT.
 
-    Ключом служит URL из sensors - ровно то, что лежит в конфиге, поэтому
-    build_snapshot не различает транспорты и не меняется. Протухший или
-    непригодный ответ в словари не попадает: станция станет offline сама.
+    Ключом служит ровно то, что лежит в sensors в конфиге: у yartemp это URL,
+    у аэропорта - код аэропорта. Ключ сравнивается только с самим конфигом,
+    поэтому build_snapshot не различает транспорты и не меняется. Протухший
+    или непригодный ответ в словари не попадает: станция станет offline сама.
     """
     for st in http_stations(stations):
         fetcher = station_fetcher(st)
@@ -315,9 +330,10 @@ def collect_http(received, seen, stations, now, timeout_s=HTTP_TIMEOUT_S):
             payload, reading_ts = fetcher(url, now=now, timeout_s=timeout_s)
             if payload is None:
                 continue
-            # Часы источника могут спешить на несколько секунд. Метка из
-            # будущего прошла бы проверку свежести и выглядела бы свежее
-            # прогона, поэтому она прижимается к времени опроса.
+            # Часы источника могут спешить на несколько секунд (замерено: -5 с
+            # у источников сети). Метка из будущего прошла бы проверку
+            # свежести и выглядела бы свежее прогона, поэтому она прижимается
+            # к времени опроса.
             if reading_ts > now:
                 reading_ts = now
             max_age_s = station_max_age_s(st)
@@ -668,8 +684,9 @@ def collect(client, stations, window_s):
     seen = {}
     wanted = set()
     for st in stations:
-        # Только mqtt-станции: у http-станции в sensors лежит URL, и подписка
-        # на него была бы молчаливым мусором в брокере.
+        # Только mqtt-станции: у http- и metar-станций в sensors лежит не
+        # топик, а адрес или код аэропорта, и подписка на него была бы
+        # молчаливым мусором в брокере.
         if st.get('source', 'mqtt') != 'mqtt':
             continue
         for topic in st['sensors'].values():

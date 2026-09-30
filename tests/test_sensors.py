@@ -1077,6 +1077,27 @@ def test_metar_station_in_config_points_at_uudl_with_its_own_threshold():
     assert (metar['lat'], metar['lon']) == (57.561, 40.157)
 
 
+def test_fetch_metar_rejects_a_report_for_another_airport():
+    """Сводка чужого аэропорта не должна выдаваться за нашу станцию.
+
+    NOAA на несуществующий код отвечает 204 с пустым телом, и без сверки
+    icaoId опечатка в конфиге выглядела бы как «аэропорт не отвечает» - молча,
+    при каждом прогоне. С несуществующим ULLK так уже случилось однажды.
+    """
+    session = _FakeSession(_metar_body())
+    fetcher = cs.station_fetcher({'source': 'metar'})
+    payload, reading_ts = fetcher('UUDL', now=1.0, session=_FakeSession(
+        json.dumps([{'icaoId': 'UUDR', 'temp': 14,
+                     'reportTime': METAR_REPORT_ISO}])))
+    assert (payload, reading_ts) == (None, None)
+
+    # а свой код проходит - сверка не должна отвергать всё подряд
+    ok_payload, ok_ts = fetcher('UUDL', now=1.0, session=session)
+    assert ok_payload == '16.0'
+    assert ok_ts == pytest.approx(
+        datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp(), abs=1)
+
+
 def test_repository_metar_station_survives_validation_and_network_selection():
     """Шестая станция проходит проверки конфига и попадает в сетевой опрос.
 
@@ -1634,7 +1655,7 @@ def test_fetch_metar_honours_offset_in_report_time():
 
 
 def test_fetch_metar_reads_naive_report_time_as_utc():
-    """Без смещения в reportTime время считается московским, а не UTC.
+    """Метка reportTime без смещения читается как UTC.
 
     Сводка приходит в UTC, поэтому метка без часового пояса читается как UTC:
     иначе показание уезжало бы на три часа в бакет истории.
@@ -1868,7 +1889,7 @@ def test_collect_http_forwards_its_timeout_to_both_adapters(monkeypatch):
         # Подпись повторяет настоящий контракт адаптеров, session включительно:
         # разбор выбора адаптера подставляет его в вызов сам, и заглушка с
         # урезанной подписью ловила бы не ошибку таймаута, а TypeError.
-        def fetcher(url, now=None, timeout_s=None, session=None):
+        def fetcher(url, now=None, timeout_s=None, session=None, **kw):
             calls.append((name, url, timeout_s))
             return None, None
         return fetcher

@@ -555,7 +555,7 @@ def test_collect_http_picks_the_adapter_matching_the_source(tmp_path, monkeypatc
            window_s=0, history=str(tmp_path / 'h.json'))
 
     # каждый адаптер вызван только для своей станции
-    assert seen_by == {'yartemp': YARTEMP_URL, 'metar': 'UUDL'}
+    assert seen_by == {'yartemp': YARTEMP_URL, 'metar': METAR_URL}
     data = json.loads(out.read_text(encoding='utf-8'))
     by_id = {st['id']: st for st in data['stations']}
     assert by_id['uudl']['values']['temperature_2m'] == pytest.approx(16.0)
@@ -688,7 +688,7 @@ def station_fetcher(station):
     чтобы collect_http не ветвился по source на каждую станцию.
     """
     if station.get('source') == 'metar':
-        return fetch_metar
+        return metar_fetcher
     return fetch_yartemp
 ```
 
@@ -967,7 +967,7 @@ Expected: только untracked-файлы, которые были до зад
 
 - [ ] **Step 2: Прогнать адаптер на живом источнике**
 
-Run: `.venv\Scripts\python.exe -c "import json,time; from tools import collect_sensors as cs; stations=cs.load_stations(cs.DEFAULT_CONFIG); st=[s for s in stations if s.get('source')=='metar'][0]; p,ts=cs.fetch_metar(st['sensors']['temperature_2m'], now=time.time()); print(p, ts, int(time.time()-ts))"`
+Run: `.venv\Scripts\python.exe -c "import json,time; from tools import collect_sensors as cs; stations=cs.load_stations(cs.DEFAULT_CONFIG); st=[s for s in stations if s.get('source')=='metar'][0]; p,ts=cs.station_fetcher(st)(st['sensors']['temperature_2m'], now=time.time()); print(p, ts, int(time.time()-ts))"`
 
 Expected: температура строкой, метка числом, возраст меньше `2400` — то есть
 сводка не старше собственного порога станции.
