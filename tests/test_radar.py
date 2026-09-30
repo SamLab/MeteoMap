@@ -511,9 +511,37 @@ def test_warnings_gust_column_instead_of_hail():
     assert "const GUST_MIN=15;" in tpl
     assert "wind_gusts_10m?.[i]" in tpl
     assert "findGust(1)" in tpl and "findGust(2)" in tpl
-    assert "g.lst.join(' и ')" in tpl
-    assert "lst.push(names[c])" in tpl
+    # предупреждение о ветре показывает ЧИСЛО моделей, а не название модели:
+    # строка обязана читаться одинаково при любом счётчике
+    assert "' м/с · по '+rcLbl(g.n,g.n);}" in tpl
+    assert "g.lst.join(' и ')" not in tpl
+    # список имён стал мёртвым кодом — убирать, а не оставлять на будущее
+    assert "lst.push(names[c])" not in tpl
+    assert "const lst=[]" not in tpl
     assert "col('🧊',H)" not in tpl
+
+
+def test_wind_warning_uses_model_count_never_model_name():
+    """«Чт 8 в 20ч до 15 м/с · по 1 модели» вместо «· Visual Crossing»."""
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+
+    def rc_lbl(mn, mx):
+        # порс той же rcLbl(), которой пользуется строка предупреждения
+        if mn < 1:
+            return ""
+        if mn == mx:
+            return "1 модели" if mn == 1 else "%d моделям" % mn
+        return "%d-%d моделям" % (mn, mx)
+
+    assert "по " + rc_lbl(1, 1) == "по 1 модели"
+    for n, want in ((2, "по 2 моделям"), (3, "по 3 моделям"),
+                    (5, "по 5 моделям"), (11, "по 11 моделям")):
+        assert "по " + rc_lbl(n, n) == want, n
+
+    # имя модели в предупреждении о ветре больше не встречается вовсе
+    assert "names[c]}" not in tpl.split("const gustInfo=")[1][:400]
+    assert "function rcLbl(mn,mx){" in tpl
 
 
 def test_warnings_do_not_duplicate_when_nearest_confirmed_coincide():
