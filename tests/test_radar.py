@@ -1289,7 +1289,8 @@ def test_widget_shows_sensor_temperature_with_directional_rounding():
         assert "function roundSensorTemp(v, isDay)" in w, fname
         assert "return isDay ? Math.ceil(v) : Math.floor(v);" in w, fname
         assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
-        assert "cityEl.textContent = '\\uD83C\\uDF24 ' + sensorTemp + summary;" in w, fname
+        assert "cityEl.textContent = '\\uD83C\\uDF24 ' + (sensorTemp ? sensorTemp + ' ' : '') + summary;" in w, fname
+        assert "' + sensorTemp + summary;" not in w, fname
         # виджет берёт наблюдение датчиков, а не прогноз
         assert "var SENSOR_CODE = 'sensors'" in w, fname
         assert "var SENSOR_VARS = ['temperature_2m']" in w, fname
@@ -1311,6 +1312,46 @@ def test_widget_sensor_temp_absent_when_no_observation():
             w = f.read()
         assert "if(!n||!v) return '';" in w, fname
         assert "return '';" in w.split("function widgetSensorTemp")[1][:1200], fname
+
+
+def test_widget_header_separates_temp_from_summary():
+    # Регрессия: «+14Дождь» — склейка без пробела. Строка собирается целиком,
+    # а не проверяется по подстрокам: раздельные assert на «+14» и «Дождь»
+    # проходили и при слипшейся строке, поэтому проверяем результат сборки.
+    import re as _re
+
+    def unescape(src):
+        return _re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), src)
+
+    def header(sensor_temp, summary):
+        # порт строки виджета: пробел после эмодзи, затем префикс с
+        # разделителем только если префикс есть
+        return "\u2600\uFE0F " + (sensor_temp + " " if sensor_temp else "") + summary
+
+    # эмодзи в виджете не обязателен для проверки разделителя, но строка
+    # должна собираться ровно так же, как в JS
+    for sensor_temp, summary, want in (
+        ("+14", "Дождь Пн 5 22ч—Вт 6 23ч [0мм_34%] 3-10м",
+         "\u2600\uFE0F +14 Дождь Пн 5 22ч—Вт 6 23ч [0мм_34%] 3-10м"),
+        ("", "Остаток дня без дождя", "\u2600\uFE0F Остаток дня без дождя"),
+        ("-3", "Снег сегодня 10ч—12ч [0.2мм_60%] 2м",
+         "\u2600\uFE0F -3 Снег сегодня 10ч—12ч [0.2мм_60%] 2м"),
+        ("+5", "Вероятны Осадки до 18ч [0.1мм_40%] 4м",
+         "\u2600\uFE0F +5 Вероятны Осадки до 18ч [0.1мм_40%] 4м"),
+    ):
+        got = header(sensor_temp, summary)
+        assert got == want, (got, want)
+        # ни слипания, ни двойного пробела
+        assert "  " not in got, got
+        if sensor_temp:
+            assert sensor_temp + " " + summary in got, got
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = unescape(f.read())
+        line = [ln.strip() for ln in w.splitlines() if "cityEl.textContent" in ln and "summary" in ln]
+        assert len(line) == 1, (fname, line)
+        assert "sensorTemp ? sensorTemp + ' ' : ''" in line[0], (fname, line[0])
 
 
 def test_widget_sensor_rounding_semantics():

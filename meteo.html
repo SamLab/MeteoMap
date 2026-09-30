@@ -344,7 +344,7 @@ function render(data){
 
   var summary = buildSummary(times, data.weighted, data.models, idx);
   var sensorTemp = widgetSensorTemp(data, idx);
-  cityEl.textContent = '\uD83C\uDF24 ' + sensorTemp + summary;
+  cityEl.textContent = '\uD83C\uDF24 ' + (sensorTemp ? sensorTemp + ' ' : '') + summary;
 
   var html = '';
   for (var h = 0; h < hours && idx + h < times.length; h++){
