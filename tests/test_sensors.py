@@ -1041,17 +1041,77 @@ def test_http_station_is_never_subscribed_over_mqtt():
     assert client.subs == ['city/out/a']
 
 
-def test_repository_config_has_five_stations_with_one_http():
+def test_repository_config_has_six_stations_with_two_network_sources():
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
     stations = settings['stations']
-    assert len(stations) == 5
+    assert len(stations) == 6
     http = [st for st in stations if st.get('source') == 'http']
+    metar = [st for st in stations if st.get('source') == 'metar']
     assert len(http) == 1
     assert http[0]['id'] == 'yartemp'
+    assert len(metar) == 1
+    assert metar[0]['id'] == 'uudl'
     # у всех станций только температура, как и у MQTT-станций
     for st in stations:
         assert list(st['sensors']) == ['temperature_2m']
+
+
+def test_metar_station_in_config_points_at_uudl_with_its_own_threshold():
+    """Код аэропорта и его собственный порог закреплены конфигом.
+
+    UUDL - аэропорт Ярославля; ULLK в каталоге NOAA не существует, и первая
+    попытка работы с ним молча дала ложный вывод, что станция не отдаёт METAR.
+
+    Порог 2400 с обязателен и не избыточен: общий порог 900 с короче
+    получасовой периодичности сводок, и без собственного станция не отдала бы
+    ни одного значения - молча, без ошибок.
+    """
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    metar = [st for st in settings['stations'] if st.get('source') == 'metar'][0]
+    assert metar['sensors']['temperature_2m'] == 'UUDL'
+    # 30-минутная периодичность источника плюс запас
+    assert metar['max_age_s'] == 2400
+    # координаты аэропорта из каталога NOAA, а не координаты соседней станции
+    assert (metar['lat'], metar['lon']) == (57.561, 40.157)
+
+
+def test_repository_metar_station_survives_validation_and_network_selection():
+    """Шестая станция проходит проверки конфига и попадает в сетевой опрос.
+
+    Тест работает с настоящим tools/stations.json, а не с рукописной копией:
+    копия разъехалась бы с файлом незаметно, и расхождение никто бы не увидел.
+    """
+    stations = cs.load_stations(cs.DEFAULT_CONFIG)
+    uudl = [st for st in stations if st['id'] == 'uudl'][0]
+    assert uudl['source'] == 'metar'
+    assert cs.station_max_age_s(uudl) == 2400
+    # сетевой опрос её берёт, а подписка по MQTT - нет
+    assert 'uudl' in [st['id'] for st in cs.http_stations(stations)]
+    mqtt_ids = [st['id'] for st in stations if st.get('source', 'mqtt') == 'mqtt']
+    assert 'uudl' not in mqtt_ids
+
+
+def test_repository_metar_station_reaches_a_real_url_through_the_real_dispatch():
+    """Токен из боевого конфига доезжает до запроса как настоящий адрес.
+
+    Здесь нет подмены адаптера: берётся запись из stations.json, прогоняется
+    через station_fetcher, и единственное подменённое - сессия. Именно так
+    станция молчала бы в бою, если бы токен ушёл в get() как есть.
+    """
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    uudl = [st for st in settings['stations'] if st.get('source') == 'metar'][0]
+    token = uudl['sensors']['temperature_2m']
+
+    session = _FakeSession(_metar_body())
+    fetcher = cs.station_fetcher(uudl)
+    payload, reading_ts = fetcher(token, now=1.0, session=session)
+
+    assert session.calls[0][0] == METAR_URL
+    assert payload == '16.0'
+    assert reading_ts is not None
 
 
 def test_load_stations_accepts_source_field(tmp_path):

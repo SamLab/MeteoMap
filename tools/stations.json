@@ -49,6 +49,17 @@
       "sensors": {
         "temperature_2m": "https://yartemp.com/webdata/"
       }
+    },
+    {
+      "id": "uudl",
+      "name": "Ярославль, аэропорт (METAR)",
+      "lat": 57.561,
+      "lon": 40.157,
+      "source": "metar",
+      "max_age_s": 2400,
+      "sensors": {
+        "temperature_2m": "UUDL"
+      }
     }
   ]
 }
