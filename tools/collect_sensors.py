@@ -187,20 +187,18 @@ def fetch_yartemp(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
 def parse_metar_report_time(text):
     """Разбирает reportTime NOAA в unix-время. None - если разобрать нельзя.
 
-    Строка приходит с миллисекундами ('2026-09-30T09:30:00.000Z'), которые
-    datetime.fromisoformat не принимает, поэтому хвост отсекается до разбора.
-    Метка наблюдения нужна и для бакета часа, и для проверки свежести,
-    поэтому неразобранное время означает отказ от показания.
+    Строка приходит с миллисекундами и суффиксом 'Z'
+    ('2026-09-30T09:30:00.000Z'); с 3.11 datetime.fromisoformat ест и то, и
+    другое, поэтому строка разбирается как есть. Ничего отбрасывать нельзя:
+    хвост с миллисекундами отделяется точкой, но точка же может стоять перед
+    смещением ('09:30:00.000+03:00'), и отрезанное '+03:00' уехало бы на
+    три часа по времени наблюдения. Метка нужна и для бакета часа, и для
+    проверки свежести, поэтому неразобранное время означает отказ от показания.
     """
     if not isinstance(text, str) or not text.strip():
         return None
-    cleaned = text.strip()
-    if cleaned.endswith('Z'):
-        cleaned = cleaned[:-1]
-    if '.' in cleaned:
-        cleaned = cleaned.split('.', 1)[0]
     try:
-        moment = datetime.fromisoformat(cleaned)
+        moment = datetime.fromisoformat(text.strip())
     except ValueError:
         return None
     if moment.tzinfo is None:
@@ -219,8 +217,10 @@ def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     Не бросает исключений ни при каком ответе - публикация sensors_history.json
     не должна зависеть от чужого сервиса. Смена формата, HTML вместо JSON,
     обрыв сети - всё это «нет данных», станция просто молчит.
+
+    Параметр now остаётся, хотя внутри не используется: collect_http зовёт
+    адаптеры одним и тем же вызовом, и сигнатуры у них обязаны совпадать.
     """
-    now = time.time() if now is None else now
     if session is None:
         import requests
 

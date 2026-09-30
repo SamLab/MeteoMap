@@ -1385,7 +1385,57 @@ def test_fetch_metar_takes_temperature_and_observation_time():
     payload, reading_ts = fetch_metar(
         METAR_URL, now=want_ts, session=_FakeSession(_metar_body()))
     assert payload == '16.0'
-    assert reading_ts == pytest.approx(want_ts)
+    assert reading_ts == pytest.approx(want_ts, abs=1)
+
+
+def test_fetch_metar_marks_observation_time_not_poll_time():
+    """Метка - это момент наблюдения, а не момент нашего запроса.
+
+    Между сводками проходит полчаса, поэтому now отличается от reportTime на
+    минуты. Подставь fetch_metar вместо reportTime время запроса, прогон
+    объявил бы получасовую давность свежим замером, и age_s на сайте считал бы
+    давность запроса вместо давности показания.
+    """
+    want_ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
+    payload, reading_ts = fetch_metar(
+        METAR_URL, now=want_ts + 1500, session=_FakeSession(_metar_body()))
+    assert payload == '16.0'
+    assert reading_ts == pytest.approx(want_ts, abs=1)
+
+
+def test_fetch_metar_takes_numeric_temperature_as_it_comes():
+    """Живой NOAA присылает temp числом JSON, а не строкой.
+
+    Значение всё равно возвращается строкой: build_snapshot разбирает payload
+    через parse_payload, и оба транспорта обязаны отдавать одно и то же.
+    """
+    want_ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
+    payload, reading_ts = fetch_metar(
+        METAR_URL, now=want_ts, session=_FakeSession(_metar_body(temp=14)))
+    assert isinstance(payload, str), 'payload must be a string, like fetch_yartemp'
+    assert payload == '14.0'
+    assert reading_ts == pytest.approx(want_ts, abs=1)
+    # round trip через build_snapshot: разбор строки даёт то же число
+    assert cs.parse_payload(payload) == pytest.approx(14.0)
+
+
+def test_fetch_metar_takes_the_newest_report_of_the_list():
+    """NOAA отдаёт сводки новыми первыми, поэтому берётся report[0].
+
+    report[-1] - это сводка получасовой давности: значение вышло бы верное на
+    вид, а в бакет истории легло бы в старый час.
+    """
+    want_ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
+    body = json.dumps([
+        {'icaoId': 'UUDL', 'temp': 14, 'reportTime': METAR_REPORT_ISO},
+        {'icaoId': 'UUDL', 'temp': 11,
+         'reportTime': '2026-09-30T09:00:00.000Z',
+         'rawOb': 'UUDL 090000Z 09004MPS 060V110 9999 FEW045 11/09 Q1011'},
+    ])
+    payload, reading_ts = fetch_metar(
+        METAR_URL, now=want_ts + 1500, session=_FakeSession(body))
+    assert payload == '14.0'
+    assert reading_ts == pytest.approx(want_ts, abs=1)
 
 
 def test_fetch_metar_sends_a_user_agent():
@@ -1396,14 +1446,6 @@ def test_fetch_metar_sends_a_user_agent():
     assert url == METAR_URL
     assert 'User-Agent' in kw['headers']
     assert 'Referer' not in kw['headers']
-
-
-def test_fetch_metar_parses_report_time_without_milliseconds():
-    """reportTime приходит с миллисекундами; datetime.fromisoformat их не ест."""
-    ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()
-    payload, reading_ts = fetch_metar(
-        METAR_URL, now=ts, session=_FakeSession(_metar_body()))
-    assert reading_ts == pytest.approx(ts)
 
 
 def test_fetch_metar_returns_none_on_empty_list():
@@ -1450,9 +1492,14 @@ def test_fetch_metar_survives_network_error():
 
 
 def test_fetch_metar_survives_http_error():
+    """Сводка за 503 - это «нет данных», даже если тело разбирается.
+
+    Тело здесь заведомо валидная сводка: иначе тест прошёл бы и с выкинутой
+    проверкой статуса, потому что json.loads всё равно не справился бы.
+    """
     assert fetch_metar(
         METAR_URL, now=1.0,
-        session=_FakeSession('oops', status=503)) == (None, None)
+        session=_FakeSession(_metar_body(), status=503)) == (None, None)
 
 
 def test_fetch_metar_returns_none_on_empty_body():
@@ -1492,6 +1539,26 @@ def test_fetch_metar_returns_none_on_non_numeric_temperature(temp):
         session=_FakeSession(_metar_body(temp=temp))) == (None, None)
 
 
+def test_fetch_metar_honours_offset_in_report_time():
+    """Смещение в reportTime читается как смещение, а не отбрасывается.
+
+    Отбрасывать нельзя ни миллисекунды, ни знак: '09:30+03:00' и '06:30Z' -
+    один и тот же момент, и разница трёх часов решила бы, в какой бакет часа
+    попадёт показание. Смещение в сводке NOAA сегодня не встречается, но
+    разбор не должен зависеть от этого.
+    """
+    with_offset = datetime(2026, 9, 30, 9, 30,
+                           tzinfo=timezone(timedelta(hours=3))).timestamp()
+    _payload, shifted = fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(report_time='2026-09-30T09:30:00.000+03:00')))
+    _payload, as_utc = fetch_metar(
+        METAR_URL, now=1.0,
+        session=_FakeSession(_metar_body(report_time='2026-09-30T06:30:00.000Z')))
+    assert shifted == pytest.approx(as_utc, abs=1)
+    assert shifted == pytest.approx(with_offset, abs=1)
+
+
 def test_fetch_metar_reads_naive_report_time_as_utc():
     """Без смещения в reportTime время считается московским, а не UTC.
 
@@ -1503,4 +1570,4 @@ def test_fetch_metar_reads_naive_report_time_as_utc():
     payload, reading_ts = fetch_metar(METAR_URL, now=want_ts,
                                       session=_FakeSession(body))
     assert payload == '16.0'
-    assert reading_ts == pytest.approx(want_ts)
+    assert reading_ts == pytest.approx(want_ts, abs=1)
