@@ -42,7 +42,8 @@ HISTORY_DEFAULT_DAYS = 30
 # Транспорт станции. Поле source в stations.json: отсутствует - значит mqtt,
 # потому что так записаны все станции брокера. Явный "http" означает, что в
 # sensors лежит URL, а не топик, и станция опрашивается, а не слушается.
-VALID_SOURCES = ('mqtt', 'http')
+# "metar" - тот же опрос, но ответом идёт JSON-сводка аэропорта.
+VALID_SOURCES = ('mqtt', 'http', 'metar')
 
 # Порог свежести HTTP-замера. Сам yartemp обновляет данные раз в 5 минут и не
 # гарантирует круглосуточной доступности, поэтому 15 минут - это запас на три
@@ -97,12 +98,15 @@ def parse_payload(raw):
 
 
 def http_stations(stations):
-    """Станции, которые опрашиваются по HTTP, а не слушаются по MQTT.
+    """Станции, которые опрашиваются по сети, а не слушаются по MQTT.
 
-    Отсутствие поля source - это mqtt, поэтому существующие станции в
-    stations.json не меняются и не обязаны знать про этот выбор.
+    Их два вида: http разбирает ответ веб-страницы, metar - сводку аэропорта
+    из JSON API. Оба опрашиваются, поэтому и живут в одной выборке; чем
+    разбирать ответ, решает collect_http по полю source. Отсутствие поля
+    означает mqtt, поэтому существующие станции в stations.json не меняются
+    и не обязаны знать про этот выбор.
     """
-    return [st for st in stations if st.get('source', 'mqtt') == 'http']
+    return [st for st in stations if st.get('source', 'mqtt') in ('http', 'metar')]
 
 
 def station_max_age_s(station):
@@ -342,6 +346,20 @@ def load_stations(path):
         if source not in VALID_SOURCES:
             raise ValueError('station %r: unknown source %r; allowed: %s'
                              % (sid, source, ', '.join(VALID_SOURCES)))
+        # Порог свежести проверяется здесь, а не в collect_http: station_max_age_s
+        # отдаёт поле как есть, поэтому мусор в конфиге уронил бы прогон
+        # TypeError уже после прослушки эфира. Проверка bool обязательна и
+        # идёт первой: bool - подкласс int, и JSON-true в пороге прошёл бы
+        # числовую проверку как 1 секунда, то есть станция молчала бы в каждом
+        # прогоне, а виноват выглядел бы источник.
+        if 'max_age_s' in st:
+            raw_age = st['max_age_s']
+            if isinstance(raw_age, bool) or not isinstance(raw_age, (int, float)):
+                raise ValueError('station %r: max_age_s must be a number'
+                                 % (sid,))
+            if raw_age <= 0:
+                raise ValueError('station %r: max_age_s must be positive: %s'
+                                 % (sid, raw_age))
         for param, topic in sensors.items():
             if param not in SENSOR_PARAMS:
                 raise ValueError(

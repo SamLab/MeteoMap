@@ -1231,3 +1231,94 @@ def test_station_with_own_max_age_s_keeps_a_reading_older_than_the_shared_one(tm
     st = data['stations'][0]
     assert st['online'] is True
     assert st['values']['temperature_2m'] == pytest.approx(8.09)
+
+
+# --- третий транспорт: metar --------------------------------------------
+
+METAR_URL = 'https://aviationweather.gov/api/data/metar?format=json&ids=UUDL&hours=1'
+
+
+def test_metar_is_a_valid_source(tmp_path):
+    stations = [{'id': 'uudl', 'name': 'A', 'lat': 57.561, 'lon': 40.157,
+                 'source': 'metar', 'sensors': {'temperature_2m': 'UUDL'}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    assert load_stations(cfg)[0]['source'] == 'metar'
+
+
+def test_load_stations_rejects_non_positive_max_age(tmp_path):
+    """Ноль или минус означали бы «отбрасывать всё», поэтому это ошибка конфига."""
+    for bad in (0, -1):
+        stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                     'source': 'http', 'max_age_s': bad,
+                     'sensors': {'temperature_2m': YARTEMP_URL}}]
+        cfg = tmp_path / 'st.json'
+        cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+        with pytest.raises(ValueError, match='max_age_s'):
+            load_stations(cfg)
+
+
+def test_load_stations_rejects_non_numeric_max_age(tmp_path):
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'max_age_s': 'half an hour',
+                 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    with pytest.raises(ValueError, match='max_age_s'):
+        load_stations(cfg)
+
+
+def test_load_stations_rejects_null_max_age(tmp_path):
+    """Явный null - это не «поля нет», а запрещённое значение.
+
+    station_max_age_s отдаёт поле как есть, поэтому None доехал бы до
+    сравнения now - reading_ts > None и уронил прогон TypeError уже после
+    того, как эфир прослушан. Ошибка конфига обязана звучать на загрузке,
+    где её ещё можно исправить руками.
+    """
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'max_age_s': None,
+                 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    with pytest.raises(ValueError, match='max_age_s'):
+        load_stations(cfg)
+
+
+def test_load_stations_rejects_boolean_max_age(tmp_path):
+    """bool - подкласс int, поэтому наивная числовая проверка его протащила бы.
+
+    JSON-true в пороге означал бы одну секунду свежести: станция молчала бы в
+    каждом прогоне, и виноват выглядел бы не конфиг, а сам источник.
+    """
+    stations = [{'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9,
+                 'source': 'http', 'max_age_s': True,
+                 'sensors': {'temperature_2m': YARTEMP_URL}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    with pytest.raises(ValueError, match='max_age_s'):
+        load_stations(cfg)
+
+
+def test_metar_station_is_polled_over_the_network_not_mqtt():
+    """Обе сетевые станции попадают в http_stations, mqtt-станции - нет."""
+    stations = [
+        {'id': 'a', 'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'yt', 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+        {'id': 'uudl', 'source': 'metar',
+         'sensors': {'temperature_2m': 'UUDL'}},
+    ]
+    assert [st['id'] for st in http_stations(stations)] == ['yt', 'uudl']
+
+
+def test_metar_station_is_never_subscribed_over_mqtt():
+    """Токен UUDL - это не топик брокера: в подписку он попасть не должен."""
+    stations = [
+        {'id': 'a', 'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'uudl', 'source': 'metar',
+         'sensors': {'temperature_2m': 'UUDL'}},
+    ]
+    client = _FakeClient([('city/out/a', '20.4', False)])
+    cs.collect(client, stations, 0)
+    assert client.subs == ['city/out/a']
