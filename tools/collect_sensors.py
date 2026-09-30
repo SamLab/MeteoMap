@@ -66,6 +66,12 @@ YARTEMP_REFERER = 'https://yartemp.com/'
 # ничего не значит для API.
 NOAA_USER_AGENT = 'meteomap-yaroslavl/1.0 (github.com/meteomap)'
 
+# Адрес METAR-сводки по коду аэропорта. hours=1 - суточная сводка NOAA
+# обновляется раз в полчаса, поэтому часа достаточно; ids= вместо отдельного
+# запроса на каждую станцию оставляет возможность опросить несколько кодов.
+METAR_ENDPOINT = ('https://aviationweather.gov/api/data/metar'
+                  '?format=json&ids=%s&hours=1')
+
 try:
     HISTORY_TZ = ZoneInfo('Europe/Moscow')
 except ZoneInfoNotFoundError:
@@ -270,6 +276,20 @@ def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     return str(number), reading_ts
 
 
+def metar_fetcher(icao, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
+    """Разворачивает код аэропорта из конфига в адрес METAR-API.
+
+    В конфиге лежит короткий код аэропорта - 'UUDL'. Он же служит ключом
+    словаря полученных значений, и сравнивать его с URL не пришлось бы. Но
+    сам по себе это относительный путь, а не адрес: requests на нём падает с
+    MissingSchema, fetch_metar глотает исключение, и станция молчала бы при
+    каждом прогоне, нигде не оставив следов. Поэтому адрес собирается здесь,
+    на границе конфига и транспорта, а адаптеру достаётся готовый URL.
+    """
+    return fetch_metar(METAR_ENDPOINT % icao, timeout_s=timeout_s,
+                       now=now, session=session)
+
+
 def station_fetcher(station):
     """Адаптер разбора ответа для сетевой станции.
 
@@ -278,7 +298,7 @@ def station_fetcher(station):
     чтобы collect_http не ветвился по source на каждую станцию.
     """
     if station.get('source') == 'metar':
-        return fetch_metar
+        return metar_fetcher
     return fetch_yartemp
 
 

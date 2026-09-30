@@ -1625,12 +1625,33 @@ def test_collect_http_picks_the_adapter_matching_the_source(tmp_path, monkeypatc
     cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
            window_s=0, history=str(tmp_path / 'h.json'))
 
-    # каждый адаптер вызван только для своей станции
-    assert seen_by == {'yartemp': YARTEMP_URL, 'metar': 'UUDL'}
+    # Каждый адаптер вызван только для своей станции. METAR получает не токен
+    # из конфига, а развёрнутый из него адрес API: сам токен - относительный
+    # URL, и requests на нём падает, а fetch_metar это молча проглатывает.
+    assert seen_by == {'yartemp': YARTEMP_URL, 'metar': METAR_URL}
     data = json.loads(out.read_text(encoding='utf-8'))
     by_id = {st['id']: st for st in data['stations']}
     assert by_id['uudl']['values']['temperature_2m'] == pytest.approx(16.0)
     assert by_id['yt']['values']['temperature_2m'] == pytest.approx(8.09)
+
+
+def test_icao_token_from_config_becomes_a_requestable_metar_url():
+    """Токен из конфига - это ключ словаря, а не адрес, по нему не ходят.
+
+    Здесь настоящий fetch_metar с поддельной сессией: если бы station_fetcher
+    отдал адаптер напрямую, в get() ушло бы 'UUDL', requests поднял бы
+    MissingSchema, except Exception проглотил бы её, и станция молчала бы
+    каждый прогон - без единой ошибки в логе.
+    """
+    session = _FakeSession(_metar_body())
+
+    fetcher = cs.station_fetcher({'source': 'metar'})
+    payload, reading_ts = fetcher('UUDL', now=1.0, session=session)
+
+    assert session.calls[0][0] == METAR_URL
+    assert payload == '16.0'
+    assert reading_ts == pytest.approx(
+        datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp(), abs=1)
 
 
 def test_fresh_metar_reading_lands_in_the_hour_of_the_observation(tmp_path, monkeypatch):
@@ -1784,7 +1805,10 @@ def test_collect_http_forwards_its_timeout_to_both_adapters(monkeypatch):
     calls = []
 
     def record(name):
-        def fetcher(url, now=None, timeout_s=None):
+        # Подпись повторяет настоящий контракт адаптеров, session включительно:
+        # разбор выбора адаптера подставляет его в вызов сам, и заглушка с
+        # урезанной подписью ловила бы не ошибку таймаута, а TypeError.
+        def fetcher(url, now=None, timeout_s=None, session=None):
             calls.append((name, url, timeout_s))
             return None, None
         return fetcher
@@ -1800,4 +1824,4 @@ def test_collect_http_forwards_its_timeout_to_both_adapters(monkeypatch):
 
     cs.collect_http({}, {}, stations, now=1790708310.0, timeout_s=7)
 
-    assert calls == [('yartemp', YARTEMP_URL, 7), ('metar', 'UUDL', 7)]
+    assert calls == [('yartemp', YARTEMP_URL, 7), ('metar', METAR_URL, 7)]
