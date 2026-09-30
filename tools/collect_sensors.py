@@ -270,22 +270,34 @@ def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
     return str(number), reading_ts
 
 
-def collect_http(received, seen, stations, now, fetcher=None, timeout_s=HTTP_TIMEOUT_S):
-    """Опрашивает HTTP-станции и кладёт ответы в те же словари, что и MQTT.
+def station_fetcher(station):
+    """Адаптер разбора ответа для сетевой станции.
+
+    Транспорт один - HTTP, но формат ответа разный: yartemp отдаёт строку с
+    полями через ';', аэропорт отдаёт JSON-сводку. Разбор выбирается здесь,
+    чтобы collect_http не ветвился по source на каждую станцию.
+    """
+    if station.get('source') == 'metar':
+        return fetch_metar
+    return fetch_yartemp
+
+
+def collect_http(received, seen, stations, now, timeout_s=HTTP_TIMEOUT_S):
+    """Опрашивает сетевые станции и кладёт ответы в те же словари, что и MQTT.
 
     Ключом служит URL из sensors - ровно то, что лежит в конфиге, поэтому
     build_snapshot не различает транспорты и не меняется. Протухший или
     непригодный ответ в словари не попадает: станция станет offline сама.
     """
-    fetcher = fetcher or fetch_yartemp
     for st in http_stations(stations):
+        fetcher = station_fetcher(st)
         for param, url in st['sensors'].items():
             payload, reading_ts = fetcher(url, now=now, timeout_s=timeout_s)
             if payload is None:
                 continue
-            # Часы источника могут спешить на несколько секунд (замерено: -5 с).
-            # Метка из будущего прошла бы проверку свежести и выглядела бы
-            # свежее прогона, поэтому она прижимается к времени опроса.
+            # Часы источника могут спешить на несколько секунд. Метка из
+            # будущего прошла бы проверку свежести и выглядела бы свежее
+            # прогона, поэтому она прижимается к времени опроса.
             if reading_ts > now:
                 reading_ts = now
             max_age_s = station_max_age_s(st)

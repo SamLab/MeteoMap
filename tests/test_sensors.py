@@ -1585,3 +1585,219 @@ def test_fetch_metar_reads_naive_report_time_as_utc():
                                       session=_FakeSession(body))
     assert payload == '16.0'
     assert reading_ts == pytest.approx(want_ts, abs=1)
+
+
+# --- collect_http разводит станции по адаптерам ----------------------------
+# Сетевой транспорт один, а формат ответа разный: yartemp отдаёт строку с
+# полями через ';', аэропорт - JSON-сводку. Слой опроса не должен ветвиться по
+# source на каждую станцию, поэтому выбор адаптера вынесен в station_fetcher.
+
+
+def test_collect_http_picks_the_adapter_matching_the_source(tmp_path, monkeypatch):
+    """Каждая сетевая станция получает свой разбор ответа, не чужой."""
+    now = 1790708310.0
+    stations = [
+        {'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9, 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+        {'id': 'uudl', 'name': 'A', 'lat': 57.561, 'lon': 40.157,
+         'source': 'metar', 'max_age_s': 2400,
+         'sensors': {'temperature_2m': 'UUDL'}},
+    ]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+    metar_ts = now - 600
+
+    seen_by = {}
+
+    def fake_yartemp(url, **kw):
+        seen_by['yartemp'] = url
+        return '8.090', now - 60
+
+    def fake_metar(url, **kw):
+        seen_by['metar'] = url
+        return '16.0', metar_ts
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp', fake_yartemp)
+    monkeypatch.setattr(cs, 'fetch_metar', fake_metar)
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    # каждый адаптер вызван только для своей станции
+    assert seen_by == {'yartemp': YARTEMP_URL, 'metar': 'UUDL'}
+    data = json.loads(out.read_text(encoding='utf-8'))
+    by_id = {st['id']: st for st in data['stations']}
+    assert by_id['uudl']['values']['temperature_2m'] == pytest.approx(16.0)
+    assert by_id['yt']['values']['temperature_2m'] == pytest.approx(8.09)
+
+
+def test_fresh_metar_reading_lands_in_the_hour_of_the_observation(tmp_path, monkeypatch):
+    """Бакет берётся от reportTime, а не от часа прогона.
+
+    Прогон в 13:05 МСК, а сам замер сделан в 12:30. Замер обязан лечь в бакет
+    12:00, иначе подпись на сайте сказала бы «обновилось в 13:00» про
+    показание получасовой давности.
+
+    fetch_yartemp подменён тоже: при неверном выборе адаптера станция ушла бы
+    в настоящий HTTP-запрос по не-URL и «прошла бы» на отказе сети, а не на
+    нужной метке бакета.
+    """
+    run_ts = datetime(2026, 9, 30, 10, 5, tzinfo=timezone.utc).timestamp()  # 13:05 МСК
+    obs_ts = datetime(2026, 9, 30, 9, 30, tzinfo=timezone.utc).timestamp()  # 12:30 МСК
+    stations = [{'id': 'uudl', 'name': 'A', 'lat': 57.561, 'lon': 40.157,
+                 'source': 'metar', 'max_age_s': 2400,
+                 'sensors': {'temperature_2m': 'UUDL'}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+    hist = tmp_path / 'h.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: run_ts)
+    monkeypatch.setattr(cs, 'fetch_yartemp',
+                        lambda url, **kw: ('8.090', run_ts - 60))
+    monkeypatch.setattr(cs, 'fetch_metar', lambda url, **kw: ('16.0', obs_ts))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(hist))
+
+    hours = json.loads(hist.read_text(encoding='utf-8'))['hours']
+    assert list(hours) == ['2026-09-30T12:00']
+
+
+def test_stale_metar_reading_is_not_injected(tmp_path, monkeypatch):
+    """Сводка старше собственного порога станции не попадает в среднее."""
+    now = 1790708310.0
+    stations = [{'id': 'uudl', 'name': 'A', 'lat': 57.561, 'lon': 40.157,
+                 'source': 'metar', 'max_age_s': 2400,
+                 'sensors': {'temperature_2m': 'UUDL'}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    # Замер yartemp здесь свежий, поэтому с ошибочным выбором адаптера станция
+    # наполнилась бы чужим значением и тест прошёл бы не по той причине.
+    monkeypatch.setattr(cs, 'fetch_yartemp',
+                        lambda url, **kw: ('8.090', now - 60))
+    monkeypatch.setattr(cs, 'fetch_metar',
+                        lambda url, **kw: ('16.0', now - 2400 - 60))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    assert data['stations'][0]['online'] is False
+    assert data['stations'][0]['values'] == {}
+
+
+def test_metar_freshness_uses_its_own_threshold_not_the_shared_one(tmp_path, monkeypatch):
+    """Полчаса - протухло для yartemp, но в пределах допуска METAR."""
+    now = 1790708310.0
+    stations = [
+        {'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9, 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+        {'id': 'uudl', 'name': 'A', 'lat': 57.561, 'lon': 40.157,
+         'source': 'metar', 'max_age_s': 2400,
+         'sensors': {'temperature_2m': 'UUDL'}},
+    ]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+    aged = now - 2000
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp', lambda url, **kw: ('8.090', aged))
+    monkeypatch.setattr(cs, 'fetch_metar', lambda url, **kw: ('16.0', aged))
+
+    cs.run(client_factory=lambda *a, **kw: _FakeClient([]), config=cfg, out=out,
+           window_s=0, history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    by_id = {st['id']: st for st in data['stations']}
+    assert by_id['yt']['online'] is False
+    assert by_id['uudl']['online'] is True
+
+
+def test_failing_metar_does_not_break_other_stations(tmp_path, monkeypatch):
+    """Отвал аэропорта не должен обнулять ни MQTT, ни yartemp."""
+    now = 1790708310.0
+    stations = [
+        {'id': 'a', 'name': 'A', 'lat': 57.0, 'lon': 39.0,
+         'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'yt', 'name': 'Y', 'lat': 57.6, 'lon': 39.9, 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+        {'id': 'uudl', 'name': 'Air', 'lat': 57.561, 'lon': 40.157,
+         'source': 'metar', 'max_age_s': 2400,
+         'sensors': {'temperature_2m': 'UUDL'}},
+    ]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    out = tmp_path / 'sensors.json'
+    fake = _FakeClient([('city/out/a', '20.4', False)])
+
+    monkeypatch.setattr(cs.time, 'time', lambda: now)
+    monkeypatch.setattr(cs, 'fetch_yartemp', lambda url, **kw: ('8.090', now - 60))
+    monkeypatch.setattr(cs, 'fetch_metar', lambda url, **kw: (None, None))
+
+    cs.run(client_factory=lambda *a, **kw: fake, config=cfg, out=out, window_s=0,
+           history=str(tmp_path / 'h.json'))
+
+    data = json.loads(out.read_text(encoding='utf-8'))
+    by_id = {st['id']: st for st in data['stations']}
+    assert by_id['a']['values']['temperature_2m'] == pytest.approx(20.4)
+    assert by_id['yt']['online'] is True
+    assert by_id['uudl']['online'] is False
+
+
+# --- таймаут доходит до обоих адаптеров -----------------------------------
+# collect_http гонит оба разбора одним и тем же вызовом, поэтому забытый
+# таймаут сломал бы оба источника разом, а заметить это можно было бы только
+# по прогону, который висит дольше любой разумной публикации.
+
+
+def test_fetch_yartemp_passes_the_timeout_through():
+    """Таймаут уходит в запрос, а не теряется по дороге к session.get."""
+    session = _FakeSession(YARTEMP_BODY)
+    fetch_yartemp(YARTEMP_URL, now=1790708310.0, session=session, timeout_s=7)
+
+    _url, kw = session.calls[0]
+    assert kw['timeout'] == 7
+
+
+def test_fetch_metar_passes_the_timeout_through():
+    """То же для аэропорта: у обоих адаптеров сигнатуры обязаны совпадать."""
+    session = _FakeSession(_metar_body())
+    fetch_metar(METAR_URL, now=1.0, session=session, timeout_s=7)
+
+    _url, kw = session.calls[0]
+    assert kw['timeout'] == 7
+
+
+def test_collect_http_forwards_its_timeout_to_both_adapters(monkeypatch):
+    """Свой таймаут collect_http доезжает до обоих разборов ответа.
+
+    Разбор выбирается по source, а вызов у них общий: забыть параметр можно
+    один раз, но цена - HTTP-запрос без предела ожидания на обоих источниках.
+    """
+    calls = []
+
+    def record(name):
+        def fetcher(url, now=None, timeout_s=None):
+            calls.append((name, url, timeout_s))
+            return None, None
+        return fetcher
+
+    monkeypatch.setattr(cs, 'fetch_yartemp', record('yartemp'))
+    monkeypatch.setattr(cs, 'fetch_metar', record('metar'))
+    stations = [
+        {'id': 'yt', 'source': 'http',
+         'sensors': {'temperature_2m': YARTEMP_URL}},
+        {'id': 'uudl', 'source': 'metar', 'max_age_s': 2400,
+         'sensors': {'temperature_2m': 'UUDL'}},
+    ]
+
+    cs.collect_http({}, {}, stations, now=1790708310.0, timeout_s=7)
+
+    assert calls == [('yartemp', YARTEMP_URL, 7), ('metar', 'UUDL', 7)]
