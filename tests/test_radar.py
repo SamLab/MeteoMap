@@ -1278,6 +1278,79 @@ def test_lockstep_survives_a_checkout_with_other_autocrlf(tmp_path):
     )
 
 
+def test_widget_shows_sensor_temperature_with_directional_rounding():
+    # Строка виджета начинается с температуры датчика: при активном солнце
+    # округление вверх, от заката до рассвета — вниз.
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "function widgetSensorTemp(data, idx)" in w, fname
+        assert "function sensorIsDayAt(data, j)" in w, fname
+        assert "function roundSensorTemp(v, isDay)" in w, fname
+        assert "return isDay ? Math.ceil(v) : Math.floor(v);" in w, fname
+        assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
+        assert "cityEl.textContent = '\\uD83C\\uDF24 ' + sensorTemp + summary;" in w, fname
+        # виджет берёт наблюдение датчиков, а не прогноз
+        assert "var SENSOR_CODE = 'sensors'" in w, fname
+        assert "var SENSOR_VARS = ['temperature_2m']" in w, fname
+        assert "var n = sc ? sc[key] : null;" in w, fname
+        assert "var v = sr ? sr.temperature_2m : null;" in w, fname
+        # Цеденево ночью показывает минимум — то же значение, что и главная страница
+        assert "var mn = data.sensor_station_min ? data.sensor_station_min.temperature_2m : null;" in w, fname
+        assert "slug==='tsedenevo' && !isDay && mn && mn[j]!=null" in w, fname
+        # виджеты написаны в ES5 (var, без ?. и const) — не потерять стиль
+        assert "?." not in w, fname
+        assert "const " not in w, fname
+
+
+def test_widget_sensor_temp_absent_when_no_observation():
+    # Без наблюдения строка виджета остаётся прежней: пустой префикс вместо
+    # прочерка, иначе заголовок занял бы место пустотой.
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "if(!n||!v) return '';" in w, fname
+        assert "return '';" in w.split("function widgetSensorTemp")[1][:1200], fname
+
+
+def test_widget_sensor_rounding_semantics():
+    # Node недоступен, поэтому семантику округления воспроизводим в Python.
+    # Границы: день ceil, ночь floor, ровные значения не меняются.
+    import math
+
+    def round_sensor_temp(v, is_day):
+        return math.ceil(v) if is_day else math.floor(v)
+
+    assert round_sensor_temp(13.18, True) == 14
+    assert round_sensor_temp(13.18, False) == 13
+    assert round_sensor_temp(5.2, True) == 6
+    assert round_sensor_temp(5.8, False) == 5
+    # отрицательные: «в большую» и «в меньшую» — это ceil/floor, а не toward zero
+    assert round_sensor_temp(-2.3, True) == -2
+    assert round_sensor_temp(-2.3, False) == -3
+    assert round_sensor_temp(-2.0, True) == -2
+    assert round_sensor_temp(-2.0, False) == -2
+    assert round_sensor_temp(0.0, True) == 0
+    assert round_sensor_temp(0.0, False) == 0
+
+
+def test_widget_sensor_temp_prefix_format():
+    # «+5» для положительных, «-3» для отрицательных, ноль без знака —
+    # как в часовой ленте, но без знака градуса.
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "return(t>0?'+':'')+t;" in w, fname
+        assert "'+';" not in w.split("function roundSensorTemp")[1][:200], fname
+
+
+def test_help_documents_widget_sensor_temperature():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "Температура датчика в виджете" in tpl
+    assert "вверх" in tpl and "вниз" in tpl
+
+
 def test_main_chart_reused_not_recreated():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
