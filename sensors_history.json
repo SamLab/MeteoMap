@@ -1033,6 +1033,36 @@
           ]
         }
       }
+    },
+    "2026-09-30T09:00": {
+      "samples": 5,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            14.29
+          ]
+        },
+        "frunze": {
+          "temperature_2m": [
+            9.78
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            10.81
+          ]
+        },
+        "bereg": {
+          "temperature_2m": [
+            7.4
+          ]
+        },
+        "yartemp": {
+          "temperature_2m": [
+            8.77
+          ]
+        }
+      }
     }
   }
 }
