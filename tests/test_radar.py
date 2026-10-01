@@ -1529,6 +1529,29 @@ def test_widget_typography_is_half_a_pixel_smaller():
         assert needle in w, f"meteow.html: нет {needle}"
 
 
+def test_widget_card_has_no_frame_and_sits_in_the_corner():
+    # Виджет встраивается в чужую страницу, поэтому рамка и скругление были
+    # лишними: карточка должна начинаться ровно в левом верхнем углу окна.
+    import re as _re
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        card = _re.search(r"\.card\{[^}]*\}", w)
+        assert card, f"{fname}: нет правила .card"
+        rule = card.group(0)
+        assert "border-radius" not in rule, f"{fname}: скругление осталось"
+        assert "border:" not in rule, f"{fname}: рамка осталась"
+        assert "padding:0" in rule, f"{fname}: внутренний отступ не обнулён: {rule}"
+        assert "margin:0" in rule, f"{fname}: карточка всё ещё центрируется: {rule}"
+        # отступ страницы тоже должен быть нулевым
+        body = _re.search(r"\nbody\{[^}]*\}", w)
+        assert body, f"{fname}: нет правила body"
+        assert "padding:0" in body.group(0), f"{fname}: отступ body не обнулён"
+        # ширину виджета не трогали: снять max-width — другая задача
+        assert "max-width:600px" in rule, f"{fname}: max-width убран не по задаче"
+
+
 def test_widget_gap_between_hourly_and_daily_blocks_is_four_pixels():
     # Зазор между часовым и недельным блоками складывается из двух отступов:
     # низ .strip плюс верх .d10wrap. Сумма обязана быть 4px — раньше было 6px,

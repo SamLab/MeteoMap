@@ -22,11 +22,13 @@ html,body{height:100%}
 body{
   background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  padding:10px;overflow-x:auto;overflow-y:hidden;
+  padding:0;overflow-x:auto;overflow-y:hidden;
 }
 .card{
-  background:var(--card);border:1px solid var(--line);border-radius:14px;
-  max-width:600px;margin:0 auto;padding:10px 12px;
+  /* Без рамки и скругления: виджет встраивается в чужую страницу и должен
+     начинаться ровно в левом верхнем углу окна. */
+  background:var(--card);
+  max-width:600px;margin:0;padding:0;
 }
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .city{font-size:14px;font-weight:600}
