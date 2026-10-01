@@ -2833,46 +2833,52 @@
       "updated_at": "2026-10-01T12:56:00+03:00"
     },
     "2026-10-01T13:00": {
-      "samples": 12,
+      "samples": 18,
       "stations": {
         "penaty": {
           "temperature_2m": [
             11.04,
-            11.12
+            11.12,
+            11.32
           ]
         },
         "frunze": {
           "temperature_2m": [
             9.75,
+            9.96,
             9.96
           ]
         },
         "east": {
           "temperature_2m": [
             10.69,
-            10.62
+            10.62,
+            11.06
           ]
         },
         "bereg": {
           "temperature_2m": [
             9.6,
-            9.8
+            9.8,
+            10.0
           ]
         },
         "yartemp": {
           "temperature_2m": [
             10.18,
-            10.09
+            10.09,
+            10.42
           ]
         },
         "uudl": {
           "temperature_2m": [
             10.0,
+            10.0,
             10.0
           ]
         }
       },
-      "updated_at": "2026-10-01T13:16:00+03:00"
+      "updated_at": "2026-10-01T13:26:00+03:00"
     }
   }
 }
