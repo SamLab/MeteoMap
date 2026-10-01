@@ -971,10 +971,10 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "function hourBgSvg(" in w
     assert "strip.insertAdjacentHTML('afterbegin', bg)" in w
     assert "(1 - Math.min(1, r / 5)) * 100" in w
-    # по одному последнему элементу убраны: 13 часов и 13 дней — остальные крупнее
-    assert "var DEFAULT_HOURS = 13;" in w
-    # заливки/кривая считаются по числу выводимых колонок, иначе при обрезке 16→13 сетка графика разъезжалась бы с колонками
-    assert "var dispDays = Math.min(arr.length, 13);" in w
+    # по одному последнему элементу убраны: 14 часов и 14 дней — остальные крупнее
+    assert "var DEFAULT_HOURS = 14;" in w
+    # заливки/кривая считаются по числу выводимых колонок, иначе при обрезке 16→14 сетка графика разъезжалась бы с колонками
+    assert "var dispDays = Math.min(arr.length, 14);" in w
     assert "d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 74);" in w
 
 
@@ -1542,14 +1542,30 @@ def test_widget_card_has_no_frame_and_sits_in_the_corner():
         rule = card.group(0)
         assert "border-radius" not in rule, f"{fname}: скругление осталось"
         assert "border:" not in rule, f"{fname}: рамка осталась"
-        assert "padding:0" in rule, f"{fname}: внутренний отступ не обнулён: {rule}"
+        assert "padding:2px 0 0 2px" in rule, f"{fname}: отступ не 2px слева и сверху: {rule}"
         assert "margin:0" in rule, f"{fname}: карточка всё ещё центрируется: {rule}"
-        # отступ страницы тоже должен быть нулевым
+        # отступ страницы остался нулевым: воздух даёт сама карточка
         body = _re.search(r"\nbody\{[^}]*\}", w)
         assert body, f"{fname}: нет правила body"
         assert "padding:0" in body.group(0), f"{fname}: отступ body не обнулён"
         # ширину виджета не трогали: снять max-width — другая задача
         assert "max-width:600px" in rule, f"{fname}: max-width убран не по задаче"
+
+
+def test_widget_column_counts():
+    # +1 час и +1 день. Оба числа стоят в коде дважды: в срезе колонок и в
+    # расчёте заливки, иначе фон графика разъехался бы с колонками.
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+    assert "var DEFAULT_HOURS = 14;" in w
+    assert "var dispDays = Math.min(arr.length, 14);" in w
+    assert "cloudRainSvgW(arr.slice(0, dispDays), 74)" in w
+
+    with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
+        m = f.read()
+    assert "var DEFAULT_HOURS = 15;" in m
+    # ширину не трогали: колонки flex:1, поэтому одна extra-колонка лишь сужает их
+    assert "max-width:600px" in m
 
 
 def test_widget_gap_between_hourly_and_daily_blocks_is_four_pixels():
