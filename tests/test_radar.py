@@ -1529,6 +1529,27 @@ def test_widget_typography_is_half_a_pixel_smaller():
         assert needle in w, f"meteow.html: нет {needle}"
 
 
+def test_widget_gap_between_hourly_and_daily_blocks_is_four_pixels():
+    # Зазор между часовым и недельным блоками складывается из двух отступов:
+    # низ .strip плюс верх .d10wrap. Сумма обязана быть 4px — раньше было 6px,
+    # и блоки визуально распадались на две отдельные полосы.
+    import re as _re
+
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+    m = _re.search(r"\.strip\{[^}]*padding:(\d+)px 0 (\d+)px", w)
+    assert m, "у .strip должен остаться явный вертикальный padding"
+    strip_bottom = int(m.group(2))
+    m2 = _re.search(r"\.d10wrap\{[^}]*padding:(\d+)px 0", w)
+    assert m2, "у .d10wrap должен остаться явный верхний padding"
+    wrap_top = int(m2.group(1))
+    assert strip_bottom + wrap_top == 4, (
+        f"зазор между блоками {strip_bottom}+{wrap_top}={strip_bottom + wrap_top}px, ждали 4px"
+    )
+    # нижний отступ недельного блока не трогаем: он отделяет его от низа карточки
+    assert "padding:2px 0 2px}" in w, "нижние отступы должны остаться по 2px"
+
+
 def test_help_documents_widget_sensor_temperature():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
