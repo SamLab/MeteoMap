@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -563,6 +564,10 @@ def test_temp_and_fmt_round_symmetrically_on_halves():
         ("12.98", "+13°", "13"),
         ("-12.98", "-13°", "-13"),
     ]
+    # Список уходит в JS как JSON-массив. Через repr нельзя: repr кортежа
+    # даёт скобки, а в JS «(("a","b","c"))» — это один элемент, где запятая
+    # схлопывается в оператор, и разборка [arg,t,f] раскладывала строку по
+    # символам вместо того, чтобы прочитать тройку.
     script = src + """
 const cases=%s;
 for(const [arg,t,f] of cases){
@@ -571,7 +576,7 @@ for(const [arg,t,f] of cases){
   if(got!==t||String(gotF)!==f){
     console.log(JSON.stringify([arg,t,f,got,String(gotF)]));
   }
-}""" % repr(cases).replace("'", '"')
+}""" % json.dumps(cases, ensure_ascii=False)
     # Скрипт уходит байтами UTF-8: text=True кодировал бы аргумент в кодировку
     # локали и ломал бы кириллицу на любой машине, где не UTF-8.
     out = subprocess.run(["node", "-e", script.encode("utf-8")],
