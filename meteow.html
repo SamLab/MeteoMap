@@ -118,7 +118,7 @@ var WMO = {
 var DOW = ['\u0412\u0441','\u041F\u043D','\u0412\u0442','\u0421\u0440','\u0427\u0442','\u041F\u0442','\u0421\u0431'];
 
 var DEFAULT_CITY = 'tsedenevo';
-var DEFAULT_HOURS = 15;
+var DEFAULT_HOURS = 16;
 var REFRESH_MS = 5 * 60 * 1000;
 
 function getParam(name, def){
@@ -422,7 +422,7 @@ function render(data){
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
   var html10 = '';
-  var dispDays = Math.min(arr.length, 15);
+  var dispDays = Math.min(arr.length, 16);
   for (var di = 0; di < dispDays; di++){
     var x = arr[di];
     var y1 = yT(x.tmax), y2 = yT(x.tmin);
