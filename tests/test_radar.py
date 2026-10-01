@@ -1489,7 +1489,7 @@ def test_widget_typography_is_half_a_pixel_smaller():
     # легко откатить случайно, не заметив.
     shared = [
         # верхняя строчка с городом, температурой и сводкой
-        ".city{font-size:14.5px",
+        ".city{font-size:14px;font-weight:600}",
         # почасовой блок
         ".hour .ht{color:var(--muted);font-size:10px",
         ".hour .he{font-size:20.5px",
