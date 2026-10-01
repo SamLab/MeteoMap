@@ -44,8 +44,9 @@ HISTORY_DEFAULT_DAYS = 30
 # потому что так записаны все станции брокера. Явный "http" означает, что в
 # sensors лежит URL, а не топик, и станция опрашивается, а не слушается.
 # "metar" - тот же опрос, но в sensors лежит код аэропорта, а ответом идёт
-# JSON-сводка.
-VALID_SOURCES = ('mqtt', 'http', 'metar')
+# JSON-сводка. "wu" - опрос любительской станции Weather Underground, в sensors
+# лежит короткий stationId, а ответом тоже идёт JSON.
+VALID_SOURCES = ('mqtt', 'http', 'metar', 'wu')
 
 # Порог свежести HTTP-замера. Сам yartemp обновляет данные раз в 5 минут и не
 # гарантирует круглосуточной доступности, поэтому 15 минут - это запас на три
@@ -62,16 +63,23 @@ HTTP_TIMEOUT_S = 20
 # которого ответы могут кэшироваться посередине.
 YARTEMP_REFERER = 'https://yartemp.com/'
 
-# Идентификация, которую NOAA требует от автоматических запросов. Без неё
-# ответ может прийти 403. Referer не шлём: источник его не требует и он
-# ничего не значит для API.
-NOAA_USER_AGENT = 'meteomap-yaroslavl/1.0 (github.com/meteomap)'
+# Идентификация, которую внешние сервисы (NOAA, Weather Underground) требуют от
+# автоматических запросов. Без неё ответ может прийти 403. Referer не шлём:
+# источники его не требуют и он ничего не значит для API.
+SOURCE_USER_AGENT = 'meteomap-yaroslavl/1.0 (github.com/meteomap)'
 
 # Адрес METAR-сводки по коду аэропорта. Сводка NOAA обновляется раз в полчаса,
 # поэтому окно в час - с запасом на половину периода. ids= выбран потому, что
 # это форма адреса самого сервиса; подставляется ровно один код на запрос.
 METAR_ENDPOINT = ('https://aviationweather.gov/api/data/metar'
                   '?format=json&ids=%s&hours=1')
+
+# Weather Underground: любительские станции (PWS). Ключ - публичный веб-ключ,
+# вшитый в сайт wunderground.com, не является нашим секретом. units=m даёт
+# температуру в Цельсиях и ветер в м/с. stationId подставляется один на запрос.
+WU_API_KEY = '6532d6454b8aa370768e63d6ba5a832e'
+WU_ENDPOINT = ('https://api.weather.com/v2/pws/observations/current'
+               '?stationId=%s&format=json&units=m&apiKey=' + WU_API_KEY)
 
 try:
     HISTORY_TZ = ZoneInfo('Europe/Moscow')
@@ -114,13 +122,15 @@ def parse_payload(raw):
 def http_stations(stations):
     """Станции, которые опрашиваются по сети, а не слушаются по MQTT.
 
-    Их два вида: http разбирает ответ веб-страницы, metar - сводку аэропорта
-    из JSON API. Оба опрашиваются, поэтому и живут в одной выборке; чем
-    разбирать ответ, решает collect_http по полю source. Отсутствие поля
-    означает mqtt, поэтому существующие станции в stations.json не меняются
-    и не обязаны знать про этот выбор.
+    Их три вида: http разбирает ответ веб-страницы, metar - сводку аэропорта
+    из JSON API, wu - наблюдение любительской станции Weather Underground. Все
+    опрашиваются, поэтому и живут в одной выборке; чем разбирать ответ, решает
+    collect_http по полю source. Отсутствие поля означает mqtt, поэтому
+    существующие станции в stations.json не меняются и не обязаны знать про
+    этот выбор.
     """
-    return [st for st in stations if st.get('source', 'mqtt') in ('http', 'metar')]
+    return [st for st in stations
+            if st.get('source', 'mqtt') in ('http', 'metar', 'wu')]
 
 
 def station_max_age_s(station):
@@ -235,7 +245,7 @@ def fetch_metar(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None,
         session = requests.Session()
     try:
         response = session.get(url, timeout=timeout_s,
-                               headers={'User-Agent': NOAA_USER_AGENT})
+                               headers={'User-Agent': SOURCE_USER_AGENT})
         response.raise_for_status()
         text = response.text
     except Exception:
@@ -304,15 +314,110 @@ def metar_fetcher(icao, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
                        now=now, session=session, expect_icao=icao)
 
 
+def fetch_wu(url, timeout_s=HTTP_TIMEOUT_S, now=None, session=None,
+             expect_station=None):
+    """Опрашивает станцию Weather Underground. Возвращает (payload, reading_ts).
+
+    Ответ - JSON-объект с полем observations, свежая запись первая. Берутся
+    ровно два поля: metric.temp как значение и obsTimeUtc как метка наблюдения.
+    Время отдачи ответа не годится: станция обновляется примерно раз в 5 минут,
+    и подставь мы время запроса, прогон объявил бы пятиминутную давность свежим
+    замером.
+
+    Не бросает исключений ни при каком ответе - публикация sensors_history.json
+    не должна зависеть от чужого сервиса. Смена формата, HTML вместо JSON,
+    обрыв сети - всё это «нет данных», станция просто молчит.
+
+    Параметр now остаётся, хотя внутри не используется: collect_http зовёт
+    адаптеры одним и тем же вызовом, и сигнатуры у них обязаны совпадать.
+    """
+    if session is None:
+        import requests
+
+        session = requests.Session()
+    try:
+        response = session.get(url, timeout=timeout_s,
+                               headers={'User-Agent': SOURCE_USER_AGENT})
+        response.raise_for_status()
+        text = response.text
+    except Exception:
+        return None, None
+
+    if not text:
+        return None, None
+    try:
+        report = json.loads(text)
+    except ValueError:
+        return None, None
+    # У METAR верхний уровень - массив, у WU - объект с observations. Массив на
+    # месте объекта означает смену формата, а не повод падать.
+    if not isinstance(report, dict):
+        return None, None
+    observations = report.get('observations')
+    if not isinstance(observations, list) or not observations:
+        return None, None
+    newest = observations[0]
+    if not isinstance(newest, dict):
+        return None, None
+
+    # Сверка id по образцу expect_icao у METAR: на несуществующий id WU отвечает
+    # пустым observations, но проверка ловит и ответ другой станции, и опечатку
+    # в конфиге, которая иначе молчала бы как «станция не отвечает».
+    if expect_station is not None:
+        station_id = newest.get('stationID')
+        if (not isinstance(station_id, str)
+                or station_id.strip().upper() != expect_station.strip().upper()):
+            return None, None
+
+    reading_ts = parse_metar_report_time(newest.get('obsTimeUtc'))
+    if reading_ts is None:
+        return None, None
+
+    # metric может отсутствовать или быть не объектом; temp внутри - null,
+    # когда датчик отвалился. null - это «нет данных», а не ноль градусов.
+    metric = newest.get('metric')
+    if not isinstance(metric, dict):
+        return None, None
+    temp = metric.get('temp')
+    if temp is None or isinstance(temp, bool):
+        return None, None
+    try:
+        number = float(temp)
+    except (TypeError, ValueError, OverflowError):
+        return None, None
+    low, high = SENSOR_PARAMS['temperature_2m']
+    if not (low <= number <= high):
+        return None, None
+    return str(number), reading_ts
+
+
+def wu_fetcher(station_id, timeout_s=HTTP_TIMEOUT_S, now=None, session=None):
+    """Разворачивает stationId из конфига в адрес Weather Underground.
+
+    В конфиге лежит короткий id станции - 'IZAVOLZH3'. Он же служит ключом
+    словаря полученных значений, и сравнивать его с URL не пришлось бы. Но сам
+    по себе это относительный путь, а не адрес: requests на нём падает с
+    MissingSchema, fetch_wu глотает исключение, и станция молчала бы при каждом
+    прогоне, нигде не оставив следов. Поэтому адрес собирается здесь, на границе
+    конфига и транспорта, а адаптеру достаётся готовый URL.
+    """
+    return fetch_wu(WU_ENDPOINT % station_id, timeout_s=timeout_s,
+                    now=now, session=session, expect_station=station_id)
+
+
 def station_fetcher(station):
     """Адаптер разбора ответа для сетевой станции.
 
     Транспорт один - HTTP, но формат ответа разный: yartemp отдаёт строку с
-    полями через ';', аэропорт отдаёт JSON-сводку. Разбор выбирается здесь,
-    чтобы collect_http не ветвился по source на каждую станцию.
+    полями через ';', аэропорт отдаёт JSON-сводку, WU - JSON с observations.
+    Разбор выбирается здесь, чтобы collect_http не ветвился по source на каждую
+    станцию.
     """
-    if station.get('source') == 'metar':
+    source = station.get('source')
+    if source == 'metar':
         return metar_fetcher
+    if source == 'wu':
+        return wu_fetcher
     return fetch_yartemp
 
 

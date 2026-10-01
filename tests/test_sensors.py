@@ -1041,17 +1041,20 @@ def test_http_station_is_never_subscribed_over_mqtt():
     assert client.subs == ['city/out/a']
 
 
-def test_repository_config_has_six_stations_with_two_network_sources():
+def test_repository_config_has_eight_stations_with_three_network_sources():
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
     stations = settings['stations']
-    assert len(stations) == 6
+    assert len(stations) == 8
     http = [st for st in stations if st.get('source') == 'http']
     metar = [st for st in stations if st.get('source') == 'metar']
+    wu = [st for st in stations if st.get('source') == 'wu']
     assert len(http) == 1
     assert http[0]['id'] == 'yartemp'
     assert len(metar) == 1
     assert metar[0]['id'] == 'uudl'
+    assert len(wu) == 2
+    assert {st['id'] for st in wu} == {'wu-ananyino', 'wu-zavolzhskoe'}
     # у всех станций только температура, как и у MQTT-станций
     for st in stations:
         assert list(st['sensors']) == ['temperature_2m']
@@ -1906,3 +1909,248 @@ def test_collect_http_forwards_its_timeout_to_both_adapters(monkeypatch):
     cs.collect_http({}, {}, stations, now=1790708310.0, timeout_s=7)
 
     assert calls == [('yartemp', YARTEMP_URL, 7), ('metar', METAR_URL, 7)]
+
+
+# --- четвёртый транспорт: wu ----------------------------------------------
+# Weather Underground PWS. Ответ - JSON-объект с полем observations (не массив
+# верхнего уровня, как у METAR). Значение - metric.temp, метка наблюдения -
+# obsTimeUtc. Формат зафиксирован с живого запроса 2026-10-01.
+
+WU_KEY = '6532d6454b8aa370768e63d6ba5a832e'
+WU_URL = ('https://api.weather.com/v2/pws/observations/current'
+          '?stationId=IZAVOLZH3&format=json&units=m&apiKey=' + WU_KEY)
+# 2026-10-01T20:44:12Z = 23:44 МСК
+WU_OBS_ISO = '2026-10-01T20:44:12Z'
+
+
+def _wu_ts():
+    return datetime(2026, 10, 1, 20, 44, 12, tzinfo=timezone.utc).timestamp()
+
+
+def _wu_body(temp=4, obs_time=WU_OBS_ISO, station='IZAVOLZH3', metric=True):
+    obs = {'stationID': station, 'obsTimeUtc': obs_time, 'humidity': 91,
+           'qcStatus': -1}
+    if metric:
+        obs['metric'] = {'temp': temp, 'windSpeed': 0, 'pressure': 1016.26}
+    return json.dumps({'observations': [obs]})
+
+
+def test_fetch_wu_takes_temperature_and_observation_time():
+    """metric.temp - значение, obsTimeUtc - метка наблюдения в unix-времени."""
+    payload, reading_ts = cs.fetch_wu(
+        WU_URL, now=_wu_ts(), session=_FakeSession(_wu_body()))
+    assert payload == '4.0'
+    assert reading_ts == pytest.approx(_wu_ts(), abs=1)
+
+
+def test_fetch_wu_marks_observation_time_not_poll_time():
+    """Метка - момент наблюдения, а не момент нашего запроса.
+
+    WU отдаёт готовое число, но обновляется раз в ~5 минут, поэтому now и
+    obsTimeUtc расходятся. Подставь время запроса - age_s на сайте считал бы
+    давность запроса, а не давность показания.
+    """
+    payload, reading_ts = cs.fetch_wu(
+        WU_URL, now=_wu_ts() + 60, session=_FakeSession(_wu_body()))
+    assert payload == '4.0'
+    assert reading_ts == pytest.approx(_wu_ts(), abs=1)
+
+
+def test_fetch_wu_sends_a_user_agent():
+    session = _FakeSession(_wu_body())
+    cs.fetch_wu(WU_URL, now=1.0, session=session)
+    url, kw = session.calls[0]
+    assert url == WU_URL
+    assert 'User-Agent' in kw['headers']
+    assert 'Referer' not in kw['headers']
+
+
+def test_fetch_wu_returns_none_on_empty_observations():
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession('{"observations": []}')) == (None, None)
+
+
+def test_fetch_wu_returns_none_when_json_is_not_an_object():
+    """Массив вместо объекта - смена формата (METAR отдаёт массив, WU нет)."""
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession('[]')) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_missing_metric():
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession(_wu_body(metric=False))) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_missing_temperature():
+    body = json.dumps({'observations': [{'stationID': 'IZAVOLZH3',
+                                         'obsTimeUtc': WU_OBS_ISO,
+                                         'metric': {'windSpeed': 0}}]})
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession(body)) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_null_temperature():
+    """null на месте temp - «нет данных», а не ноль градусов.
+
+    У проверенных станций поле присутствует, но PWS легко отдают null, когда
+    датчик отвалился. Прочитай его как 0 - в бакет истории легло бы ложное
+    показание.
+    """
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession(_wu_body(temp=None))) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_boolean_temperature():
+    """bool - подкласс int, поэтому float(true) дал бы тихий 1.0 градус."""
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession(_wu_body(temp=True))) == (None, None)
+
+
+def test_fetch_wu_rejects_temperature_out_of_range():
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession(_wu_body(temp=99))) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_missing_observation_time():
+    body = json.dumps({'observations': [{'stationID': 'IZAVOLZH3',
+                                         'metric': {'temp': 4}}]})
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession(body)) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_unparsable_observation_time():
+    assert cs.fetch_wu(
+        WU_URL, now=1.0,
+        session=_FakeSession(_wu_body(obs_time='вчера'))) == (None, None)
+
+
+def test_fetch_wu_survives_html_instead_of_json():
+    assert cs.fetch_wu(
+        WU_URL, now=1.0,
+        session=_FakeSession('<html>maintenance</html>')) == (None, None)
+
+
+def test_fetch_wu_survives_network_error():
+    assert cs.fetch_wu(
+        WU_URL, now=1.0,
+        session=_FakeSession(raises=OSError('connection reset'))) == (None, None)
+
+
+def test_fetch_wu_survives_http_error():
+    """503 - «нет данных», даже если тело разбирается.
+
+    Тело здесь валидная сводка: иначе тест прошёл бы и с выкинутой проверкой
+    статуса, потому что json.loads всё равно бы не справился.
+    """
+    assert cs.fetch_wu(
+        WU_URL, now=1.0,
+        session=_FakeSession(_wu_body(), status=503)) == (None, None)
+
+
+def test_fetch_wu_returns_none_on_empty_body():
+    assert cs.fetch_wu(WU_URL, now=1.0,
+                       session=_FakeSession('')) == (None, None)
+
+
+def test_fetch_wu_rejects_a_report_for_another_station():
+    """Станция чужого id не должна выдаваться за нашу.
+
+    WU на несуществующий id отвечает пустым observations, но сверка ловит и
+    случай, когда сервис вернул данные другой станции. Без неё опечатка в
+    конфиге молчала бы, а выглядело бы как «станция не отвечает».
+    """
+    body = _wu_body(station='I90583615')
+    assert cs.fetch_wu(WU_URL, now=1.0, expect_station='IZAVOLZH3',
+                       session=_FakeSession(body)) == (None, None)
+
+
+def test_fetch_wu_accepts_its_own_station_id():
+    payload, reading_ts = cs.fetch_wu(
+        WU_URL, now=_wu_ts(), expect_station='IZAVOLZH3',
+        session=_FakeSession(_wu_body()))
+    assert payload == '4.0'
+    assert reading_ts == pytest.approx(_wu_ts(), abs=1)
+
+
+def test_fetch_wu_passes_the_timeout_through():
+    session = _FakeSession(_wu_body())
+    cs.fetch_wu(WU_URL, now=1.0, session=session, timeout_s=7)
+    _url, kw = session.calls[0]
+    assert kw['timeout'] == 7
+
+
+def test_wu_fetcher_builds_the_request_url_from_the_station_id():
+    """Токен из конфига - ключ словаря, а не адрес: по нему не ходят.
+
+    wu_fetcher разворачивает stationId в настоящий URL, как metar_fetcher
+    разворачивает код аэропорта. Иначе requests упал бы с MissingSchema,
+    адаптер проглотил бы исключение, и станция молчала бы каждый прогон.
+    """
+    session = _FakeSession(_wu_body())
+    payload, reading_ts = cs.wu_fetcher('IZAVOLZH3', now=_wu_ts(), session=session)
+    assert session.calls[0][0] == WU_URL
+    assert payload == '4.0'
+    assert reading_ts is not None
+
+
+def test_station_fetcher_picks_wu_adapter():
+    assert cs.station_fetcher({'source': 'wu'}) is cs.wu_fetcher
+
+
+def test_wu_is_a_valid_source(tmp_path):
+    stations = [{'id': 'wu', 'name': 'W', 'lat': 57.5, 'lon': 39.9,
+                 'source': 'wu', 'sensors': {'temperature_2m': 'IZAVOLZH3'}}]
+    cfg = tmp_path / 'st.json'
+    cfg.write_text(json.dumps({'stations': stations}), encoding='utf-8')
+    assert load_stations(cfg)[0]['source'] == 'wu'
+
+
+def test_wu_station_is_polled_over_the_network_not_mqtt():
+    stations = [
+        {'id': 'a', 'sensors': {'temperature_2m': 'city/out/a'}},
+        {'id': 'wu', 'source': 'wu',
+         'sensors': {'temperature_2m': 'IZAVOLZH3'}},
+    ]
+    assert [st['id'] for st in http_stations(stations)] == ['wu']
+    client = _FakeClient([('city/out/a', '20.4', False)])
+    cs.collect(client, stations, 0)
+    assert client.subs == ['city/out/a']
+
+
+def test_repository_wu_stations_point_at_expected_ids_with_own_threshold():
+    """id станций, порог и координаты закреплены боевым конфигом.
+
+    Порог 1800 с - 3 периода обновления WU (~5 минут): короче общего 900 с он
+    не должен становиться, иначе станция протухала бы между циклами.
+    """
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    wu = {st['id']: st for st in settings['stations'] if st.get('source') == 'wu'}
+    assert set(wu) == {'wu-ananyino', 'wu-zavolzhskoe'}
+    assert wu['wu-ananyino']['sensors']['temperature_2m'] == 'I90583615'
+    assert wu['wu-zavolzhskoe']['sensors']['temperature_2m'] == 'IZAVOLZH3'
+    for st in wu.values():
+        assert st['max_age_s'] == 1800
+    assert (wu['wu-ananyino']['lat'], wu['wu-ananyino']['lon']) == (57.48765, 39.94122)
+    assert (wu['wu-zavolzhskoe']['lat'], wu['wu-zavolzhskoe']['lon']) == (57.81076, 40.06904)
+
+
+def test_repository_wu_station_reaches_a_real_url_through_the_real_dispatch():
+    """Токен из боевого конфига доезжает до запроса как настоящий адрес.
+
+    Единственное подменённое - сессия: так станция молчала бы в бою, если бы
+    в get() ушёл голый stationId.
+    """
+    with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
+        settings = json.load(f)
+    wu = [st for st in settings['stations'] if st.get('source') == 'wu'][0]
+    token = wu['sensors']['temperature_2m']
+
+    session = _FakeSession(_wu_body(station=token))
+    fetcher = cs.station_fetcher(wu)
+    payload, reading_ts = fetcher(token, now=_wu_ts(), session=session)
+
+    assert token in session.calls[0][0]
+    assert 'stationId=' + token in session.calls[0][0]
+    assert payload == '4.0'
+    assert reading_ts is not None

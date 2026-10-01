@@ -807,25 +807,30 @@ def test_help_credits_yartemp_as_a_station_source():
     assert 'YarTemp' in template or 'yartemp' in template
 
 
-def test_help_lists_six_stations_and_credits_noaa_metar():
-    """В справке шесть станций, аэропорт назван, источник данных указан.
+def test_help_lists_eight_stations_and_credits_noaa_metar():
+    """В справке восемь станций, аэропорт назван, источники данных указаны.
 
     NOAA отдаёт открытые данные без требования атрибуции, но ссылка нужна
-    пользователю, чтобы проверить, откуда взялось число.
+    пользователю, чтобы проверить, откуда взялось число. Weather Underground
+    добавлены двумя любительскими станциями, поэтому и они должны быть названы
+    со ссылкой на источник.
     """
     with open('template.html', encoding='utf-8') as f:
         template = f.read()
-    assert 'Станций шесть' in template
+    assert 'Станций восемь' in template
     assert 'https://aviationweather.gov/' in template
     assert 'METAR' in template
     assert 'раз в 30 минут' in template
+    assert 'https://www.wunderground.com/' in template
+    assert 'Weather Underground' in template
 
 
-def test_help_does_not_promise_a_five_station_network():
-    """Старое «пять станций» должно уйти вместе со сменой состава сети."""
+def test_help_does_not_promise_an_outdated_station_count():
+    """Старые «пять» и «шесть станций» должны уйти вместе со сменой состава."""
     with open('template.html', encoding='utf-8') as f:
         template = f.read()
     assert 'Станций пять' not in template
+    assert 'Станций шесть' not in template
 
 
 # --- подпись показывает время последнего обновления, а не начало часа -----

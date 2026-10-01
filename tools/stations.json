@@ -60,6 +60,28 @@
       "sensors": {
         "temperature_2m": "UUDL"
       }
+    },
+    {
+      "id": "wu-ananyino",
+      "name": "Ананьино",
+      "lat": 57.48765,
+      "lon": 39.94122,
+      "source": "wu",
+      "max_age_s": 1800,
+      "sensors": {
+        "temperature_2m": "I90583615"
+      }
+    },
+    {
+      "id": "wu-zavolzhskoe",
+      "name": "Заволжское",
+      "lat": 57.81076,
+      "lon": 40.06904,
+      "source": "wu",
+      "max_age_s": 1800,
+      "sensors": {
+        "temperature_2m": "IZAVOLZH3"
+      }
     }
   ]
 }
