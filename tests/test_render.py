@@ -1,5 +1,7 @@
 import os
 import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -141,9 +143,9 @@ def test_help_documents_sensor_section():
     assert "старше 15 минут" in tpl
     assert "не заполняется предыдущим" in tpl
 
-    # ночной минимум Цеденево
-    assert "Цеденево — среднее днём и минимум ночью" in tpl
-    assert "Ночь — от заката до рассвета" in tpl
+    # окно среднего Цеденево смещено относительно солнца
+    assert "Цеденево — не только ночью" in tpl
+    assert "с трёх часов после рассвета и до двух часов до заката" in tpl
 
     # сбор и условия использования YarTemp
     assert "каждые 10 минут" in tpl
@@ -522,6 +524,89 @@ def test_weather_now_sensor_line_shows_hour_of_the_reading():
     # Подпись строится из элемента с индексом нашего бакета j, а не из
     # текущего часа страницы: иначе она называла бы время просмотра.
     assert re.search(r"D\.time\[j\]", body), "метка обязана браться по индексу j"
+
+
+# --- округление половины от нуля
+
+
+def _js_round_helper():
+    """Исходник округляющего помощника."""
+    html = read_template()
+    start = html.index("const rnd=")
+    return html[start:html.index("\n", start)]
+
+
+def test_rounding_sends_halves_away_from_zero():
+    """Math.round округляет к +∞, и в мороз это читается как ошибка.
+
+    JS: Math.round(-1.5) == -1 и Math.round(-0.5) == -0. То есть -1.5°
+    показывалось как -1° (а не -2°), а -0.4° вообще теряло знак. Половины
+    обязаны уходить от нуля, иначе шкала несимметрична относительно нуля.
+    """
+    body = _js_round_helper()
+    assert "Math.sign" in body and "Math.abs" in body, \
+        "округление обязано идти от нуля через знак и модуль"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_temp_and_fmt_round_symmetrically_on_halves():
+    """Поведенческая проверка: числа из JS считаются реально, а не на глаз."""
+    html = read_template()
+    src = html[html.index("const rnd="):html.index("const WCODE=")]
+    cases = [
+        # (аргумент, ожидаемый temp, ожидаемый fmt)
+        ("13.5", "+14°", "13.5"),
+        ("-13.5", "-14°", "-13.5"),
+        ("-0.5", "-1°", "-0.5"),
+        ("-0.4", "0°", "-0.4"),
+        ("-0.6", "-1°", "-0.6"),
+        ("12.98", "+13°", "13"),
+        ("-12.98", "-13°", "-13"),
+    ]
+    script = src + """
+const cases=%s;
+for(const [arg,t,f] of cases){
+  const got=temp(Number(arg));
+  const gotF=fmt(Number(arg));
+  if(got!==t||String(gotF)!==f){
+    console.log(JSON.stringify([arg,t,f,got,String(gotF)]));
+  }
+}""" % repr(cases).replace("'", '"')
+    # Скрипт уходит байтами UTF-8: text=True кодировал бы аргумент в кодировку
+    # локали и ломал бы кириллицу на любой машине, где не UTF-8.
+    out = subprocess.run(["node", "-e", script.encode("utf-8")],
+                         capture_output=True)
+    assert not out.stdout.strip(), \
+        "расхождение округления: %s" % out.stdout.decode("utf-8", "replace")
+
+
+# --- температура виджета берётся из датчиков
+
+
+def _widget_thermo_js():
+    """Кусок buildWeatherNow, отвечающий за число в виджете."""
+    html = read_template()
+    start = html.index("function buildWeatherNow(){")
+    return html[start:html.index("function buildWeatherHours(", start)]
+
+
+def test_widget_shows_sensor_temperature_not_model():
+    """Большое число виджета — показание станций, а не модельный консенсус.
+
+    Пользователь заметил расхождение «+14» против «По датчику +13.1» и
+    потребовал, чтобы виджет показывал то же, что и строка под ним: реальное
+    измерение, округлённое до целых. Модель и измерение — разные величины,
+    и подписывать одно именем другого нельзя.
+    """
+    body = _widget_thermo_js()
+    assert re.search(r"const\s+wtemp\s*=\s*sv!=null\s*\?\s*sv\s*:", body), \
+        "виджет обязан брать температуру из датчиков, а откатываться на модель"
+    # Само число в разметке и в ячейке «Температура» — одно и то же значение,
+    # иначе виджет покажет две разные температуры рядом.
+    assert len(re.findall(r"temp\(wtemp\)", body)) >= 2, \
+        "и крупное число, и ячейка «Температура» берут wtemp"
+    assert "temp(w.temperature_2m?.[curIdx])" not in body, \
+        "модельное значение больше не должно попадать в виджет"
     # опциональная цепочка допустима: массив time может оказаться короче ряда
     assert "D.time[j]" in body
 
@@ -530,9 +615,9 @@ def test_weather_now_sensor_line_shows_hour_of_the_reading():
 
 
 def _sensor_daynight_js():
-    """Помощники выбора значения: день/ночь и что именно показать."""
+    """Помощники выбора значения: границы окон и что именно показать."""
     html = read_template()
-    start = html.index("function sensorIsDayAt(")
+    start = html.index("function hhmmMin(")
     return html[start:html.index("function lastSensorHour(", start)]
 
 
@@ -558,21 +643,61 @@ def test_sensor_is_day_compares_the_reading_hour_against_its_own_day():
 
 
 def test_sensor_is_day_boundaries_match_the_agreed_rule():
-    """День — это sunrise <= час < sunset: рассвет включительно, закат нет.
+    """Среднее показывается с рассвета+3ч и до заката-2ч.
 
-    Проверяется структура сравнения, а не наличие подстрок: перевёрнутое
-    условие даёт ночь днём на тех же данных, и любой тест на вхождение слова
-    «sunrise» при этом проходит. Регулярка требует один и тот же левый
-    операнд в обеих границах — иначе «день» вёл бы себя как «час не раньше
-    рассвета ИЛИ час раньше заката», то есть почти всегда был бы днём.
+    Границы считаются в минутах от полуночи, а не сравнением строк: сдвиг на
+    часы арифметикой виден в коде буквально, тогда как строковое сравнение
+    спрятало бы его за срезом и при переходе через полночь Compare вели бы себя
+    неожиданно. Проверяются оба сдвига и то, что верхняя граница не входит.
     """
     body = _sensor_daynight_js()
-    m = re.search(r"(\w+)>=(\w+)\.slice\(11,16\)&&\1<(\w+)\.slice\(11,16\)", body)
+    assert "SENSOR_MEAN_AFTER_SUNRISE=180" in body, "3 часа после рассвета = 180 минут"
+    assert "SENSOR_MEAN_BEFORE_SUNSET=120" in body, "2 часа до заката = 120 минут"
+    m = re.search(
+        r"(\w+)\s*>=\s*([\w.]+)\s*\+\s*SENSOR_MEAN_AFTER_SUNRISE\s*&&\s*\1\s*<\s*([\w.]+)\s*-\s*"
+        r"SENSOR_MEAN_BEFORE_SUNSET",
+        body,
+    )
     assert m, (
-        "ожидалось сравнение вида hh>=sr.slice(11,16)&&hh<ss.slice(11,16), с одним "
-        "и тем же часом в обеих границах"
+        "ожидалось сравнение вида hh>=sr+AFTER&&hh<ss-BEFORE, с одним и тем же "
+        "часом в обеих границах"
     )
     assert m.group(2) != m.group(3), "нижняя и верхняя границы не должны совпадать"
+
+
+def test_sensor_window_helpers_agree_across_the_three_frontends():
+    """Главная и оба виджета считают одно и то же окно.
+
+    Правило живёт в трёх копиях шаблона. Если разъедутся сдвиги или знаки,
+    строка «По датчику» на странице и цифра в виджете будут показывать разное
+    для одного и того же часа, и это не заметят по одному скриншоту.
+    """
+    tpl = read_template()
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        for body, label in ((tpl, "template.html"), (w, fname)):
+            assert "180" in body, f"{label}: 3 часа после рассвета"
+            assert "120" in body, f"{label}: 2 часа до заката"
+
+
+def test_sensor_rounding_follows_the_value_shown_only_for_tsedenevo():
+    """Направление округления у Цеденево — по показанной величине.
+
+    У Ярославля значение всегда среднее, но округление остаётся на старом
+    окне рассвет–закат: привязывать его к выбору значения значило бы сделать
+    его всегда вверх и поднять ночные числа города на градус.
+    """
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "function sensorInDayWindow(" in w, fname
+        assert "function sensorShowsMean(" in w, fname
+        assert "return showsMean ? Math.ceil(v) : Math.floor(v);" in w, fname
+        # Ярославль идёт по старому окну, Цеденево — по новому
+        assert re.search(
+            r"showsMean\s*=\s*slug==='tsedenevo'\s*\?\s*sensorShowsMean\([^)]*\)"
+            r"\s*:\s*sensorInDayWindow\([^)]*\)", w), fname
 
 
 def test_sensor_is_day_defaults_to_day_without_solar_data():
@@ -588,14 +713,28 @@ def test_sensor_is_day_defaults_to_day_without_solar_data():
 
 
 def test_tsedenevo_takes_minimum_at_night_and_yaroslavl_always_mean():
-    """Цеденево переключается на минимум ночью, Ярославль — никогда."""
+    """Цеденево переключается на минимум вне окна, Ярославль — никогда."""
     body = _sensor_pick_js()
     assert "tsedenevo" in body
+    assert "sensorShowsMean" in body, "значение выбирается по новому окну"
     assert "sensor_station_min" in _sensor_now_js() or "min" in body
     # Ярославль не упоминается в ветке выбора: там только slug Цеденево,
     # всё остальное — среднее по умолчанию
     assert "yaroslavl" not in body, (
         "у Ярославля ночного минимума нет, упоминать его в выборе незачем"
+    )
+
+
+def test_help_explains_the_shifted_window():
+    """Справка обязана называть новые границы, а не «от заката до рассвета».
+
+    Старая формулировка стала бы прямой ложью на странице: правило сдвинуто,
+    а текст продолжал бы обещать переключение ровно на закате.
+    """
+    tpl = read_template()
+    assert "рассвет" in tpl and "3" in tpl and "2" in tpl
+    assert "от заката до рассвета" not in tpl, (
+        "старое правило в справке больше не действует"
     )
 
 

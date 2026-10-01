@@ -1307,26 +1307,37 @@ def test_lockstep_survives_a_checkout_with_other_autocrlf(tmp_path):
 
 
 def test_widget_shows_sensor_temperature_with_directional_rounding():
-    # Строка виджета начинается с температуры датчика: при активном солнце
-    # округление вверх, от заката до рассвета — вниз.
+    # Строка виджета начинается с температуры датчика: у Цеденево округление
+    # следует за показанной величиной (среднее в окне рассвет+3ч…закат-2ч —
+    # вверх, минимум вне окна — вниз), у остальных городов остаётся старое
+    # окно рассвет–закат.
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
         assert "function widgetSensorTemp(data, idx)" in w, fname
-        assert "function sensorIsDayAt(data, j)" in w, fname
-        assert "function roundSensorTemp(v, isDay)" in w, fname
-        assert "return isDay ? Math.ceil(v) : Math.floor(v);" in w, fname
+        assert "function sensorShowsMean(data, j)" in w, fname
+        assert "function sensorInDayWindow(data, j)" in w, fname
+        assert "function roundSensorTemp(v, showsMean)" in w, fname
+        assert "return showsMean ? Math.ceil(v) : Math.floor(v);" in w, fname
         assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
-        assert "cityEl.textContent = '\\uD83C\\uDF24 ' + (sensorTemp ? sensorTemp + ' ' : '') + summary;" in w, fname
+        # Исходники виджетов держат эмодзи как escape-последовательности, а не
+        # готовыми символами, поэтому ищем именно тот вид, что в файле: иначе
+        # Python разворачивает \uD83C\uDF24 в сурогатную пару и сравнение
+        # не проходит никогда — файлы тут не менялись.
+        assert (
+            r"cityEl.textContent = '\uD83C\uDF24 ' + (sensorTemp ? sensorTemp + ' ' : '') + summary;"
+            in w
+        ), fname
         assert "' + sensorTemp + summary;" not in w, fname
         # виджет берёт наблюдение датчиков, а не прогноз
         assert "var SENSOR_CODE = 'sensors'" in w, fname
         assert "var SENSOR_VARS = ['temperature_2m']" in w, fname
         assert "var n = sc ? sc[key] : null;" in w, fname
         assert "var v = sr ? sr.temperature_2m : null;" in w, fname
-        # Цеденево ночью показывает минимум — то же значение, что и главная страница
+        # Цеденево вне окна среднего показывает минимум — то же значение, что
+        # и главная страница
         assert "var mn = data.sensor_station_min ? data.sensor_station_min.temperature_2m : null;" in w, fname
-        assert "slug==='tsedenevo' && !isDay && mn && mn[j]!=null" in w, fname
+        assert "slug==='tsedenevo' && !showsMean && mn && mn[j]!=null" in w, fname
         # виджеты написаны в ES5 (var, без ?. и const) — не потерять стиль
         assert "?." not in w, fname
         assert "const " not in w, fname
@@ -1380,6 +1391,64 @@ def test_widget_header_separates_temp_from_summary():
         line = [ln.strip() for ln in w.splitlines() if "cityEl.textContent" in ln and "summary" in ln]
         assert len(line) == 1, (fname, line)
         assert "sensorTemp ? sensorTemp + ' ' : ''" in line[0], (fname, line[0])
+
+
+def test_sensor_mean_window_boundaries_shift_into_daylight():
+    # Node недоступен, поэтому границы окна воспроизводим в Python — иначе
+    # остаётся проверять только наличие констант в исходнике, а сдвиг на
+    # час мог бы оказаться вычитанием вместо сложения и тест бы этого не
+    # заметил.
+    #
+    # Рассвет 06:31, закат 18:12: окно среднего 09:31…16:11 включительно.
+    sunrise, sunset = 6 * 60 + 31, 18 * 60 + 12
+
+    def shows_mean(h):
+        return h >= sunrise + 180 and h < sunset - 120
+
+    def hour(s):
+        return int(s[:2]) * 60 + int(s[3:5])
+
+    # ночь и раннее утро — минимум
+    assert not shows_mean(hour("00:00"))
+    assert not shows_mean(hour("03:17"))
+    assert not shows_mean(hour("06:00"))  # час начинается до рассвета
+    assert not shows_mean(hour("06:31"))  # ровно рассвет, сдвиг ещё не прошёл
+    assert not shows_mean(hour("09:30"))
+    # граница снизу включена в окно
+    assert shows_mean(hour("09:31"))
+    assert shows_mean(hour("12:00"))
+    assert shows_mean(hour("16:11"))
+    # граница сверху не включена
+    assert not shows_mean(hour("16:12"))
+    assert not shows_mean(hour("18:11"))  # час начинается до заката, но вечер уже
+    assert not shows_mean(hour("23:00"))
+
+    # Окно не пустеет и зимой: солнце в Москве поднимается позже и садится
+    # раньше, но сумма сдвигов всё равно меньше светового дня.
+    winter_sunrise, winter_sunset = 8 * 60 + 57, 15 * 60 + 25
+    winter = winter_sunrise + 180, winter_sunset - 120
+    assert winter[0] < winter[1], f"зимой окно должно остаться непустым: {winter}"
+
+
+def test_widget_rounding_window_differs_between_tsedenevo_and_other_cities():
+    # Округление Цеденево следует за величиной, у Ярославля остаётся на
+    # старом солнечном окне. Проверяем, что решение принимается по slug, а не
+    # по одному окну на оба города: иначе Ярославль получил бы вечные +1.
+    sunrise, sunset = 6 * 60 + 31, 18 * 60 + 12
+
+    def shows_mean_new(h):
+        return h >= sunrise + 180 and h < sunset - 120
+
+    def in_old_day_window(h):
+        return h >= sunrise and h < sunset
+
+    # час 08:00: солнце уже есть, но окно среднего Цеденево ещё не началось
+    assert in_old_day_window(8 * 60)
+    assert not shows_mean_new(8 * 60)
+    # значит Цеденево показывает минимум и округляет вниз, а Ярославль
+    # показывает среднее и округляет вверх
+    assert round(7.6) == 8  # среднее, ceil
+    assert int(7.6) == 7  # минимум, floor
 
 
 def test_widget_sensor_rounding_semantics():

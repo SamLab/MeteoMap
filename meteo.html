@@ -265,40 +265,72 @@ function buildSummary(times, data, rawData, idx){
   return txt;
 }
 
+// Половины округляются от нуля — тем же правилом, что на главной странице
+// (template.html) и во втором виджете (meteow.html).
+function rnd(v){ return Math.sign(v)*Math.round(Math.abs(v)); }
 function fmtP(v){
   if(v==null) return '—';
-  return Math.round(v*10)/10;
+  return rnd(v*10)/10;
 }
 
 var SENSOR_CODE = 'sensors';
 var SENSOR_VARS = ['temperature_2m'];
 
-function sensorIsDayAt(data, j){
-  // День или ночь для часа j. Рассвет и закат берутся для того дня, к которому
-  // принадлежит сам час: сравнение с сегодняшним закатом на границе суток
-  // посчитало бы ночь последнего часа по закату первого дня.
-  // Дефолт — день: обратный переключил бы округление там, где данных просто
-  // не хватает, и заголовок изменился бы из-за отсутствия прогноза.
+// Минуты от полуночи для «ЧЧ:ММ». Границы окна получаются сдвигом на часы,
+// поэтому сравнивать их строки бессмысленно — арифметика держит сдвиг видимым.
+function hhmmMin(s){ return (+s.slice(0,2))*60+(+s.slice(3,5)); }
+// Сдвиг окна среднего от рассвета и заката, минуты.
+var SENSOR_MEAN_AFTER_SUNRISE = 180, SENSOR_MEAN_BEFORE_SUNSET = 120;
+
+// Рассвет и закат для часа j в минутах от полуночи, либо null. Границы берутся
+// для того дня, к которому принадлежит сам час: сравнение с сегодняшним
+// закатом на границе суток посчитало бы ночь последнего часа по закату
+// первого дня.
+function sunMinutes(data, j){
   var iso = data.time ? data.time[j] : null;
-  if(!iso) return true;
-  var dt = data.daily_time || [];
-  var k = dt.indexOf(iso.slice(0,10));
-  if(k<0) return true;
+  if(!iso) return null;
+  var k = (data.daily_time || []).indexOf(iso.slice(0,10));
+  if(k<0) return null;
   var dl = data.daily || {};
   var sr = dl.sunrise ? dl.sunrise[k] : null;
   var ss = dl.sunset ? dl.sunset[k] : null;
-  if(!sr||!ss) return true;
-  // Обе стороны — «ЧЧ:ММ» с ведущими нулями в одном часовом поясе, поэтому
-  // строковое сравнение корректно. Час до рассвета — ещё ночь, час, не
-  // переваливший закат, — ещё день.
-  var hh = iso.slice(11,16);
-  return hh>=sr.slice(11,16) && hh<ss.slice(11,16);
+  if(!sr||!ss) return null;
+  return {sr: hhmmMin(sr), ss: hhmmMin(ss)};
+}
+function hourMinutes(data, j){
+  var iso = data.time ? data.time[j] : null;
+  return iso ? hhmmMin(iso.slice(11,16)) : null;
 }
 
-function roundSensorTemp(v, isDay){
+function sensorShowsMean(data, j){
+  // Окно среднего: с трёх часов после рассвета и до двух часов до заката.
+  // Раньше границы стояли на рассвете и закате, и первые три часа утра
+  // показывали минимум ночи, хотя солнце уже поднялось.
+  // Дефолт — среднее: обратный дефолт переключил бы округление там, где
+  // данных просто не хватает, и заголовок изменился бы из-за отсутствия
+  // прогноза.
+  var b = sunMinutes(data, j);
+  if(!b) return true;
+  var h = hourMinutes(data, j);
+  if(h==null) return true;
+  return h>=b.sr+SENSOR_MEAN_AFTER_SUNRISE && h<b.ss-SENSOR_MEAN_BEFORE_SUNSET;
+}
+
+function sensorInDayWindow(data, j){
+  // Старое окно рассвет–закат, без сдвигов. Значение по нему не выбирается:
+  // Ярославль показывает среднее круглосуточно, и его округление не должно
+  // поехать вместе с границами Цеденево.
+  var b = sunMinutes(data, j);
+  if(!b) return true;
+  var h = hourMinutes(data, j);
+  if(h==null) return true;
+  return h>=b.sr && h<b.ss;
+}
+
+function roundSensorTemp(v, showsMean){
   // Днём округляем вверх, ночью — вниз. Ночная оценка отвечает на вопрос
   // «укрываться или нет», поэтому вверх её сглаживать нельзя.
-  return isDay ? Math.ceil(v) : Math.floor(v);
+  return showsMean ? Math.ceil(v) : Math.floor(v);
 }
 
 function widgetSensorTemp(data, idx){
@@ -318,11 +350,16 @@ function widgetSensorTemp(data, idx){
     // одинаково плохо описывают наблюдение.
     var x = v[j];
     if(n[j]>0 && x!=null){
-      // Цеденево ночью показывает минимум — то же значение, что строка
-      // «Датчик» главной страницы, чтобы заголовок и страница не расходились.
-      var isDay = sensorIsDayAt(data, j);
-      var val = (slug==='tsedenevo' && !isDay && mn && mn[j]!=null) ? mn[j] : x;
-      var t = roundSensorTemp(val, isDay);
+      // Цеденево вне окна среднего показывает минимум — то же значение, что
+      // строка «Датчик» главной страницы, чтобы заголовок и страница не
+      // расходились. Округление у Цеденево следует за показанной величиной,
+      // у Ярославля — за старым окном рассвет–закат, где величина всегда
+      // средняя.
+      var showsMean = slug==='tsedenevo'
+        ? sensorShowsMean(data, j)
+        : sensorInDayWindow(data, j);
+      var val = (slug==='tsedenevo' && !showsMean && mn && mn[j]!=null) ? mn[j] : x;
+      var t = roundSensorTemp(val, showsMean);
       return(t>0?'+':'')+t;
     }
   }
@@ -332,12 +369,17 @@ function widgetSensorTemp(data, idx){
 function render(data){
   if (!data || !data.time || !data.weighted) return showError('Нет данных');
 
+  // Сетка времени — стенное время города без смещения ('2026-09-30T17:00'),
+  // поэтому new Date(t) читался по часам браузера, и посетителю из Нью-Йорка
+  // показывался не тот час. idx берём по городским часам, как на главной.
   var times = data.time.map(function(t){ return new Date(t); });
-  var now = new Date();
+  var tz = (data.location && data.location.tz) ? data.location.tz : 'Europe/Moscow';
+  var nowS = new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date()).replace(', ','T');
+  var curHour = nowS.slice(0,13) + ':00';
 
   var idx = -1;
-  for (var i = 0; i < times.length; i++){
-    if (times[i] <= now) idx = i;
+  for (var i = 0; i < data.time.length; i++){
+    if (data.time[i] <= curHour) idx = i;
     else break;
   }
   if (idx < 0) idx = 0;
@@ -352,7 +394,7 @@ function render(data){
     var t = times[i];
     var code = data.weighted.weather_code ? Math.round(data.weighted.weather_code[i]) : 0;
     var w = WMO[code] || {e:'\uD83C\uDF21', l:'Код ' + code};
-    var temp = Math.round(data.weighted.temperature_2m ? data.weighted.temperature_2m[i] : 0);
+    var temp = rnd(data.weighted.temperature_2m ? data.weighted.temperature_2m[i] : 0);
     var prob = data.weighted.precipitation_probability ? Math.round(data.weighted.precipitation_probability[i]) : 0;
     var mm = data.weighted.precipitation ? data.weighted.precipitation[i] : 0;
     var rain = prob >= 50 || mm >= 0.1;
@@ -372,11 +414,13 @@ function render(data){
   }
 
   strip.innerHTML = html;
-  var bg = hourBgSvg(hours);
+  var bg = hourBgSvg(cnt);
   if (bg) strip.insertAdjacentHTML('afterbegin', bg);
 
   var gen = data.generated_at ? new Date(data.generated_at) : null;
-  updEl.textContent = gen ? pad2(gen.getHours()) + ':' + pad2(gen.getMinutes()) : '\u2014';
+  // generated_at несёт смещение +03:00, но getHours() печатал его по часам
+  // браузера: в Нью-Йорке один и тот же факт читался как 04:56 вместо 11:56.
+  updEl.textContent = gen ? new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Moscow',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(gen) : '\u2014';
 
   function hourBgSvg(cnt){
     var cc = [], pr = [];
