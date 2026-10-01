@@ -954,7 +954,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     # в колонке виджета вместо мм — значок кондиции
     assert 'class="d10mm"' not in w
     assert 'class="d10cond"><span class="ic">' in w
-    assert ".d10cond{font-size:16px" in w
+    assert ".d10cond{font-size:15.5px" in w
     # первый день в виджете — сегодня (не завтра), подпись — день недели + число (без «Сегодня/Завтра»)
     assert "if (dateStr < todayStr) continue;" in w
     assert "dateStr <= todayStr" not in w
@@ -1480,6 +1480,53 @@ def test_widget_sensor_temp_prefix_format():
             w = f.read()
         assert "return(t>0?'+':'')+t;" in w, fname
         assert "'+';" not in w.split("function roundSensorTemp")[1][:200], fname
+
+
+def test_widget_typography_is_half_a_pixel_smaller():
+    # Шрифты виджета уменьшены на полпикселя: верхняя строчка и оба блока.
+    # Значения зафиксированы числами, потому что полпикселя глазом не
+    # отличить — без теста правка выглядит как «ничего не изменилось» и её
+    # легко откатить случайно, не заметив.
+    shared = [
+        # верхняя строчка с городом, температурой и сводкой
+        ".city{font-size:14.5px",
+        # почасовой блок
+        ".hour .ht{color:var(--muted);font-size:10px",
+        ".hour .he{font-size:20.5px",
+        ".hour .htemp{font-weight:600;font-size:13px",
+        ".hour .hpp{color:var(--rain);font-size:9.5px",
+        ".hour .hmm{color:var(--rain);font-size:9px",
+        # узкий экран — те же элементы отдельными размерами
+        ".hour .ht{font-size:8.5px}",
+        ".hour .he{font-size:16.5px}",
+        ".hour .htemp{font-size:11px}",
+        ".hour .hpp{font-size:7.5px}",
+        ".hour .hmm{font-size:7px}",
+    ]
+    # .ppct задан в em и обязан остаться в em: пересчитается сам от
+    # уменьшенного родителя, а фиксированное значение разъехалось бы с ним.
+    shared.append(".ppct{font-size:.5em}")
+    # Вне запрошенных блоков — не трогали.
+    shared.append(".updated{font-size:11px")
+    shared.append(".err{color:var(--muted);font-size:12px")
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        for needle in shared:
+            assert needle in w, f"{fname}: нет {needle}"
+
+    # Недельный блок есть только в meteow.html — meteo.html ограничен
+    # часами и рисует трубку сам.
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+    for needle in (
+        "translateX(-50%);font-size:10.5px;font-weight:700",
+        ".d10cond{font-size:15.5px",
+        ".d10cond .ic{font-size:15.5px}",
+        ".d10day{font-size:9.5px",
+    ):
+        assert needle in w, f"meteow.html: нет {needle}"
 
 
 def test_help_documents_widget_sensor_temperature():
