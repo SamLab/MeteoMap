@@ -33,7 +33,7 @@ body{
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
 .city{font-size:14px;font-weight:600}
 .updated{font-size:11px;color:var(--muted)}
-.strip{display:flex;gap:2px;padding:2px 0 2px;position:relative}
+.strip{display:flex;gap:2px;padding:2px 0 1px;position:relative}
 .hour{
   flex:1 1 0;min-width:0;
   text-align:center;font-size:12px;
@@ -55,7 +55,7 @@ body{
 .hour .hpp{color:var(--rain);font-size:9.5px;min-height:13px;white-space:nowrap}
 .ppct{font-size:.5em}
 .hour .hmm{color:var(--rain);font-size:9px;min-height:13px;white-space:nowrap}
-.d10wrap{overflow-x:auto;padding:2px 0 2px}
+.d10wrap{overflow-x:auto;padding:1px 0 2px}
 .d10strip{display:flex;width:100%;min-width:100%;position:relative}
 .d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}
 .d10col:first-child{border-left:0}
@@ -444,8 +444,8 @@ function render(data){
       '<div class="d10tnight" style="top:' + (y2+2) + 'px">' + temp(x.tmin) + '</div>' +
       '</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
-      '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '<div class="d10wind">' + windCell(x.wd, x.ws) + '</div>' +
+      '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
       '</div>';
   }
   d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 74);

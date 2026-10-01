@@ -966,7 +966,7 @@ def test_widget_d10_unified_cloud_rain_graph():
     assert "var x = h / cnt * 100;" in w
     assert "(h + 0.5)" not in w
     # заливки облачности/осадков в почасовой части, как в 16 днях (SVG позади ячеек)
-    assert ".strip{display:flex;gap:2px;padding:2px 0 2px;position:relative}" in w
+    assert ".strip{display:flex;gap:2px;padding:2px 0 1px;position:relative}" in w
     assert ".hobg{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in w
     assert "function hourBgSvg(" in w
     assert "strip.insertAdjacentHTML('afterbegin', bg)" in w
@@ -1575,9 +1575,9 @@ def test_widget_daily_block_shows_wind_arrow_and_speed():
     # сила ветра без единиц измерения, как заказано
     assert "d10wind" in w
     assert "if (ws == null) return" in w, "нет защиты на отсутствие данных о ветре"
-    # блок стал выше: в разметке строка ветра идёт после подписи дня
+    # ветер стоит над датой: блок стал выше, но день остаётся нижней строкой
     markup = w[w.index("var html10 = '';"):]
-    assert markup.index('class="d10day"') < markup.index('class="d10wind"')
+    assert 'class="d10day"' not in markup[:markup.index('class="d10wind"')], "ветер должен быть выше даты"
     # вертикальный overflow больше не hidden, иначе строка ветра обрезалась бы
     body = _re.search(r"\nbody\{[^}]*\}", w)
     assert "overflow-y:hidden" not in body.group(0), "overflow-y:hidden обрежет ветер"
@@ -1599,10 +1599,9 @@ def test_widget_column_counts():
     assert "max-width:600px" in m
 
 
-def test_widget_gap_between_hourly_and_daily_blocks_is_four_pixels():
+def test_widget_gap_between_hourly_and_daily_blocks_is_two_pixels():
     # Зазор между часовым и недельным блоками складывается из двух отступов:
-    # низ .strip плюс верх .d10wrap. Сумма обязана быть 4px — раньше было 6px,
-    # и блоки визуально распадались на две отдельные полосы.
+    # низ .strip плюс верх .d10wrap. После сжатия сумма должна быть 2px.
     import re as _re
 
     with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
@@ -1610,14 +1609,14 @@ def test_widget_gap_between_hourly_and_daily_blocks_is_four_pixels():
     m = _re.search(r"\.strip\{[^}]*padding:(\d+)px 0 (\d+)px", w)
     assert m, "у .strip должен остаться явный вертикальный padding"
     strip_bottom = int(m.group(2))
-    m2 = _re.search(r"\.d10wrap\{[^}]*padding:(\d+)px 0", w)
-    assert m2, "у .d10wrap должен остаться явный верхний padding"
+    m2 = _re.search(r"\.d10wrap\{[^}]*padding:(\d+)px 0 (\d+)px", w)
+    assert m2, "у .d10wrap должен остаться явный вертикальный padding"
     wrap_top = int(m2.group(1))
-    assert strip_bottom + wrap_top == 4, (
-        f"зазор между блоками {strip_bottom}+{wrap_top}={strip_bottom + wrap_top}px, ждали 4px"
+    assert strip_bottom + wrap_top == 2, (
+        f"зазор между блоками {strip_bottom}+{wrap_top}={strip_bottom + wrap_top}px, ждали 2px"
     )
     # нижний отступ недельного блока не трогаем: он отделяет его от низа карточки
-    assert "padding:2px 0 2px}" in w, "нижние отступы должны остаться по 2px"
+    assert int(m2.group(2)) == 2, "нижний отступ недельного блока должен остаться 2px"
 
 
 def test_help_documents_widget_sensor_temperature():
