@@ -101,6 +101,23 @@ def test_cmp_table_renders_station_count_as_superscript():
     assert re.search(r"models\[[^\]]+\][^\n]*station_counts", read_template()) is None
 
 
+def test_cmp_table_uses_the_same_sensor_value_as_now():
+    """Колонка «Датчик» в «Часах» показывает ту же величину, что «Сейчас».
+
+    Цеденево вне окна среднего берёт минимум по станциям, но таблица сравнения
+    рисовала среднее: строка «По датчику» и столбик в «Часах» расходились.
+    Подстановка идёт через `sensorValueFor` и до подсчёта mx/mn, поэтому и
+    сравнение с консенсусом, и жирный экстремум считаются по показанному числу.
+    """
+    body = _cmp_table_js()
+    assert "sensorValueFor(" in body, "значение «Датчика» выбирается общим хелпером"
+    assert "sensor_station_min" in body, "минимум едет отдельным ключом payload"
+    assert body.index("sensorValueFor(") < body.index("Math.max(...nums)"), (
+        "подстановка должна идти до подсчёта mx/mn, иначе подсветка разойдётся "
+        "с показанным числом"
+    )
+
+
 def test_sensor_superscript_is_styled_without_breaking_the_column():
     """Надстрочная цифра обязана не раздувать строку таблицы."""
     html = read_template()
