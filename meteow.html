@@ -22,7 +22,7 @@ html,body{height:100%}
 body{
   background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  padding:0;overflow-x:auto;overflow-y:hidden;
+  padding:0;overflow-x:auto;overflow-y:auto;
 }
 .card{
   /* Без рамки и скругления: виджет встраивается в чужую страницу и должен
@@ -70,7 +70,8 @@ body{
 .d10tnight{color:#2c6f9b}
 .d10cond{font-size:15.5px;line-height:1;min-height:18px;padding:2px 0;white-space:nowrap}
 .d10cond .ic{font-size:15.5px}
-.d10wind{display:none}
+.d10wind{font-size:9.5px;color:var(--muted);white-space:nowrap;padding-top:2px}
+.d10wind .warr{display:inline-block;font-size:11px;line-height:1;transform-origin:center;vertical-align:-1px}
 .d10day{font-size:9.5px;color:#666;border-top:1px dashed var(--line);padding-top:3px;margin-top:1px;white-space:nowrap}
 .d10day b{color:#222}
 .err{color:var(--muted);font-size:12px;padding:8px 2px}
@@ -407,7 +408,8 @@ function render(data){
     var pp = daily.precipitation_probability_max ? daily.precipitation_probability_max[di] : null;
     var cl = daily.cloud_cover_mean ? daily.cloud_cover_mean[di] : null;
     var ws = daily.wind_speed_10m_max ? daily.wind_speed_10m_max[di] : null;
-    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,we:w2.e,d:d,ds:dateStr});
+    var wd = daily.wind_direction_10m_dominant ? daily.wind_direction_10m_dominant[di] : null;
+    arr.push({tmin:tmin,tmax:tmax,pr:pr,pp:pp,cl:cl,ws:ws,wd:wd,we:w2.e,d:d,ds:dateStr});
   }
 
   var lo = Infinity, hi = -Infinity;
@@ -421,6 +423,17 @@ function render(data){
   var SCALE = span > 0 ? (BTM - TOP) / span : 0;
   function yT(t){ return t == null ? BTM : (span > 0 ? BTM - SCALE * (t - lo) : (TOP + BTM) / 2); }
 
+  // Стрелка ветра смотрит по ходу ветра, а не откуда он пришёл: градусы в API
+  // задают направление, ОТКУДА дует, поэтому прибавляем 180.
+  var RUMBS = ['\u0421','\u0421\u0412','\u0412','\u042E\u0412','\u042E','\u042E\u0417','\u0417','\u0421\u0417'];
+  function windCell(wd, ws){
+    if (ws == null) return '\u2014';
+    var rot = wd == null ? null : (wd + 180) % 360;
+    var arr = rot == null ? '' :
+      '<span class="warr" style="transform:rotate(' + Math.round(rot) + 'deg)" title="\u0412\u0435\u0442\u0435\u0440 \u043A ' + RUMBS[Math.round(rot / 45) % 8] + '">\u2191</span>';
+    return arr + (ws == null ? '' : rnd(ws));
+  }
+
   var html10 = '';
   var dispDays = Math.min(arr.length, 16);
   for (var di = 0; di < dispDays; di++){
@@ -432,6 +445,7 @@ function render(data){
       '</div>' +
       '<div class="d10cond"><span class="ic">' + x.we + '</span></div>' +
       '<div class="d10day"><b>' + DOW[x.d.getDay()] + '</b> ' + x.d.getDate() + '</div>' +
+      '<div class="d10wind">' + windCell(x.wd, x.ws) + '</div>' +
       '</div>';
   }
   d10strip.innerHTML = html10 + cloudRainSvgW(arr.slice(0, dispDays), 74);

@@ -1552,6 +1552,37 @@ def test_widget_card_has_no_frame_and_sits_in_the_corner():
         assert "max-width:600px" in rule, f"{fname}: max-width убран не по задаче"
 
 
+def test_widget_daily_block_shows_wind_arrow_and_speed():
+    # Ветреная подпись в недельном блоке: стрелка показывает, КУДА дует
+    # (градус из API — откуда, поэтому плюс 180), рядом сила без единиц.
+    import re as _re
+
+    with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
+        w = f.read()
+
+    # заглушка display:none заменена рабочим правилом
+    wind = _re.search(r"\.d10wind\{[^}]*\}", w)
+    assert wind, "нет правила .d10wind"
+    assert "display:none" not in wind.group(0), ".d10wind всё ещё скрыт"
+    assert "font-size:9.5px" in wind.group(0), f"шрифт ветра не 9.5px: {wind.group(0)}"
+
+    # направление ветра кладём в arr, иначе стрелке нечего поворачивать
+    assert "daily.wind_direction_10m_dominant" in w
+    assert "wd:wd" in w, "направление не попало в arr"
+
+    # поворот именно на +180: стрелка смотрит по ходу ветра, а не откуда он идёт
+    assert "(wd + 180) % 360" in w
+    # сила ветра без единиц измерения, как заказано
+    assert "d10wind" in w
+    assert "if (ws == null) return" in w, "нет защиты на отсутствие данных о ветре"
+    # блок стал выше: в разметке строка ветра идёт после подписи дня
+    markup = w[w.index("var html10 = '';"):]
+    assert markup.index('class="d10day"') < markup.index('class="d10wind"')
+    # вертикальный overflow больше не hidden, иначе строка ветра обрезалась бы
+    body = _re.search(r"\nbody\{[^}]*\}", w)
+    assert "overflow-y:hidden" not in body.group(0), "overflow-y:hidden обрежет ветер"
+
+
 def test_widget_column_counts():
     # +1 час и +1 день. Оба числа стоят в коде дважды: в срезе колонок и в
     # расчёте заливки, иначе фон графика разъехался бы с колонками.
