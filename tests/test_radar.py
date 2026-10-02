@@ -1328,8 +1328,10 @@ def test_widget_shows_sensor_temperature_with_directional_rounding():
         assert "if (sensorTemp) headParts.push(sensorTemp);" in w, fname
         assert "if (windPart) headParts.push(windPart);" in w, fname
         assert "headParts.push(summary);" in w, fname
+        # значок обёрнут в span, чтобы его можно было увеличить отдельно от
+        # текста города; сравниваем с escape-последовательностью эмодзи
         assert (
-            r"cityEl.innerHTML = '\uD83C\uDF24 ' + headParts.join(', ');"
+            r"""cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');"""
             in w
         ), fname
         assert "' + sensorTemp + summary;" not in w, fname
@@ -1425,6 +1427,25 @@ def test_widget_header_wind_arrow_rotates_to_direction():
         # виджеты остаются ES5
         assert "?." not in w, fname
         assert "const " not in w, fname
+
+
+def test_widget_header_icon_larger_and_gap_to_hourly_reduced():
+    # Значок 🌤 в шапке крупнее текста города, а зазор от шапки до часовой
+    # полосы — на 1px меньше прежних 8px. Значок обёрнут в .cico, иначе
+    # увеличить его отдельно от названия города нельзя.
+    import re as _re
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        cico = _re.search(r"\.city \.cico\{[^}]*\}", w)
+        assert cico, f"{fname}: нет правила .city .cico"
+        m = _re.search(r"font-size:(\d+)px", cico.group(0))
+        assert m and int(m.group(1)) > 14, (fname, cico.group(0))
+        assert r'<span class="cico">' in w, fname
+        head = _re.search(r"\.head\{[^}]*\}", w)
+        assert head, f"{fname}: нет правила .head"
+        assert "margin-bottom:7px" in head.group(0), (fname, head.group(0))
 
 
 def test_widget_hourly_shows_wind_between_condition_and_temperature():

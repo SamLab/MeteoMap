@@ -30,8 +30,8 @@ body{
   background:var(--card);
   max-width:600px;margin:0;padding:2px 2px 0 2px;
 }
-.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
-.city{font-size:14px;font-weight:600}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+.city{font-size:14px;font-weight:600}.city .cico{font-size:18px;line-height:1;vertical-align:-1px}
 .updated{font-size:11px;color:var(--muted)}
 .strip{
   display:flex;
@@ -122,7 +122,7 @@ var strip = document.getElementById('strip');
 var cityEl = document.getElementById('city');
 var updEl = document.getElementById('updated');
 
-  cityEl.textContent = '\uD83C\uDF24';
+  cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span>';
 
 function relUrl(){ return 'data/' + city + '.json'; }
 function absUrl(){ return 'https://samlab.github.io/MeteoMap/data/' + city + '.json'; }
@@ -408,7 +408,7 @@ function render(data){
   var windPart = windArrow(windDir, windSpeed);
   if (windPart) headParts.push(windPart);
   headParts.push(summary);
-  cityEl.innerHTML = '\uD83C\uDF24 ' + headParts.join(', ');
+  cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');
 
   var html = '';
   for (var h = 0; h < hours && idx + h < times.length; h++){
@@ -467,7 +467,7 @@ function render(data){
 function showError(msg){
   strip.innerHTML = '<div class="err">\u26A0\uFE0F Не удалось загрузить данные' + (msg ? ' (' + msg + ')' : '') + '</div>';
   updEl.textContent = '';
-cityEl.textContent = '\uD83C\uDF24';
+cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span>';
 }
 
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
