@@ -1445,7 +1445,7 @@ def test_widget_header_icon_larger_and_gap_to_hourly_reduced():
         assert r'<span class="cico">' in w, fname
         head = _re.search(r"\.head\{[^}]*\}", w)
         assert head, f"{fname}: нет правила .head"
-        assert "margin-bottom:7px" in head.group(0), (fname, head.group(0))
+        assert "margin-bottom:6px" in head.group(0), (fname, head.group(0))
 
 
 def test_widget_hourly_shows_wind_between_condition_and_temperature():
