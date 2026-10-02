@@ -294,10 +294,24 @@ def test_tomorrow_23h_interval_with_00h_edge_keeps_day():
 
 
 def test_widget_interval_breaks_on_first_dry_hour():
+    # Один проход по объединённому критерию (консенсус ИЛИ >=2 модели):
+    # берётся ближайший эпизод, интервал рвётся на первом часу без дождя.
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
-        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+        assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+
+
+def test_widget_summary_prefers_nearest_rain_not_later_confirmed():
+    # Регрессия: виджет прыгал на далёкий подтверждённый консенсусом дождь,
+    # пропуская ближайший эпизод, который отмечают >=2 модели. «Вероятны
+    # Осадки» — когда начало ближайшего эпизода не подтверждено консенсусом.
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" not in w, fname
+        assert "if(rainHour>=0)fromModels=true;" not in w, fname
+        assert "var fromModels=rainHour>=0&&!hasRainAt(rainHour);" in w, fname
 
 
 def test_hourly_interval_continues_on_consensus_even_if_models_below_threshold():

@@ -181,15 +181,9 @@ function buildSummary(times, data, rawData, idx){
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
-    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+    if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
-  var fromModels=false;
-  if(rainHour<0){
-    for(var j=idx;j<times.length;j++){
-      if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
-    }
-    if(rainHour>=0)fromModels=true;
-  }
+  var fromModels=rainHour>=0&&!hasRainAt(rainHour);
   if(rainHour<0) return '\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0434\u043D\u044F \u0431\u0435\u0437 \u0434\u043E\u0436\u0434\u044F';
   var sumPr=0,maxPp=0,modelCnt=0;
   for(var j=rainHour;j<=jLast;j++){
