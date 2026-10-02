@@ -1320,12 +1320,16 @@ def test_widget_shows_sensor_temperature_with_directional_rounding():
         assert "function roundSensorTemp(v, showsMean)" in w, fname
         assert "return showsMean ? Math.ceil(v) : Math.floor(v);" in w, fname
         assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
-        # Исходники виджетов держат эмодзи как escape-последовательности, а не
-        # готовыми символами, поэтому ищем именно тот вид, что в файле: иначе
-        # Python разворачивает \uD83C\uDF24 в сурогатную пару и сравнение
-        # не проходит никогда — файлы тут не менялись.
+        # Шапка собирается из частей через join(', '), а не склейкой строки:
+        # тогда запятая появляется ровно между непустыми частями, и пропуск
+        # температуры или ветра не оставляет висячей запятой. Эмодзи в
+        # исходниках — escape-последовательность, поэтому сравниваем с ней.
+        assert "var headParts = [];" in w, fname
+        assert "if (sensorTemp) headParts.push(sensorTemp);" in w, fname
+        assert "if (windPart) headParts.push(windPart);" in w, fname
+        assert "headParts.push(summary);" in w, fname
         assert (
-            r"cityEl.textContent = '\uD83C\uDF24 ' + (sensorTemp ? sensorTemp + ' ' : '') + summary;"
+            r"cityEl.innerHTML = '\uD83C\uDF24 ' + headParts.join(', ');"
             in w
         ), fname
         assert "' + sensorTemp + summary;" not in w, fname
@@ -1354,43 +1358,73 @@ def test_widget_sensor_temp_absent_when_no_observation():
 
 
 def test_widget_header_separates_temp_from_summary():
-    # Регрессия: «+14Дождь» — склейка без пробела. Строка собирается целиком,
-    # а не проверяется по подстрокам: раздельные assert на «+14» и «Дождь»
-    # проходили и при слипшейся строке, поэтому проверяем результат сборки.
+    # Заголовок: «🌤 +14, ↑5, Дождь …» — между непустыми частями запятая с
+    # пробелом, а не склейка без разделителя и не запятая на месте пропуска.
+    # Строка собирается целиком: раздельные assert на «+14» и «Дождь» прошли
+    # бы и при слипшейся строке.
+    def header(sensor_temp, wind, summary):
+        parts = []
+        if sensor_temp: parts.append(sensor_temp)
+        if wind: parts.append(wind)
+        parts.append(summary)
+        return "\u2600\uFE0F " + ", ".join(parts)
+
+    # эмодзи в виджете не обязателен для проверки разделителя, но строка
+    # должна собираться ровно так же, как в JS
+    for sensor_temp, wind, summary, want in (
+        ("+14", "\u21915", "Дождь Пн 5 22ч-Вт 6 23ч [0мм_34%] 3-10м",
+         "\u2600\uFE0F +14, \u21915, Дождь Пн 5 22ч-Вт 6 23ч [0мм_34%] 3-10м"),
+        ("", "\u21915", "Дождь сегодня 10ч-12ч [0.2мм_60%] 2м",
+         "\u2600\uFE0F \u21915, Дождь сегодня 10ч-12ч [0.2мм_60%] 2м"),
+        ("+14", "", "Остаток дня без дождя",
+         "\u2600\uFE0F +14, Остаток дня без дождя"),
+        ("", "", "Остаток дня без дождя",
+         "\u2600\uFE0F Остаток дня без дождя"),
+    ):
+        got = header(sensor_temp, wind, summary)
+        assert got == want, (got, want)
+        # ни слипания, ни двойного пробела, ни висячей запятой
+        assert "  " not in got, got
+        assert ",," not in got, got
+
     import re as _re
 
     def unescape(src):
         return _re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), src)
 
-    def header(sensor_temp, summary):
-        # порт строки виджета: пробел после эмодзи, затем префикс с
-        # разделителем только если префикс есть
-        return "\u2600\uFE0F " + (sensor_temp + " " if sensor_temp else "") + summary
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = unescape(f.read())
+        line = [ln.strip() for ln in w.splitlines() if "headParts.join(', ')" in ln]
+        assert len(line) == 1, (fname, line)
+        assert "cityEl.innerHTML" in line[0], (fname, line[0])
 
-    # эмодзи в виджете не обязателен для проверки разделителя, но строка
-    # должна собираться ровно так же, как в JS
-    for sensor_temp, summary, want in (
-        ("+14", "Дождь Пн 5 22ч—Вт 6 23ч [0мм_34%] 3-10м",
-         "\u2600\uFE0F +14 Дождь Пн 5 22ч—Вт 6 23ч [0мм_34%] 3-10м"),
-        ("", "Остаток дня без дождя", "\u2600\uFE0F Остаток дня без дождя"),
-        ("-3", "Снег сегодня 10ч—12ч [0.2мм_60%] 2м",
-         "\u2600\uFE0F -3 Снег сегодня 10ч—12ч [0.2мм_60%] 2м"),
-        ("+5", "Вероятны Осадки до 18ч [0.1мм_40%] 4м",
-         "\u2600\uFE0F +5 Вероятны Осадки до 18ч [0.1мм_40%] 4м"),
-    ):
-        got = header(sensor_temp, summary)
-        assert got == want, (got, want)
-        # ни слипания, ни двойного пробела
-        assert "  " not in got, got
-        if sensor_temp:
-            assert sensor_temp + " " + summary in got, got
+
+def test_widget_header_wind_arrow_rotates_to_direction():
+    # Стрелка ветра в шапке: ↑ повёрнут на (направление+180)° — показывает,
+    # куда дует ветер, как в 10-дневной полосе, — и румб уходит в подпись.
+    # Скорость округляется до целых м/с тем же rnd. Нет скорости — пустая
+    # строка: в шапке ветер лучше опустить, чем показать прочерк.
+    import re as _re
+
+    def unescape(src):
+        return _re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), src)
 
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = unescape(f.read())
-        line = [ln.strip() for ln in w.splitlines() if "cityEl.textContent" in ln and "summary" in ln]
-        assert len(line) == 1, (fname, line)
-        assert "sensorTemp ? sensorTemp + ' ' : ''" in line[0], (fname, line[0])
+        assert "function windArrow(wd, ws)" in w, fname
+        assert "if(ws == null) return '';" in w, fname
+        assert "(wd + 180) % 360" in w, fname
+        assert "Math.round(rot)" in w, fname
+        assert "rnd(ws)" in w, fname
+        assert "\u2191" in w, fname
+        assert "\u0412\u0435\u0442\u0435\u0440 \u043a" in w, fname
+        assert 'class="warr"' in w, fname
+        assert ".warr{" in w, fname
+        # виджеты остаются ES5
+        assert "?." not in w, fname
+        assert "const " not in w, fname
 
 
 def test_sensor_mean_window_boundaries_shift_into_daylight():

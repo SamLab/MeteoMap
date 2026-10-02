@@ -71,7 +71,7 @@ body{
 .d10cond{font-size:15.5px;line-height:1;min-height:18px;padding:2px 0;white-space:nowrap}
 .d10cond .ic{font-size:15.5px}
 .d10wind{font-size:9.5px;color:var(--muted);white-space:nowrap;padding-top:2px}
-.d10wind .warr{display:inline-block;font-size:11px;line-height:1;transform-origin:center;vertical-align:-1px}
+.warr{display:inline-block;font-size:11px;line-height:1;transform-origin:center;vertical-align:-1px}
 .d10day{font-size:9.5px;color:#666;border-top:1px dashed var(--line);padding-top:3px;margin-top:1px;white-space:nowrap}
 .d10day b{color:#222}
 .err{color:var(--muted);font-size:12px;padding:8px 2px}
@@ -220,7 +220,7 @@ function buildSummary(times, data, rawData, idx){
   var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';
   var endIdx=Math.min(jLast+1,times.length-1);
   var en=(times[endIdx].getHours()===0)?'\u0030\u0030\u0447':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'ч':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч');
-  var timeStr=(rainHour===idx)?('до '+en):(st===en?'\u0432 '+st:st+'—'+en);
+  var timeStr=(rainHour===idx)?('до '+en):(st===en?'\u0432 '+st:st+'-'+en);
   var cntStr=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';
   var conCnt=conPeak>=1?(' '+rcCnt(conPeak,conMax)):'';
   var stats='['+fmtP(sumPr)+'\u043C\u043C_'+Math.round(maxPp)+'%]';
@@ -239,6 +239,19 @@ function num(v){ return v==null ? '\u2014' : rnd(v); }
 // (template.html). Math.round шёл к +∞, и -1.5° читался как -1° в виджете и
 // как -2° в основной странице: одно число на одном сайте двумя способами.
 function rnd(v){ return Math.sign(v)*Math.round(Math.abs(v)); }
+
+// Стрелка ветра в шапке: ↑ повёрнут на (направление+180)° — куда дует ветер,
+// а не откуда, — как в 10-дневной полосе. Скорость округляется до целых м/с
+// тем же rnd. Нет скорости — пустая строка: в шапке ветер опускается целиком,
+// а не показывается прочерком.
+var WIND_RUMBS = ['\u0421','\u0421\u0412','\u0412','\u042E\u0412','\u042E','\u042E\u0417','\u0417','\u0421\u0417'];
+function windArrow(wd, ws){
+  if(ws == null) return '';
+  var rot = (wd == null) ? null : (wd + 180) % 360;
+  var arrow = (rot == null) ? '' :
+    '<span class="warr" style="transform:rotate(' + Math.round(rot) + 'deg)" title="\u0412\u0435\u0442\u0435\u0440 \u043a ' + WIND_RUMBS[Math.round(rot / 45) % 8] + '">\u2191</span>';
+  return arrow + rnd(ws);
+}
 
 var SENSOR_CODE = 'sensors';
 var SENSOR_VARS = ['temperature_2m'];
@@ -353,7 +366,14 @@ function render(data){
 
   var summary = buildSummary(times, data.weighted, data.models, idx);
   var sensorTemp = widgetSensorTemp(data, idx);
-  cityEl.textContent = '\uD83C\uDF24 ' + (sensorTemp ? sensorTemp + ' ' : '') + summary;
+  var windSpeed = data.weighted.wind_speed_10m ? data.weighted.wind_speed_10m[idx] : null;
+  var windDir = data.weighted.wind_direction_10m ? data.weighted.wind_direction_10m[idx] : null;
+  var headParts = [];
+  if (sensorTemp) headParts.push(sensorTemp);
+  var windPart = windArrow(windDir, windSpeed);
+  if (windPart) headParts.push(windPart);
+  headParts.push(summary);
+  cityEl.innerHTML = '\uD83C\uDF24 ' + headParts.join(', ');
 
   var html = '';
   var cnt = Math.min(hours, times.length - idx);
