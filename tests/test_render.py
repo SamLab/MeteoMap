@@ -217,6 +217,7 @@ def _sensor_payload():
             "data": {"temperature_2m": [20.0, None]},
             "station_counts": {"temperature_2m": [4, 0]},
             "station_min": {"temperature_2m": [8.0, None]},
+            "station_max": {"temperature_2m": [12.0, None]},
         },
     }
     consensus = {
@@ -257,10 +258,22 @@ def test_payload_publishes_sensor_station_min_at_top_level():
     assert "station_min" not in p["models"][meteo.SENSOR_CODE]
 
 
+def test_payload_publishes_sensor_station_max_at_top_level():
+    """Максимум по станциям едет в payload тем же способом, что и минимум.
+
+    Он нужен ячейке «Датчики», где рядом со средним показывается размах
+    по станциям: среднее уже есть в data, минимум — в station_min.
+    """
+    p = _sensor_payload()
+    assert p["sensor_station_max"] == {"temperature_2m": [12.0, None]}
+    assert "station_max" not in p["models"][meteo.SENSOR_CODE]
+
+
 def test_payload_without_sensor_has_no_station_counts():
     """Город без датчика не получает ключа: двух станций рядом с ним нет."""
     assert "sensor_station_counts" not in _payload()
     assert "sensor_station_min" not in _payload()
+    assert "sensor_station_max" not in _payload()
 
 
 def test_sensor_column_header_comes_from_model_names():
@@ -524,6 +537,18 @@ def test_last_sensor_hour_returns_null_when_grid_is_empty():
     """Пустая сетка — это «нет данных», а не необработанное исключение."""
     body = _sensor_now_js()
     assert re.search(r"return\s+null", body)
+
+
+def test_last_sensor_hour_carries_max_across_stations():
+    """Вместе со средним и минимумом хелпер отдаёт максимум по станциям.
+
+    Ячейка «Датчики» показывает среднее/максимум/минимум текущей температуры,
+    поэтому максимум обязан ехать тем же рядом, что и минимум, и браться по
+    найденному часу наблюдения j, а не из текущего часа страницы.
+    """
+    body = _sensor_now_js()
+    assert "sensor_station_max" in body
+    assert "max:mx?mx[j]:null" in body
 
 
 def test_weather_now_omits_sensor_line_without_station_counts():

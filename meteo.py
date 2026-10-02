@@ -1107,18 +1107,18 @@ SENSOR_HISTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 def _sensor_hour_value(bucket, var):
-    """Тройка (среднее, минимум, n) для часа: обе статистики и число станций.
+    """Четвёрка (среднее, минимум, максимум, n): статистики часа и число станций.
 
     Станции равноправны независимо от того, сколько прогонов их видели, поэтому
     n — это число станций, а не число замеров. Без n среднее по одной станции
     неотличимо от среднего по четырём, а столбик «Датчик» показывает и то, и
     другое без разбора.
 
-    Минимум берётся по пер-станционным средним, а не по сырым замерам: иначе
-    станция с двумя замерами перевесила бы станцию с одним, и «минимум»
-    зависел бы от числа прогонов, а не от погоды. Среднее и минимум выходят из
-    одного и того же списка per_station — иначе ночная строка могла бы
-    сравнивать среднее по четырём станциям с минимумом по двум.
+    Минимум и максимум берутся по пер-станционным средним, а не по сырым
+    замерам: иначе станция с двумя замерами перевесила бы станцию с одним, и
+    размах зависел бы от числа прогонов, а не от погоды. Среднее, минимум и
+    максимум выходят из одного и того же списка per_station — иначе строка
+    могла бы сравнивать среднее по четырём станциям с размахом по двум.
 
     Чужой бакет, чужая stations, не-словарь станции или samples не из чисел —
     это «нет данных», а не ошибка: meteo.py читает историю при сборке сайта,
@@ -1128,7 +1128,7 @@ def _sensor_hour_value(bucket, var):
     """
     stations = bucket.get("stations") if isinstance(bucket, dict) else None
     if not isinstance(stations, dict):
-        return None, None, 0
+        return None, None, None, 0
     per_station = []
     for values in stations.values():
         samples = values.get(var) if isinstance(values, dict) else None
@@ -1140,9 +1140,10 @@ def _sensor_hour_value(bucket, var):
             continue
         per_station.append(sum(samples) / len(samples))
     if not per_station:
-        return None, None, 0
+        return None, None, None, 0
     return (round(sum(per_station) / len(per_station), 2),
             round(min(per_station), 2),
+            round(max(per_station), 2),
             len(per_station))
 
 
@@ -1170,10 +1171,11 @@ def load_sensor_model(grid, path=None):
     0, чтобы weighted_consensus их отбросил.
 
     Рядом с data едут station_counts — по скольким станциям усреднено каждое
-    значение, 0 там, где наблюдения не было, и station_min — минимум по тем
-    же станциям, None там же, где нет данных. Оба лежат отдельными ключами
-    модели, а не элементами data: data читается как параллельные ряды по
-    переменным, и не-массивный элемент там сломал бы график.
+    значение, 0 там, где наблюдения не было, station_min — минимум по тем же
+    станциям и station_max — максимум, оба None там же, где нет данных. Все
+    лежат отдельными ключами модели, а не элементами data: data читается как
+    параллельные ряды по переменным, и не-массивный элемент там сломал бы
+    график.
     """
     try:
         with open(path or SENSOR_HISTORY, encoding="utf-8") as f:
@@ -1195,29 +1197,34 @@ def load_sensor_model(grid, path=None):
     data = {}
     counts = {}
     minimums = {}
+    maximums = {}
     updated = {}
     found = False
     for var in SENSOR_VARS:
         column = []
         ncolumn = []
         mcolumn = []
+        xcolumn = []
         ucolumn = []
         for hour in grid:
-            value, minimum, n = _sensor_hour_value(hours.get(hour), var)
+            value, minimum, maximum, n = _sensor_hour_value(hours.get(hour), var)
             if value is not None:
                 found = True
             column.append(value)
             ncolumn.append(n)
             mcolumn.append(minimum)
+            xcolumn.append(maximum)
             ucolumn.append(_sensor_hour_updated(hours.get(hour)))
         data[var] = column
         counts[var] = ncolumn
         minimums[var] = mcolumn
+        maximums[var] = xcolumn
         updated[var] = ucolumn
     if not found:
         return None
     return {"time": list(grid), "data": data, "station_counts": counts,
-            "station_min": minimums, "updated_at": updated}
+            "station_min": minimums, "station_max": maximums,
+            "updated_at": updated}
 
 
 def force_min_weight(weights, code):
@@ -1555,6 +1562,11 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     sensor_min = sensor_model.get("station_min")
     if sensor_min:
         payload["sensor_station_min"] = sensor_min
+    # Максимум — тем же способом, что и минимум: он нужен строке «Датчики»,
+    # где рядом со средним показывается размах по станциям.
+    sensor_max = sensor_model.get("station_max")
+    if sensor_max:
+        payload["sensor_station_max"] = sensor_max
     # Время последнего замера по часам едет третьим рядом и нужно клиенту
     # для подписи «По датчику». Ряд может состоять из None там, где бакет
     # старый и метки в нём ещё нет: это не ошибка, а сигнал откатиться на час.

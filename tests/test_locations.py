@@ -261,9 +261,9 @@ def test_sensor_model_hour_with_no_stations_yields_none_column(tmp_path):
 
 
 def test_sensor_hour_value_returns_mean_min_and_station_count():
-    """Тройка (среднее, минимум, n).
+    """Четвёрка (среднее, минимум, максимум, n).
 
-    Среднее и минимум берутся из одного и того же списка пер-станционных
+    Все три статистики берутся из одного и того же списка пер-станционных
     средних: если считать их раздельно, ночной минимум может оказаться по
     двум станциям, а среднее — по четырём, и строка станет несопоставимой
     сама с собой.
@@ -276,9 +276,9 @@ def test_sensor_hour_value_returns_mean_min_and_station_count():
     # минимум 15 — это среднее станции «a», а не 10: сырые замеры внутри часа
     # за минимум не принимаются, иначе станция с двумя замерами перевесила бы
     # станцию с одним и «минимум» зависел бы от числа прогонов, а не от погоды
-    assert meteo._sensor_hour_value(bucket, "temperature_2m") == (27.5, 15.0, 2)
+    assert meteo._sensor_hour_value(bucket, "temperature_2m") == (27.5, 15.0, 40.0, 2)
     # станция без замеров по этому параметру в счётчик не идёт
-    assert meteo._sensor_hour_value(bucket, "pressure_msl") == (None, None, 0)
+    assert meteo._sensor_hour_value(bucket, "pressure_msl") == (None, None, None, 0)
 
 
 def test_sensor_model_publishes_station_counts_per_hour(tmp_path):
@@ -326,9 +326,9 @@ def test_sensor_model_publishes_station_minimum_per_hour(tmp_path):
 
 
 def test_sensor_hour_value_foreign_bucket_is_none():
-    assert meteo._sensor_hour_value("2026-09-28T10:00", "temperature_2m") == (None, None, 0)
-    assert meteo._sensor_hour_value(None, "temperature_2m") == (None, None, 0)
-    assert meteo._sensor_hour_value({"stations": 5}, "temperature_2m") == (None, None, 0)
+    assert meteo._sensor_hour_value("2026-09-28T10:00", "temperature_2m") == (None, None, None, 0)
+    assert meteo._sensor_hour_value(None, "temperature_2m") == (None, None, None, 0)
+    assert meteo._sensor_hour_value({"stations": 5}, "temperature_2m") == (None, None, None, 0)
 
 
 

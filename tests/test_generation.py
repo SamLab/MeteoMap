@@ -317,3 +317,26 @@ def test_sensor_values_stay_aligned_to_the_grid(tmp_path):
     assert model["time"] == grid
     for values in model["data"].values():
         assert len(values) == len(grid)
+
+
+def test_sensor_model_carries_max_across_stations(tmp_path):
+    """Минимум и максимум считаются по одному списку станций, а не по замерам.
+
+    Ячейка «Датчики» показывает среднее (1+5+9)/3 = 5, минимум 1 и максимум 9
+    в одном и том же часе; второй час без наблюдений остаётся None во всех
+    трёх рядах.
+    """
+    import json
+    grid = ["2026-09-28T09:00", "2026-09-28T10:00"]
+    hist = {"hours": {grid[0]: {"samples": 3, "stations": {
+        "a": {"temperature_2m": [1.0]},
+        "b": {"temperature_2m": [5.0]},
+        "c": {"temperature_2m": [9.0]},
+    }}}}
+    path = tmp_path / "sensors_history.json"
+    path.write_text(json.dumps(hist), encoding="utf-8")
+
+    model = meteo.load_sensor_model(grid, str(path))
+    assert model["data"]["temperature_2m"] == [5.0, None]
+    assert model["station_min"]["temperature_2m"] == [1.0, None]
+    assert model["station_max"]["temperature_2m"] == [9.0, None]

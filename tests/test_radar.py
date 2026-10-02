@@ -704,8 +704,17 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "lab:'Давление'" in tpl
     assert "lab:'Видимость'" in tpl
     assert "lab:'Солнце'" in tpl
+    assert "lab:'Датчики'" in tpl
+    # последняя ячейка условна: у городов с датчиками — «Датчики» со средним
+    # и размахом по станциям (без времени), у остальных — прежний CAPE
+    assert "sensor_station_max" in tpl
+    assert "mx:(sn&&sn.max!=null)?'↑ '+temp(sn.max):'—'" in tpl
+    assert "mn:(sn&&sn.min!=null)?'↓ '+temp(sn.min):'—'" in tpl
     assert "lab:'Восход / закат'" not in tpl
-    assert tpl.index("lab:'Температура'") < tpl.index("lab:'Осадки'") < tpl.index("lab:'Облачность'") < tpl.index("lab:'Ветер'") < tpl.index("lab:'Солнце'") < tpl.index("lab:'Видимость'") < tpl.index("lab:'Точка росы'") < tpl.index("lab:'Давление'") < tpl.index("lab:'Влажность'") < tpl.index("lab:'CAPE'")
+    assert tpl.index("lab:'Температура'") < tpl.index("lab:'Осадки'") < tpl.index("lab:'Облачность'") < tpl.index("lab:'Ветер'") < tpl.index("lab:'Солнце'") < tpl.index("lab:'Видимость'") < tpl.index("lab:'Точка росы'") < tpl.index("lab:'Давление'") < tpl.index("lab:'Влажность'")
+    # десятая ячейка — не литерал, а lastCell (Датчики или CAPE), и она идёт
+    # последней в массиве cells
+    assert tpl.index("lab:'Влажность'") < tpl.index("lastCell\n  ];")
     assert "const meanDay=f=>" in tpl
     assert "['temperature_2m','wind_speed_10m','dew_point_2m','relative_humidity_2m','pressure_msl','cloud_cover','visibility','cape']" in tpl
     assert "@media (max-width:700px){.wnowtbl td.wcol3,.wnowtbl td.wcol5,.wnowtbl td.wcol6,.wnowtbl td.wcol7,.wnowtbl td.wcol8,.wnowtbl td.wcol9{display:none}}" in tpl
