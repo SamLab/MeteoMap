@@ -50,12 +50,12 @@ body{
 }
 .hour.rain{background:var(--rain-bg)}
 .hour .ht{color:var(--muted);font-size:10px;white-space:nowrap}
-.hour .he{font-size:20.5px;line-height:1.35}
+.hour .he{font-size:20.5px;line-height:1.35}.hour .hwnd{font-size:9px;line-height:1.1;min-height:12px;color:var(--muted);white-space:nowrap}.hour .hwnd .warr{font-size:10px}
 .hour .htemp{font-weight:600;font-size:13px}
 .hour .hpp{color:var(--rain);font-size:9.5px;min-height:13px;white-space:nowrap}
 .ppct{font-size:.5em}
 .hour .hmm{color:var(--rain);font-size:9px;min-height:13px;white-space:nowrap}
-.d10wrap{overflow-x:auto;padding:1px 0 2px}
+.d10wrap{overflow-x:auto;padding:0px 0 2px}
 .d10strip{display:flex;width:100%;min-width:100%;position:relative}
 .d10col{flex:1 1 0;min-width:0;text-align:center;position:relative;z-index:1;border-left:1px solid var(--line)}
 .d10col:first-child{border-left:0}
@@ -383,6 +383,8 @@ function render(data){
     var code = data.weighted.weather_code ? Math.round(data.weighted.weather_code[i]) : 0;
     var w = WMO[code] || {e:'\uD83C\uDF21', l:'\u041A\u043E\u0434 ' + code};
     var temperature = rnd(data.weighted.temperature_2m ? data.weighted.temperature_2m[i] : 0);
+    var wd = data.weighted.wind_direction_10m ? data.weighted.wind_direction_10m[i] : null;
+    var ws = data.weighted.wind_speed_10m ? data.weighted.wind_speed_10m[i] : null;
     var prob = data.weighted.precipitation_probability ? Math.round(data.weighted.precipitation_probability[i]) : 0;
     var mm = data.weighted.precipitation ? data.weighted.precipitation[i] : 0;
     var rain = prob >= 50 || mm >= 0.1;
@@ -395,6 +397,7 @@ function render(data){
     html += '<div class="hour' + (rain ? ' rain' : '') + '" title="' + w.l + '">' +
       '<div class="ht">' + pad2(t.getHours()) + 'ч</div>' +
       '<div class="he">' + w.e + '</div>' +
+      '<div class="hwnd">' + windArrow(wd, ws) + '</div>' +
       '<div class="htemp">' + tempStr + '</div>' +
       '<div class="hpp">' + probStr + '</div>' +
       '<div class="hmm">' + mmStr + '</div>' +

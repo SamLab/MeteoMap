@@ -1427,6 +1427,44 @@ def test_widget_header_wind_arrow_rotates_to_direction():
         assert "const " not in w, fname
 
 
+def test_widget_hourly_shows_wind_between_condition_and_temperature():
+    # В почасовой ячейке виджета строка ветра стоит между иконкой погоды и
+    # температурой: стрелка повёрнута по ходу ветра (тот же windArrow, что в
+    # шапке), сила без единиц — как в шапке. Строка резервирует высоту, чтобы
+    # температуры во всех колонках не разъезжались там, где ветра нет.
+    import re as _re
+
+    def unescape(src):
+        return _re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), src)
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = unescape(f.read())
+        # почасовые данные ветра берём по текущему часу цикла
+        assert (
+            "var wd = data.weighted.wind_direction_10m ? data.weighted.wind_direction_10m[i] : null;"
+            in w
+        ), fname
+        assert (
+            "var ws = data.weighted.wind_speed_10m ? data.weighted.wind_speed_10m[i] : null;"
+            in w
+        ), fname
+        he = "'<div class=\"he\">' + w.e + '</div>'"
+        hw = "'<div class=\"hwnd\">' + windArrow(wd, ws) + '</div>'"
+        ht = "'<div class=\"htemp\">' + tempStr + '</div>'"
+        for frag in (he, hw, ht):
+            assert frag in w, (fname, frag)
+        assert w.index(he) < w.index(hw) < w.index(ht), fname
+        # CSS: строка не переносится и держит высоту
+        wind_css = _re.search(r"\.hour \.hwnd\{[^}]*\}", w)
+        assert wind_css, f"{fname}: нет правила .hour .hwnd"
+        assert "min-height:" in wind_css.group(0), (fname, wind_css.group(0))
+        assert ".hour .hwnd .warr{" in w, fname
+        # виджеты остаются ES5
+        assert "?." not in w, fname
+        assert "const " not in w, fname
+
+
 def test_sensor_mean_window_boundaries_shift_into_daylight():
     # Node недоступен, поэтому границы окна воспроизводим в Python — иначе
     # остаётся проверять только наличие констант в исходнике, а сдвиг на
@@ -1633,9 +1671,9 @@ def test_widget_column_counts():
     assert "max-width:600px" in m
 
 
-def test_widget_gap_between_hourly_and_daily_blocks_is_two_pixels():
+def test_widget_gap_between_hourly_and_daily_blocks_is_one_pixel():
     # Зазор между часовым и недельным блоками складывается из двух отступов:
-    # низ .strip плюс верх .d10wrap. После сжатия сумма должна быть 2px.
+    # низ .strip плюс верх .d10wrap. После сжатия сумма должна быть 1px.
     import re as _re
 
     with open(os.path.join(HERE, "meteow.html"), encoding="utf-8") as f:
@@ -1646,8 +1684,8 @@ def test_widget_gap_between_hourly_and_daily_blocks_is_two_pixels():
     m2 = _re.search(r"\.d10wrap\{[^}]*padding:(\d+)px 0 (\d+)px", w)
     assert m2, "у .d10wrap должен остаться явный вертикальный padding"
     wrap_top = int(m2.group(1))
-    assert strip_bottom + wrap_top == 2, (
-        f"зазор между блоками {strip_bottom}+{wrap_top}={strip_bottom + wrap_top}px, ждали 2px"
+    assert strip_bottom + wrap_top == 1, (
+        f"зазор между блоками {strip_bottom}+{wrap_top}={strip_bottom + wrap_top}px, ждали 1px"
     )
     # нижний отступ недельного блока не трогаем: он отделяет его от низа карточки
     assert int(m2.group(2)) == 2, "нижний отступ недельного блока должен остаться 2px"
