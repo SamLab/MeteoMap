@@ -313,10 +313,10 @@ function widgetSensorTemp(data, idx){
   var key = SENSOR_VARS[0];
   var sc = data.sensor_station_counts || null;
   var n = sc ? sc[key] : null;
-  var sm = data.models || null;
-  var sr = sm ? sm[SENSOR_CODE] : null;
-  var v = sr ? sr.temperature_2m : null;
-  var mn = data.sensor_station_min ? data.sensor_station_min.temperature_2m : null;
+  // Последний замер каждой станции, а не среднее часа: models[SENSOR_CODE]
+  // остаётся средним для таблиц и графика главной.
+  var v = data.sensor_now_value ? data.sensor_now_value.temperature_2m : null;
+  var mn = data.sensor_now_min ? data.sensor_now_min.temperature_2m : null;
   var slug = data.location ? data.location.slug : null;
   if(!n||!v) return '';
   for(var j=idx;j>=0;j--){

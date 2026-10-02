@@ -1106,25 +1106,26 @@ SENSOR_HISTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              "sensors_history.json")
 
 
-def _sensor_hour_value(bucket, var):
-    """Четвёрка (среднее, минимум, максимум, n): статистики часа и число станций.
+def _sensor_hour_value(bucket, var, last=False):
+    """Четвёрка (значение, минимум, максимум, n): статистики часа и число станций.
 
     Станции равноправны независимо от того, сколько прогонов их видели, поэтому
-    n — это число станций, а не число замеров. Без n среднее по одной станции
-    неотличимо от среднего по четырём, а столбик «Датчик» показывает и то, и
+    n — это число станций, а не число замеров. Без n значение по одной станции
+    неотличимо от значения по четырём, а столбик «Датчик» показывает и то, и
     другое без разбора.
 
-    Минимум и максимум берутся по пер-станционным средним, а не по сырым
-    замерам: иначе станция с двумя замерами перевесила бы станцию с одним, и
-    размах зависел бы от числа прогонов, а не от погоды. Среднее, минимум и
-    максимум выходят из одного и того же списка per_station — иначе строка
-    могла бы сравнивать среднее по четырём станциям с размахом по двум.
+    Пер-станционная статистика зависит от last. По умолчанию это среднее
+    замеров станции: так считаются история, столбик «Датчик» и график.
+    last=True берёт последний замер станции — это значение для показаний
+    «сейчас», где нужно не среднее часа, а последний опрос. Минимум и максимум
+    выходят из того же списка per_station, что и значение, — иначе строка могла
+    бы сравнивать среднее по четырём станциям с размахом по двум.
 
     Чужой бакет, чужая stations, не-словарь станции или samples не из чисел —
     это «нет данных», а не ошибка: meteo.py читает историю при сборке сайта,
-    и руками правленый JSON не должен ронять сборку. Семантика повторяет
-    history_hour_value в tools/collect_sensors.py; расхождение между двумя
-    читателями опаснее, чем дублирование кода.
+    и руками правленый JSON не должен ронять сборку. Семантика среднего
+    повторяет history_hour_value в tools/collect_sensors.py; расхождение между
+    двумя читателями опаснее, чем дублирование кода.
     """
     stations = bucket.get("stations") if isinstance(bucket, dict) else None
     if not isinstance(stations, dict):
@@ -1138,7 +1139,7 @@ def _sensor_hour_value(bucket, var):
         if not all(isinstance(x, (int, float)) and not isinstance(x, bool)
                    for x in samples):
             continue
-        per_station.append(sum(samples) / len(samples))
+        per_station.append(samples[-1] if last else sum(samples) / len(samples))
     if not per_station:
         return None, None, None, 0
     return (round(sum(per_station) / len(per_station), 2),
@@ -1170,12 +1171,16 @@ def load_sensor_model(grid, path=None):
     не появляется, а сборка продолжается. Часы без наблюдений дают None, а не
     0, чтобы weighted_consensus их отбросил.
 
-    Рядом с data едут station_counts — по скольким станциям усреднено каждое
+    Рядом с data едут station_counts — по скольким станциям посчитано каждое
     значение, 0 там, где наблюдения не было, station_min — минимум по тем же
     станциям и station_max — максимум, оба None там же, где нет данных. Все
     лежат отдельными ключами модели, а не элементами data: data читается как
     параллельные ряды по переменным, и не-массивный элемент там сломал бы
     график.
+
+    now_value, now_min и now_max повторяют эту тройку, но по последнему замеру
+    каждой станции, а не по среднему часа. Показ «сейчас» берёт именно их,
+    чтобы не отставать на усреднение; история (data) остаётся средним.
     """
     try:
         with open(path or SENSOR_HISTORY, encoding="utf-8") as f:
@@ -1199,6 +1204,9 @@ def load_sensor_model(grid, path=None):
     minimums = {}
     maximums = {}
     updated = {}
+    now_values = {}
+    now_mins = {}
+    now_maxs = {}
     found = False
     for var in SENSOR_VARS:
         column = []
@@ -1206,25 +1214,41 @@ def load_sensor_model(grid, path=None):
         mcolumn = []
         xcolumn = []
         ucolumn = []
+        nvcolumn = []
+        nmcolumn = []
+        nxcolumn = []
         for hour in grid:
-            value, minimum, maximum, n = _sensor_hour_value(hours.get(hour), var)
+            bucket = hours.get(hour)
+            value, minimum, maximum, n = _sensor_hour_value(bucket, var)
+            # Тот же час, но по последнему замеру станции: значение для
+            # показаний «сейчас». n переиспользуется: набор станций тот же.
+            now_value, now_min, now_max, _ = _sensor_hour_value(
+                bucket, var, last=True)
             if value is not None:
                 found = True
             column.append(value)
             ncolumn.append(n)
             mcolumn.append(minimum)
             xcolumn.append(maximum)
-            ucolumn.append(_sensor_hour_updated(hours.get(hour)))
+            ucolumn.append(_sensor_hour_updated(bucket))
+            nvcolumn.append(now_value)
+            nmcolumn.append(now_min)
+            nxcolumn.append(now_max)
         data[var] = column
         counts[var] = ncolumn
         minimums[var] = mcolumn
         maximums[var] = xcolumn
         updated[var] = ucolumn
+        now_values[var] = nvcolumn
+        now_mins[var] = nmcolumn
+        now_maxs[var] = nxcolumn
     if not found:
         return None
     return {"time": list(grid), "data": data, "station_counts": counts,
             "station_min": minimums, "station_max": maximums,
-            "updated_at": updated}
+            "updated_at": updated,
+            "now_value": now_values, "now_min": now_mins,
+            "now_max": now_maxs}
 
 
 def force_min_weight(weights, code):
@@ -1573,6 +1597,15 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
     sensor_updated = sensor_model.get("updated_at")
     if sensor_updated:
         payload["sensor_updated_at"] = sensor_updated
+    # Последние замеры станций — отдельными рядами для показаний «сейчас».
+    # models[SENSOR_CODE] остаётся средним часа и кормит таблицы и график,
+    # поэтому «сейчас» читает sensor_now_*, чтобы не показывать среднее.
+    for key, source in (("sensor_now_value", "now_value"),
+                        ("sensor_now_min", "now_min"),
+                        ("sensor_now_max", "now_max")):
+        series = sensor_model.get(source)
+        if series:
+            payload[key] = series
     return payload
 
 

@@ -331,6 +331,51 @@ def test_sensor_hour_value_foreign_bucket_is_none():
     assert meteo._sensor_hour_value({"stations": 5}, "temperature_2m") == (None, None, None, 0)
 
 
+def test_sensor_hour_value_last_takes_the_latest_sample_per_station():
+    """Режим last=True берёт последний замер станции, а не среднее часа.
+
+    Им живёт показ «сейчас»: пользователь хотел видеть последний опрос, а не
+    среднее по прошедшим часа. Минимум и максимум выходят из тех же последних
+    значений, поэтому «Датчики» и ночной минимум Цеденево остаются
+    сопоставимыми.
+    """
+    bucket = {"stations": {
+        "a": {"temperature_2m": [10.0, 20.0]},   # последний 20
+        "b": {"temperature_2m": [40.0, 5.0]},    # последний 5
+        "c": {"relative_humidity_2m": [55.0]},   # к температуре отношения не имеет
+    }}
+    assert meteo._sensor_hour_value(bucket, "temperature_2m", last=True) == (
+        12.5, 5.0, 20.0, 2)
+    assert meteo._sensor_hour_value(bucket, "pressure_msl", last=True) == (
+        None, None, None, 0)
+    # средний режим не поехал: a=15, b=22.5, среднее 18.75
+    assert meteo._sensor_hour_value(bucket, "temperature_2m") == (
+        18.75, 15.0, 22.5, 2)
+
+
+def test_sensor_model_publishes_now_arrays_per_hour(tmp_path):
+    """Ряды последних замеров едут рядом со средним, по той же оси grid."""
+    hist = {"hours": {
+        "2026-09-28T10:00": {"samples": 4, "stations": {
+            "a": {"temperature_2m": [10.0, 14.0]},
+            "b": {"temperature_2m": [20.0, 18.0]}}},
+        "2026-09-28T11:00": {"samples": 2, "stations": {
+            "a": {"temperature_2m": [7.0, 8.0]}}},
+    }}
+    grid = ["2026-09-28T09:00", "2026-09-28T10:00",
+            "2026-09-28T11:00", "2026-09-28T12:00"]
+    model = load_sensor_model(grid, _write_history(tmp_path, hist))
+    # среднее часа: a=12, b=19 -> 15.5; a=7.5
+    assert model["data"]["temperature_2m"] == [None, 15.5, 7.5, None]
+    # последние замеры: a=14, b=18 -> 16.0; a=8
+    assert model["now_value"]["temperature_2m"] == [None, 16.0, 8.0, None]
+    assert model["now_min"]["temperature_2m"] == [None, 14.0, 8.0, None]
+    assert model["now_max"]["temperature_2m"] == [None, 18.0, 8.0, None]
+    assert set(model["now_value"]) == set(meteo.SENSOR_VARS)
+    assert set(model["now_min"]) == set(meteo.SENSOR_VARS)
+    assert set(model["now_max"]) == set(meteo.SENSOR_VARS)
+
+
 
 def test_sensor_model_history_path_defaults_next_to_meteo_py():
     # Проверяем не формулу, а куда файл попадает: рядом с meteo.py, в корне

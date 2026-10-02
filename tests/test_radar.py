@@ -707,7 +707,7 @@ def test_weather_now_parameter_table_with_sun_and_rain():
     assert "lab:'Датчики'" in tpl
     # последняя ячейка условна: у городов с датчиками — «Датчики» со средним
     # и размахом по станциям (без времени), у остальных — прежний CAPE
-    assert "sensor_station_max" in tpl
+    assert "sensor_now_max" in tpl
     assert "mx:(sn&&sn.max!=null)?'↑ '+temp(sn.max):'—'" in tpl
     assert "mn:(sn&&sn.min!=null)?'↓ '+temp(sn.min):'—'" in tpl
     assert "lab:'Восход / закат'" not in tpl
@@ -1366,10 +1366,12 @@ def test_widget_shows_sensor_temperature_with_directional_rounding():
         assert "var SENSOR_CODE = 'sensors'" in w, fname
         assert "var SENSOR_VARS = ['temperature_2m']" in w, fname
         assert "var n = sc ? sc[key] : null;" in w, fname
-        assert "var v = sr ? sr.temperature_2m : null;" in w, fname
+        # виджет показывает последний замер станции, а не среднее часа:
+        # models[SENSOR_CODE] остаётся средним для таблиц и графика главной
+        assert "var v = data.sensor_now_value ? data.sensor_now_value.temperature_2m : null;" in w, fname
         # Цеденево вне окна среднего показывает минимум — то же значение, что
         # и главная страница
-        assert "var mn = data.sensor_station_min ? data.sensor_station_min.temperature_2m : null;" in w, fname
+        assert "var mn = data.sensor_now_min ? data.sensor_now_min.temperature_2m : null;" in w, fname
         assert "slug==='tsedenevo' && !showsMean && mn && mn[j]!=null" in w, fname
         # виджеты написаны в ES5 (var, без ?. и const) — не потерять стиль
         assert "?." not in w, fname

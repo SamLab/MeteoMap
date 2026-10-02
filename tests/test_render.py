@@ -218,6 +218,9 @@ def _sensor_payload():
             "station_counts": {"temperature_2m": [4, 0]},
             "station_min": {"temperature_2m": [8.0, None]},
             "station_max": {"temperature_2m": [12.0, None]},
+            "now_value": {"temperature_2m": [20.5, None]},
+            "now_min": {"temperature_2m": [9.0, None]},
+            "now_max": {"temperature_2m": [11.5, None]},
         },
     }
     consensus = {
@@ -269,11 +272,29 @@ def test_payload_publishes_sensor_station_max_at_top_level():
     assert "station_max" not in p["models"][meteo.SENSOR_CODE]
 
 
+def test_payload_publishes_sensor_now_arrays_at_top_level():
+    """Показ «сейчас» берёт последний замер станции, а не среднее часа.
+
+    Ряды now_value/now_min/now_max едут отдельными верхнеуровневыми ключами,
+    как и остальная статистика датчиков: models[code] остаётся средним часа и
+    кормит таблицы и график.
+    """
+    p = _sensor_payload()
+    assert p["sensor_now_value"] == {"temperature_2m": [20.5, None]}
+    assert p["sensor_now_min"] == {"temperature_2m": [9.0, None]}
+    assert p["sensor_now_max"] == {"temperature_2m": [11.5, None]}
+    for key in ("now_value", "now_min", "now_max"):
+        assert key not in p["models"][meteo.SENSOR_CODE]
+
+
 def test_payload_without_sensor_has_no_station_counts():
     """Город без датчика не получает ключа: двух станций рядом с ним нет."""
     assert "sensor_station_counts" not in _payload()
     assert "sensor_station_min" not in _payload()
     assert "sensor_station_max" not in _payload()
+    assert "sensor_now_value" not in _payload()
+    assert "sensor_now_min" not in _payload()
+    assert "sensor_now_max" not in _payload()
 
 
 def test_sensor_column_header_comes_from_model_names():
@@ -547,8 +568,20 @@ def test_last_sensor_hour_carries_max_across_stations():
     найденному часу наблюдения j, а не из текущего часа страницы.
     """
     body = _sensor_now_js()
-    assert "sensor_station_max" in body
+    assert "sensor_now_max" in body
     assert "max:mx?mx[j]:null" in body
+
+
+def test_last_sensor_hour_uses_now_arrays_not_hour_mean():
+    """Значение «сейчас» берётся из sensor_now_*, а не из среднего часа.
+
+    models[SENSOR_CODE] остаётся средним часа: им живут таблицы и график.
+    Подмена ряда на среднее вернула бы отставание на весь час усреднения.
+    """
+    body = _sensor_now_js()
+    assert "sensor_now_value" in body
+    assert "sensor_now_min" in body
+    assert "D.models?.[SENSOR_CODE]" not in body
 
 
 def test_weather_now_omits_sensor_line_without_station_counts():
