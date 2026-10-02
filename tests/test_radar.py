@@ -1322,12 +1322,13 @@ def test_widget_shows_sensor_temperature_with_directional_rounding():
         assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
         # Шапка собирается из частей через join(', '), а не склейкой строки:
         # тогда запятая появляется ровно между непустыми частями, и пропуск
-        # температуры или ветра не оставляет висячей запятой. Эмодзи в
-        # исходниках — escape-последовательность, поэтому сравниваем с ней.
+        # температуры не оставляет висячей запятой. Эмодзи в исходниках —
+        # escape-последовательность, поэтому сравниваем с ней.
         assert "var headParts = [];" in w, fname
         assert "if (sensorTemp) headParts.push(sensorTemp);" in w, fname
-        assert "if (windPart) headParts.push(windPart);" in w, fname
         assert "headParts.push(summary);" in w, fname
+        # ветер из шапки убран — он теперь в почасовой строке
+        assert "windPart" not in w, fname
         # значок обёрнут в span, чтобы его можно было увеличить отдельно от
         # текста города; сравниваем с escape-последовательностью эмодзи
         assert (
@@ -1360,30 +1361,29 @@ def test_widget_sensor_temp_absent_when_no_observation():
 
 
 def test_widget_header_separates_temp_from_summary():
-    # Заголовок: «🌤 +14, ↑5, Дождь …» — между непустыми частями запятая с
+    # Заголовок: «🌤 +14, Дождь …» — между непустыми частями запятая с
     # пробелом, а не склейка без разделителя и не запятая на месте пропуска.
-    # Строка собирается целиком: раздельные assert на «+14» и «Дождь» прошли
-    # бы и при слипшейся строке.
-    def header(sensor_temp, wind, summary):
+    # Ветер из шапки убран: он теперь в почасовом блоке. Строка собирается
+    # целиком: раздельные assert на «+14» и «Дождь» прошли бы и при слипшейся.
+    def header(sensor_temp, summary):
         parts = []
         if sensor_temp: parts.append(sensor_temp)
-        if wind: parts.append(wind)
         parts.append(summary)
         return "\u2600\uFE0F " + ", ".join(parts)
 
     # эмодзи в виджете не обязателен для проверки разделителя, но строка
     # должна собираться ровно так же, как в JS
-    for sensor_temp, wind, summary, want in (
-        ("+14", "\u21915", "Дождь Пн 5 22ч-Вт 6 23ч [0мм_34%] 3-10м",
-         "\u2600\uFE0F +14, \u21915, Дождь Пн 5 22ч-Вт 6 23ч [0мм_34%] 3-10м"),
-        ("", "\u21915", "Дождь сегодня 10ч-12ч [0.2мм_60%] 2м",
-         "\u2600\uFE0F \u21915, Дождь сегодня 10ч-12ч [0.2мм_60%] 2м"),
-        ("+14", "", "Остаток дня без дождя",
+    for sensor_temp, summary, want in (
+        ("+14", "Дождь Пн 5 22ч-Вт 6 23ч [0мм_34%] 3-10м",
+         "\u2600\uFE0F +14, Дождь Пн 5 22ч-Вт 6 23ч [0мм_34%] 3-10м"),
+        ("", "Дождь сегодня 10ч-12ч [0.2мм_60%] 2м",
+         "\u2600\uFE0F Дождь сегодня 10ч-12ч [0.2мм_60%] 2м"),
+        ("+14", "Остаток дня без дождя",
          "\u2600\uFE0F +14, Остаток дня без дождя"),
-        ("", "", "Остаток дня без дождя",
+        ("", "Остаток дня без дождя",
          "\u2600\uFE0F Остаток дня без дождя"),
     ):
-        got = header(sensor_temp, wind, summary)
+        got = header(sensor_temp, summary)
         assert got == want, (got, want)
         # ни слипания, ни двойного пробела, ни висячей запятой
         assert "  " not in got, got

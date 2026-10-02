@@ -366,12 +366,8 @@ function render(data){
 
   var summary = buildSummary(times, data.weighted, data.models, idx);
   var sensorTemp = widgetSensorTemp(data, idx);
-  var windSpeed = data.weighted.wind_speed_10m ? data.weighted.wind_speed_10m[idx] : null;
-  var windDir = data.weighted.wind_direction_10m ? data.weighted.wind_direction_10m[idx] : null;
   var headParts = [];
   if (sensorTemp) headParts.push(sensorTemp);
-  var windPart = windArrow(windDir, windSpeed);
-  if (windPart) headParts.push(windPart);
   headParts.push(summary);
   cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');
 
