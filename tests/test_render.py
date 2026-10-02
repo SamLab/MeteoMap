@@ -627,6 +627,72 @@ for(const [arg,t,f] of cases){
         "расхождение округления: %s" % out.stdout.decode("utf-8", "replace")
 
 
+def _precip_window_js():
+    """Чистые функции выбора окна осадков: порог консенсуса и trace-fallback."""
+    html = read_template()
+    start = html.index("function rainEpisodeWindow(")
+    end = html.index("function buildWeatherNow(){", start)
+    return html[start:end]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_precip_trace_window_uses_two_model_precipitation():
+    """Когда консенсус не даёт дождливого часа, окно берётся по trace-осадкам.
+
+    Почасовой консенсус усекает всё ниже 0.1 мм до нуля, поэтому дневная сумма
+    может быть > 0 при пустом окне (Цеденево: 0.1 мм и «—/—»). Fallback-окно
+    строится по числу моделей с осадками > 0: порог — не меньше двух моделей,
+    чтобы одиночная trace-модель не рисовала ложный интервал.
+    """
+    html = read_template()
+    assert "function rainEpisodeWindow(" in html, \
+        "нет функции выбора окна осадков"
+    body = _precip_window_js()
+    day = "2026-10-02"
+    times = ["%sT%02d:00" % (day, h) for h in range(24)] + ["2026-10-03T00:00"]
+    # две модели дают trace с 16:00 до 23:00, третья молчит
+    a = [0.0] * 25
+    b = [0.0] * 25
+    c = [0.0] * 25
+    for j in range(16, 24):
+        a[j] = 0.1
+        b[j] = 0.1
+    script = """
+const D={time:%s,models:{a:{precipitation:%s},b:{precipitation:%s},c:{precipitation:%s}}};
+const codes=['a','b','c'];
+%s
+const never=()=>false;
+const cons=j=>j===10;
+const trace=j=>modelTraceCount(j)>=2;
+const out={
+  consensus:pickRainWindow('2026-10-02',0.1,cons,trace),
+  fallback:pickRainWindow('2026-10-02',0.1,never,trace),
+  zeroSum:pickRainWindow('2026-10-02',0.0,never,trace),
+  strict:pickRainWindow('2026-10-02',0.1,never,j=>modelTraceCount(j)>=3),
+  counts:[0,5,15,16,20,23,24].map(j=>modelTraceCount(j))
+};
+console.log(JSON.stringify(out));
+""" % (json.dumps(times), json.dumps(a), json.dumps(b), json.dumps(c), body)
+    out = subprocess.run(["node", "-e", script.encode("utf-8")],
+                         capture_output=True)
+    assert not out.stderr.strip(), out.stderr.decode("utf-8", "replace")
+    got = json.loads(out.stdout.decode("utf-8"))
+    # порог консенсуса важнее trace: окно по нему, а не по моделям
+    assert got["consensus"] == {"first": 10, "last": 11}
+    # консенсус молчит, но дневная сумма > 0 — окно по trace-моделям
+    assert got["fallback"] == {"first": 16, "last": 24}
+    # нулевая сумма — trace-окна нет
+    assert got["zeroSum"] == {"first": -1, "last": -1}
+    # порог «не меньше трёх моделей» trace-окно не создаёт
+    assert got["strict"] == {"first": -1, "last": -1}
+    assert got["counts"] == [0, 0, 0, 2, 2, 2, 0]
+    # fallback подключён к ячейке «Осадки» с порогом в две модели
+    now = html[html.index("function buildWeatherNow(){"):
+               html.index("function buildWeatherHours(")]
+    assert "pickRainWindow(today,prSum,hasRainAt" in now
+    assert "modelTraceCount(j)>=2" in now
+
+
 # --- температура виджета берётся из датчиков
 
 
