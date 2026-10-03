@@ -6111,7 +6111,7 @@
       "updated_at": "2026-10-03T04:56:00+03:00"
     },
     "2026-10-03T05:00": {
-      "samples": 48,
+      "samples": 49,
       "stations": {
         "penaty": {
           "temperature_2m": [
@@ -6190,11 +6190,53 @@
             3.0,
             3.0,
             3.0,
+            3.0,
             3.0
           ]
         }
       },
       "updated_at": "2026-10-03T05:56:00+03:00"
+    },
+    "2026-10-03T06:00": {
+      "samples": 7,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            4.27
+          ]
+        },
+        "frunze": {
+          "temperature_2m": [
+            4.56
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            4.75
+          ]
+        },
+        "bereg": {
+          "temperature_2m": [
+            7.3
+          ]
+        },
+        "yartemp": {
+          "temperature_2m": [
+            4.47
+          ]
+        },
+        "uudl": {
+          "temperature_2m": [
+            4.0
+          ]
+        },
+        "wu-ananyino": {
+          "temperature_2m": [
+            4.0
+          ]
+        }
+      },
+      "updated_at": "2026-10-03T06:06:00+03:00"
     }
   }
 }
