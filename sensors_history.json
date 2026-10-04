@@ -9048,6 +9048,52 @@
         }
       },
       "updated_at": "2026-10-04T14:56:00+03:00"
+    },
+    "2026-10-04T15:00": {
+      "samples": 8,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            9.72
+          ]
+        },
+        "frunze": {
+          "temperature_2m": [
+            8.63
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            9.38
+          ]
+        },
+        "bereg": {
+          "temperature_2m": [
+            5.8
+          ]
+        },
+        "yartemp": {
+          "temperature_2m": [
+            10.23
+          ]
+        },
+        "uudl": {
+          "temperature_2m": [
+            9.0
+          ]
+        },
+        "wu-ananyino": {
+          "temperature_2m": [
+            9.0
+          ]
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": [
+            10.0
+          ]
+        }
+      },
+      "updated_at": "2026-10-04T15:06:00+03:00"
     }
   }
 }
