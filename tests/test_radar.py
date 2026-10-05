@@ -1337,18 +1337,23 @@ def test_lockstep_survives_a_checkout_with_other_autocrlf(tmp_path):
 
 
 def test_widget_shows_sensor_temperature_with_directional_rounding():
-    # Строка виджета начинается с температуры датчика: у Цеденево округление
-    # следует за показанной величиной (среднее в окне рассвет+3ч…закат-2ч —
-    # вверх, минимум вне окна — вниз), у остальных городов остаётся старое
-    # окно рассвет–закат.
+    # Строка виджета начинается с температуры датчика: у Цеденево величина
+    # выбирается окном рассвет+3ч…закат-2ч и осадками, округление же обычное,
+    # по ближайшему целому. У остальных городов остаётся старое окно
+    # рассвет–закат.
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
         assert "function widgetSensorTemp(data, idx)" in w, fname
         assert "function sensorShowsMean(data, j)" in w, fname
         assert "function sensorInDayWindow(data, j)" in w, fname
-        assert "function roundSensorTemp(v, showsMean)" in w, fname
-        assert "return showsMean ? Math.ceil(v) : Math.floor(v);" in w, fname
+        assert "function roundSensorTemp(v)" in w, fname
+        assert "return Math.sign(v)*Math.round(Math.abs(v));" in w, fname
+        # Направленного округления больше нет: 9.1 превращалось в «+10»
+        # и не сходилось со строкой «По датчику» главной страницы. Проверяем
+        # тело функции, а не весь файл: Math.ceil остался в таймере обновления.
+        body = w.split("function roundSensorTemp")[1][:400].split("\n}")[0]
+        assert "Math.ceil" not in body and "Math.floor" not in body, fname
         assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
         # Шапка собирается из частей через join(', '), а не склейкой строки:
         # тогда запятая появляется ровно между непустыми частями, и пропуск
@@ -1555,10 +1560,10 @@ def test_sensor_mean_window_boundaries_shift_into_daylight():
     assert winter[0] < winter[1], f"зимой окно должно остаться непустым: {winter}"
 
 
-def test_widget_rounding_window_differs_between_tsedenevo_and_other_cities():
-    # Округление Цеденево следует за величиной, у Ярославля остаётся на
-    # старом солнечном окне. Проверяем, что решение принимается по slug, а не
-    # по одному окну на оба города: иначе Ярославль получил бы вечные +1.
+def test_widget_value_choice_differs_between_tsedenevo_and_other_cities():
+    # Выбор величины у Цеденево идёт по окну среднего, у Ярославля — по старому
+    # солнечному. Проверяем, что решение принимается по slug, а не по одному
+    # окну на оба города: иначе Ярославль получил бы вечные +1.
     sunrise, sunset = 6 * 60 + 31, 18 * 60 + 12
 
     def shows_mean_new(h):
@@ -1570,31 +1575,31 @@ def test_widget_rounding_window_differs_between_tsedenevo_and_other_cities():
     # час 08:00: солнце уже есть, но окно среднего Цеденево ещё не началось
     assert in_old_day_window(8 * 60)
     assert not shows_mean_new(8 * 60)
-    # значит Цеденево показывает минимум и округляет вниз, а Ярославль
-    # показывает среднее и округляет вверх
-    assert round(7.6) == 8  # среднее, ceil
-    assert int(7.6) == 7  # минимум, floor
+    # значит Цеденево показывает минимум, а Ярославль — среднее
+    assert shows_mean_new(10 * 60)
 
 
-def test_widget_sensor_rounding_semantics():
+def test_widget_sensor_rounding_is_plain_half_up():
     # Node недоступен, поэтому семантику округления воспроизводим в Python.
-    # Границы: день ceil, ночь floor, ровные значения не меняются.
+    # Правило обычное: по ближайшему целому, половина — от нуля. Знак важен:
+    # Math.round в JS округляет -2.5 к -2, то есть к нулю, а нужно -3.
     import math
 
-    def round_sensor_temp(v, is_day):
-        return math.ceil(v) if is_day else math.floor(v)
+    def round_sensor_temp(v):
+        return math.copysign(round(abs(v)), v)
 
-    assert round_sensor_temp(13.18, True) == 14
-    assert round_sensor_temp(13.18, False) == 13
-    assert round_sensor_temp(5.2, True) == 6
-    assert round_sensor_temp(5.8, False) == 5
-    # отрицательные: «в большую» и «в меньшую» — это ceil/floor, а не toward zero
-    assert round_sensor_temp(-2.3, True) == -2
-    assert round_sensor_temp(-2.3, False) == -3
-    assert round_sensor_temp(-2.0, True) == -2
-    assert round_sensor_temp(-2.0, False) == -2
-    assert round_sensor_temp(0.0, True) == 0
-    assert round_sensor_temp(0.0, False) == 0
+    # Тот самый случай: страница показывала 9.1, виджет писал «+10»
+    assert round_sensor_temp(9.1) == 9
+    assert round_sensor_temp(13.18) == 13
+    assert round_sensor_temp(5.2) == 5
+    assert round_sensor_temp(5.8) == 6
+    # половина — от нуля, а не к нулю
+    assert round_sensor_temp(5.5) == 6
+    assert round_sensor_temp(-5.5) == -6
+    assert round_sensor_temp(-2.3) == -2
+    assert round_sensor_temp(-2.0) == -2
+    assert round_sensor_temp(0.0) == 0
+    assert round_sensor_temp(0.4) == 0
 
 
 def test_widget_sensor_temp_prefix_format():
@@ -1748,7 +1753,16 @@ def test_help_documents_widget_sensor_temperature():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "Температура датчика в виджете" in tpl
-    assert "вверх" in tpl and "вниз" in tpl
+    # Справка обязана называть обычное округление, а не направленное: иначе
+    # страница обещает «вверх днём, вниз ночью», а код округляет по ближайшему,
+    row = [ln for ln in tpl.splitlines() if "Температура датчика в виджете" in ln]
+    assert row, "строка справки о температуре в виджете должна быть на месте"
+    assert "по ближайшему" in row[0], (
+        "справка обязана называть округление по ближайшему целому"
+    )
+    assert "вверх" not in row[0] and "вниз" not in row[0], (
+        "направленное округление отменено, справка о нём молчит"
+    )
 
 
 def test_main_chart_reused_not_recreated():

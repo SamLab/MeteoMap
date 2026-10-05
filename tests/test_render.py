@@ -839,7 +839,9 @@ def test_sensor_rounding_follows_the_value_shown_only_for_tsedenevo():
             w = f.read()
         assert "function sensorInDayWindow(" in w, fname
         assert "function sensorShowsMean(" in w, fname
-        assert "return showsMean ? Math.ceil(v) : Math.floor(v);" in w, fname
+        assert "return Math.sign(v)*Math.round(Math.abs(v));" in w, fname
+        body = w.split("function roundSensorTemp")[1][:400].split("\n}")[0]
+        assert "Math.ceil" not in body and "Math.floor" not in body, fname
         # Ярославль идёт по старому окну, Цеденево — по новому
         assert re.search(
             r"showsMean\s*=\s*slug==='tsedenevo'\s*\?\s*sensorShowsMean\([^)]*\)"
