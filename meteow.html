@@ -276,6 +276,10 @@ function hourMinutes(data, j){
   return iso ? hhmmMin(iso.slice(11,16)) : null;
 }
 
+// Список дождевых кодов — копия из buildSummary. Там он живёт внутри функции,
+// и ссылаться на него отсюда нельзя: переменная с областью видимости function
+// недоступна снаружи, и виджет падал с «RAIN is not defined».
+var SENSOR_RAIN_CODES = [51,53,55,56,57,61,63,65,66,67,80,81,82];
 function sensorHourWet(data, j){
   // Идут ли в час j осадки по консенсусу. Пороги те же, что в сводке по
   // дождю и на главной странице: дождевой код, либо не меньше 0.1 мм,
@@ -284,7 +288,7 @@ function sensorHourWet(data, j){
   var c = w.weather_code ? w.weather_code[j] : null;
   var p = w.precipitation ? w.precipitation[j] : null;
   var q = w.precipitation_probability ? w.precipitation_probability[j] : null;
-  return (c!=null && RAIN.indexOf(Math.round(c))>=0) ||
+  return (c!=null && SENSOR_RAIN_CODES.indexOf(Math.round(c))>=0) ||
          (p!=null && p>=0.1) ||
          ((p==null || p<0.1) && q!=null && q>20);
 }

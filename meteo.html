@@ -311,6 +311,12 @@ function hourMinutes(data, j){
   return iso ? hhmmMin(iso.slice(11,16)) : null;
 }
 
+// Список дождевых кодов — копия из buildSummary. Там он живёт внутри функции,
+// и ссылаться на него отсюда нельзя: переменная с областью видимости function
+// недоступна снаружи, и виджет падал с «RAIN is not defined». Список короткий, а
+// расхождение копий страница покажет сама — расхождение в одной строке
+// страницы не собьёт график, а ReferenceError уронит виджет целиком.
+var SENSOR_RAIN_CODES = [51,53,55,56,57,61,63,65,66,67,80,81,82];
 function sensorHourWet(data, j){
   // Идут ли в час j осадки по консенсусу. Пороги те же, что в сводке по
   // дождю и на главной странице: дождевой код, либо не меньше 0.1 мм,
@@ -319,7 +325,7 @@ function sensorHourWet(data, j){
   var c = w.weather_code ? w.weather_code[j] : null;
   var p = w.precipitation ? w.precipitation[j] : null;
   var q = w.precipitation_probability ? w.precipitation_probability[j] : null;
-  return (c!=null && RAIN.indexOf(Math.round(c))>=0) ||
+  return (c!=null && SENSOR_RAIN_CODES.indexOf(Math.round(c))>=0) ||
          (p!=null && p>=0.1) ||
          ((p==null || p<0.1) && q!=null && q>20);
 }
@@ -418,7 +424,12 @@ function render(data){
   cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');
 
   var html = '';
-  for (var h = 0; h < hours && idx + h < times.length; h++){
+  // Сколько часов показываем: столько, сколько просят, но не больше
+  // оставшегося горизонта. Раньше здесь стоял бесконечный цикл по hours с
+  // проверкой внутри, а в hourBgSvg передавался cnt, которого в файле не
+  // было вовсе: виджет доходил до фона и падал с «cnt is not defined».
+  var cnt = Math.min(hours, times.length - idx);
+  for (var h = 0; h < cnt; h++){
     var i = idx + h;
     var t = times[i];
     var code = data.weighted.weather_code ? Math.round(data.weighted.weather_code[i]) : 0;

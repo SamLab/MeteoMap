@@ -1039,6 +1039,139 @@ console.log(JSON.stringify(out));
         assert json.loads(out.stdout) == cases, (fname, out.stdout)
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_widget_renders_without_swallowing_errors(tmp_path):
+    """Виджет доходит до отрисовки: любая незакрытая ссылка всплывает наружу.
+
+    Прежние проверки вырезали кусок исходника и подставляли внешние
+    переменные параметрами, поэтому виджет с `RAIN` из области buildSummary
+    проходил их как исправный, а в браузере рисовал «Не удалось загрузить
+    данные (ReferenceError: RAIN is not defined)». Тот же приём скрывал
+    несуществующий `cnt` в hourBgSvg. Здесь файл исполняется целиком, на
+    данных, которые действительно доходят до отрисовки ленты часов.
+    """
+    driver = """
+const fs=require('fs');
+const src=fs.readFileSync(process.argv[2],'utf8');
+const script=src.slice(src.indexOf('<script>')+8, src.lastIndexOf('</script>'));
+// Свой элемент на каждый id: заголовок и лента — разные узлы, и если отдать
+// им один объект, сообщение об ошибке затрёт заголовок, то есть проверка
+// ошибки пройдёт молча.
+const NODES={};
+function stub(id){return {id:id,innerHTML:'',textContent:'',style:{},
+  classList:{add:function(){},remove:function(){}},
+  insertAdjacentHTML:function(){},appendChild:function(){},
+  setAttribute:function(){},getAttribute:function(){return null;},
+  addEventListener:function(){},querySelector:function(){return null;},
+  querySelectorAll:function(){return [];}};}
+function node(id){if(!NODES[id])NODES[id]=stub(id);return NODES[id];}
+global.document={getElementById:node,
+  querySelector:function(){return stub('q');},
+  querySelectorAll:function(){return [];},
+  createElement:function(){return stub('new');},
+  addEventListener:function(){},hidden:false,
+  documentElement:stub('html'),body:stub('body')};
+global.window=global;
+global.location={href:'https://example.invalid/',
+  search:'',protocol:'https:'};
+global.navigator={userAgent:'node'};
+global.Intl=Intl;
+// Ночь, последний час с дождём: заголовок обязан показать среднее (+4, округ
+// вверх), а не ночной минимум (+3, округ вниз). Разница видна прямо в тексте.
+const N=6, times=[], codes=[], mm=[], prob=[], temp=[], smin=[];
+for(let h=0;h<N;h++){
+  times.push('2026-10-05T'+String(h).padStart(2,'0')+':00');
+  codes.push(h===N-1?61:0);
+  mm.push(h===N-1?0.4:0);
+  prob.push(h===N-1?70:0);
+  temp.push([1.0,1.1,3.2,2.0,1.5,4.0][h]);
+  smin.push([0.5,0.6,2.0,1.0,0.8,3.0][h]);
+}
+const wind=[2,2,3,2,2,2], dir=[180,180,180,180,180,180];
+const cloud=[90,90,90,90,90,90];
+global.fetch=function(){return Promise.resolve({ok:true,json:function(){
+  return Promise.resolve({time:times,
+    daily_time:['2026-10-05'],
+    daily:{sunrise:['06:40'],sunset:['18:10']},
+    location:{slug:'tsedenevo',tz:'Europe/Moscow',name:'X'},
+    models:{},
+    generated_at:'2026-10-05T02:30:00+03:00',
+    weighted:{weather_code:codes,precipitation:mm,
+      precipitation_probability:prob,temperature_2m:temp,
+      wind_speed_10m:wind,wind_direction_10m:dir,cloud_cover:cloud,
+      relative_humidity_2m:cloud,apparent_temperature:temp,
+      dew_point_2m:[0,0,2,0,0,1],
+      surface_pressure:[1000,1000,995,1000,1000,1000]},
+    sensor_station_counts:{temperature_2m:times.map(function(){return 1;})},
+    sensor_now_value:{temperature_2m:temp},
+    sensor_now_min:{temperature_2m:smin},
+    sensor_now_max:{temperature_2m:[2.0,2.1,4.0,3.0,2.5,5.0]}});}});};
+let done=false;
+function fail(e){console.log('ERR '+e.message);process.exit(1);}
+// Таймер виджета держит процесс живым, поэтому выходим сразу же.
+process.on('exit',function(){if(!done){console.log('ERR timeout');process.exitCode=1;}});
+setTimeout(function(){done=true;
+  console.log('RESULT:'+JSON.stringify({city:node('city').innerHTML,
+    strip:node('strip').innerHTML,d10strip:node('d10strip').innerHTML}));
+  process.exit(0);},1500);
+process.on('uncaughtException',fail);
+process.on('unhandledRejection',fail);
+try{
+  (new Function(script))();
+}catch(e){
+  fail(e);
+}
+"""
+    js = tmp_path / "whole_widget.js"
+    js.write_text(driver, encoding="utf-8")
+    for fname in ("meteo.html", "meteow.html"):
+        out = subprocess.run(
+            ["node", str(js), os.path.join(HERE, fname)],
+            capture_output=True, text=True, timeout=60,
+            encoding="utf-8", errors="replace",
+        )
+        assert out.returncode == 0, (fname, out.stdout, out.stderr)
+        line = [x for x in out.stdout.splitlines() if x.startswith("RESULT:")]
+        assert line, (fname, out.stdout[-400:])
+        dom = json.loads(line[-1][len("RESULT:"):])
+        # Главное: виджет не должен уйти в showError. Он ловит исключение
+        # сам и рисует «Не удалось загрузить данные (ReferenceError: ...» —
+        # ровно то, что видел пользователь, причём снаружи падения не видно.
+        err = "Не удалось загрузить данные"
+        for key in ("strip", "d10strip"):
+            assert err not in dom.get(key, ""), (fname, key, dom.get(key, "")[:400])
+        # И заголовок обязан содержать показание датчика: пустой заголовок
+        # означал бы, что sensorHourWet не звали вовсе и тест ничего не проверил.
+        text = re.sub(r"<[^>]*>", "", dom.get("city", ""))
+        assert re.search(r"[+-]?\d+", text), (fname, dom.get("city", "")[:300])
+        # Дождёвый час обязан дать среднее (+4 вверх), а не ночной минимум (+3).
+        assert "+4" in text, (
+            fname + ": осадки не переключили заголовок на среднее", text
+        )
+        # Лента часов тоже должна нарисоваться: сюда попадает hourBgSvg(cnt).
+        strip = dom.get("strip", "")
+        assert 'class="hour' in strip, (fname, strip[:300])
+
+
+def test_widget_rain_codes_do_not_borrow_buildsummary_scope():
+    """Дождевые коды у sensorHourWet объявлены рядом с ним, а не внутри сводки.
+
+    `RAIN` живёт в области видимости buildSummary, поэтому ссылка на него из
+    sensorHourWet даёт ReferenceError и виджет не рисуется вовсе. Проверка
+    сравнивает два списка и требует, чтобы виджет обходился своим.
+    """
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert re.search(
+            r"var SENSOR_RAIN_CODES\s*=\s*\[51,53,55,56,57,61,63,65,66,67,80,81,82\]",
+            w), fname
+        assert "SENSOR_RAIN_CODES.indexOf(Math.round(c))" in w, fname
+        assert "RAIN.indexOf(Math.round(c))" not in w, (
+            fname + ": RAIN принадлежит buildSummary и отсюда недоступен"
+        )
+
+
 def test_widgets_keep_es5_and_the_rain_gate():
     """Виджеты остаются ES5, а проверка осадков стоит до окна."""
     for fname in ("meteo.html", "meteow.html"):
