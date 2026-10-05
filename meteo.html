@@ -258,7 +258,7 @@ function buildSummary(times, data, rawData, idx){
   var stats='['+fmtP(sumPr)+'мм,'+Math.round(maxPp)+'%]';
   var txt=rainType+' '+timeStr+' '+stats+conCnt;
   if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;
-  return 'Осадки '+txt;
+  return txt;
 }
 
 // Половины округляются от нуля — тем же правилом, что на главной странице

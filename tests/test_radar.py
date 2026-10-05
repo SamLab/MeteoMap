@@ -596,7 +596,7 @@ def test_warnings_precip_column_wider_than_wind():
         assert m, "no flex in .%s rule" % cls
         return float(m.group(1))
     assert flex_grow("wcol-precip") > flex_grow("wcol-wind")
-    assert "'wcol-precip')" in tpl
+    assert "'wcol-precip'" in tpl
     assert "wcol wcol-wind" in tpl
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
@@ -1058,7 +1058,7 @@ def test_rain_model_count_uses_min_per_hour():
     assert "if(mn===Infinity)mn=0;" in tpl
     assert "if(mx===-Infinity)mx=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const R=rainModelRangeCons(c0,c1);rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
+    assert "const R=rainModelRangeCons(c0,c1);rows.push('<div class=\"wr2\">'+conWord+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
     assert "const R=rainModelRange(c0,c1);rows.push" not in tpl
     assert "const R=rainModelRangeCons(s,sE);" not in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
@@ -1068,6 +1068,10 @@ def test_rain_model_count_uses_min_per_hour():
     assert "const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';" not in tpl
     assert "endLabel(ts[Math.min(cE+1,ts.length-1)],ts[c].slice(0,10))" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
+    # Подтверждённая строка осадков начинается со слова «Осадки », ближайшая —
+    # нет: слово нужно, чтобы строка читалась как фраза, а не как обрывок.
+    assert "'wcol-precip','Осадки ')" in tpl
+    assert "conWord=''" in tpl
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
