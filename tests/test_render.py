@@ -980,6 +980,78 @@ def test_help_explains_that_rain_cancels_the_minimum():
     )
 
 
+def test_widgets_use_the_same_rain_rule_as_the_page(tmp_path):
+    """Виджеты повторяют правило страницы, иначе заголовок разойдётся с ней.
+
+    Правило живёт в трёх копиях: разъедутся пороги осадков, и одна и та же
+    дождливая ночь покажет в виджете минимум, а на странице среднее. Проверка
+    сравнивает не текст, а результат: обе копии обязаны дать одинаковые ответы
+    на сухую ночь, день и три вида осадков.
+    """
+    cases = {
+        "night_clear": False,      # сухая ночь -> минимум
+        "day_clear": True,         # день -> среднее
+        "night_rain_mm": True,     # осадки есть -> среднее
+        "night_rain_code": True,   # дождевой код без миллиметров -> среднее
+        "night_rain_prob": True,   # вероятность без миллиметров -> среднее
+    }
+    driver = """
+const fs=require('fs');
+function load(fname){
+  const src=fs.readFileSync(fname,'utf8');
+  const start=src.indexOf('function hhmmMin(');
+  const end=src.indexOf('function sensorInDayWindow(',start);
+  const line=src.split('\\n').filter(l=>l.indexOf('var RAIN=')>=0)[0];
+  const rain=JSON.parse(line.slice(line.indexOf('[')).replace(/;\\s*$/,'').trim());
+  return (new Function('RAIN',src.slice(start,end)+
+    '\\nreturn {sensorShowsMean};'))(rain);
+}
+const data={time:['2026-10-05T02:00','2026-10-05T10:00'],
+  daily_time:['2026-10-05'],
+  daily:{sunrise:['06:40'],sunset:['18:10']},
+  weighted:{weather_code:[0,0],precipitation:[0,0],
+    precipitation_probability:[0,0]}};
+const m=load(process.argv[2]);
+function reset(){
+  data.weighted.weather_code=[0,0];
+  data.weighted.precipitation=[0,0];
+  data.weighted.precipitation_probability=[0,0];
+}
+const out={};
+out.night_clear=m.sensorShowsMean(data,0);
+out.day_clear=m.sensorShowsMean(data,1);
+reset();data.weighted.precipitation=[0.4,0];
+out.night_rain_mm=m.sensorShowsMean(data,0);
+reset();data.weighted.weather_code=[61,0];
+out.night_rain_code=m.sensorShowsMean(data,0);
+reset();data.weighted.precipitation_probability=[55,0];
+out.night_rain_prob=m.sensorShowsMean(data,0);
+console.log(JSON.stringify(out));
+"""
+    js = tmp_path / "widget_rain_rule.js"
+    js.write_text(driver, encoding="utf-8")
+    for fname in ("meteo.html", "meteow.html"):
+        path = os.path.join(HERE, fname)
+        out = subprocess.run(
+            ["node", str(js), path], capture_output=True, text=True, timeout=60
+        )
+        assert out.returncode == 0, (fname, out.stderr)
+        assert json.loads(out.stdout) == cases, (fname, out.stdout)
+
+
+def test_widgets_keep_es5_and_the_rain_gate():
+    """Виджеты остаются ES5, а проверка осадков стоит до окна."""
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        assert "function sensorHourWet(data, j)" in w, fname
+        assert "if(sensorHourWet(data, j)) return true;" in w, fname
+        assert "data.weighted" in w, fname
+        assert "0.1" in w, "порог 0.1 мм должен совпадать с порогом страницы"
+        assert "?." not in w, fname
+        assert "const " not in w, fname
+
+
 def test_sensor_min_missing_falls_back_to_mean():
     """Нет ряда минимумов — строка показывает среднее, а не исчезает."""
     body = _sensor_pick_js()

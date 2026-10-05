@@ -276,13 +276,30 @@ function hourMinutes(data, j){
   return iso ? hhmmMin(iso.slice(11,16)) : null;
 }
 
+function sensorHourWet(data, j){
+  // Идут ли в час j осадки по консенсусу. Пороги те же, что в сводке по
+  // дождю и на главной странице: дождевой код, либо не меньше 0.1 мм,
+  // либо (когда осадков по сумме нет) вероятность выше 20%.
+  var w = data.weighted || {};
+  var c = w.weather_code ? w.weather_code[j] : null;
+  var p = w.precipitation ? w.precipitation[j] : null;
+  var q = w.precipitation_probability ? w.precipitation_probability[j] : null;
+  return (c!=null && RAIN.indexOf(Math.round(c))>=0) ||
+         (p!=null && p>=0.1) ||
+         ((p==null || p<0.1) && q!=null && q>20);
+}
+
 function sensorShowsMean(data, j){
   // Окно среднего: с трёх часов после рассвета и до двух часов до заката.
   // Раньше границы стояли на рассвете и закате, и первые три часа утра
   // показывали минимум ночи, хотя солнце уже поднялось.
+  // Второе условие — осадки, и оно перевешивает время суток: низина
+  // остывает только под ясным небом, поэтому в дождь станции стоят рядом и
+  // минимум приписал бы низине холод, которого не было.
   // Дефолт — среднее: обратный дефолт переключил бы округление там, где
   // данных просто не хватает, и заголовок изменился бы из-за отсутствия
   // прогноза.
+  if(sensorHourWet(data, j)) return true;
   var b = sunMinutes(data, j);
   if(!b) return true;
   var h = hourMinutes(data, j);
