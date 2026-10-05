@@ -712,7 +712,7 @@ function buildWeatherHours(){
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     const mcLbl='по '+rcLbl(mCnt,mX);
     const ccLbl='по '+rcLbl(ccCnt,ccX);
-    parts.push(fromModels?'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':'Сегодня — Осадки '+txt+(ccCnt>=1?' · '+ccLbl:''));
+    parts.push(fromModels?'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+(ccCnt>=1?' · '+ccLbl:''));
   }
   else parts.push('без дождя');
   const th=document.getElementById('hourstitle');
