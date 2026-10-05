@@ -884,6 +884,102 @@ def test_help_explains_the_shifted_window():
     )
 
 
+def test_sensor_shows_mean_when_precipitation_is_forecast_for_the_hour():
+    """Осадки — второе условие: в дождь показывается среднее, а не минимум.
+
+    Минимум по станциям отвечает на вопрос «насколько холодно в низине», и
+    низина остывает только под ясным небом. Под дождём или плотной облачностью
+    станции стоят рядом, и ночной минимум приписал бы низине холод, которого
+    не было. Поэтому проверка осадков должна вызываться из sensorShowsMean до
+    сравнения часа с окном, а не после него: иначе дождливый час в окне среднего
+    и дождливый час вне его вели бы себя одинаково лишь случайно.
+    """
+    body = _sensor_daynight_js()
+    assert "function sensorHourWet(" in body, "проверка осадков должна быть отдельной функцией"
+    wet = body[body.index("function sensorHourWet("):body.index("function sensorShowsMean(")]
+    assert "weighted" in wet, "осадки берутся у консенсуса, как и остальная сводка"
+    assert "precipitation" in wet and "precipitation_probability" in wet
+    assert "0.1" in wet, "порог тот же, что в сводке по дождю: 0.1 мм"
+    shows = body[body.index("function sensorShowsMean("):]
+    assert re.search(r"if\([^)]*sensorHourWet\([^)]*\)\)\s*return true", shows), (
+        "идущие осадки переводят показ на среднее независимо от времени суток"
+    )
+    assert shows.index("sensorHourWet(") < shows.index("SENSOR_MEAN_AFTER_SUNRISE"), (
+        "осадки проверяются до окна, а не после"
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_sensor_window_switches_to_mean_when_it_rains(tmp_path):
+    """Поведенческая проверка: правило исполняется, а не только написано.
+
+    Четыре случая подряд: сухая ночь обязана остаться минимумом, день —
+    средним, а три вида осадков (миллиметры, дождевой код, вероятность) —
+    переводить ночь на среднее. Без node эти случаи остались бы
+    предположением по тексту.
+    """
+    html = read_template()
+    src = html[html.index("function hhmmMin("):html.index("function lastSensorHour(")]
+    script = f"""
+const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+const D={{time:['2026-10-05T02:00','2026-10-05T10:00'],
+  daily_time:['2026-10-05'],
+  daily:{{sunrise:['06:40'],sunset:['18:10']}},
+  weighted:{{weather_code:[0,0],precipitation:[0,0],precipitation_probability:[0,0]}}}};
+const m=(new Function('D','RAIN_CODES',{json.dumps(src)}+
+  ';return {{sensorShowsMean}};'))(D,RAIN_CODES);
+function reset(){{
+  D.weighted.weather_code=[0,0];
+  D.weighted.precipitation=[0,0];
+  D.weighted.precipitation_probability=[0,0];
+}}
+const out={{}};
+out.night_clear=m.sensorShowsMean(0);
+out.day_clear=m.sensorShowsMean(1);
+reset();D.weighted.precipitation=[0.4,0];out.night_rain_mm=m.sensorShowsMean(0);
+reset();D.weighted.weather_code=[61,0];out.night_rain_code=m.sensorShowsMean(0);
+reset();D.weighted.precipitation_probability=[55,0];out.night_rain_prob=m.sensorShowsMean(0);
+console.log(JSON.stringify(out));
+"""
+    js = tmp_path / "sensor_window.js"
+    js.write_text(script, encoding="utf-8")
+    out = subprocess.run(
+        ["node", str(js)], capture_output=True, text=True, timeout=60
+    )
+    assert out.returncode == 0, out.stderr
+    got = json.loads(out.stdout)
+    assert got == {
+        "night_clear": False,      # сухая ночь -> минимум
+        "day_clear": True,         # день -> среднее
+        "night_rain_mm": True,     # осадки есть -> среднее
+        "night_rain_code": True,   # дождевой код без миллиметров -> среднее
+        "night_rain_prob": True,   # вероятность без миллиметров -> среднее
+    }, got
+
+
+def test_sensor_minimum_only_when_night_is_clear():
+    """Минимум достаётся Цеденево лишь когда ни ночь, ни осадки не отменяют его."""
+    body = _sensor_pick_js()
+    m = re.search(r"slug==='tsedenevo'\s*&&\s*!sensorShowsMean\(", body)
+    assert m, "минимум выбирается через то же окно, что и раньше"
+    daynight = _sensor_daynight_js()
+    assert "sensorShowsMean(" in daynight, "окно обязано учитывать осадки"
+
+
+def test_help_explains_that_rain_cancels_the_minimum():
+    """Справка обязана называть второе условие, иначе правило станет загадкой.
+
+    Формулировка «ночью стоит минимум» перестала бы быть правдой в дождливую
+    ночь, а страница продолжала бы обещать минимум.
+    """
+    tpl = read_template()
+    row = [ln for ln in tpl.splitlines() if "минимум по станциям" in ln]
+    assert row, "строка про минимум по станциям должна быть в справке"
+    assert "осадк" in row[0].lower(), (
+        "в строке про минимум должно быть сказано про осадки"
+    )
+
+
 def test_sensor_min_missing_falls_back_to_mean():
     """Нет ряда минимумов — строка показывает среднее, а не исчезает."""
     body = _sensor_pick_js()
