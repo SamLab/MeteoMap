@@ -188,3 +188,72 @@ def test_sensor_none_past_hours_do_not_fabricate_forecast():
     with_sensor = meteo.assemble_consensus(hb, ["temperature_2m"], {})
     assert plain["weighted"]["temperature_2m"][1] == with_sensor["weighted"]["temperature_2m"][1]
     assert with_sensor["weighted"]["temperature_2m"][1] == 11.0
+
+
+def test_wwo_neither_votes_nor_weighs_but_still_adds_mm(monkeypatch):
+    """WWO в консенсусе: код и вероятность молчат, миллиметры идут.
+
+    Строка берётся через настоящий fetch_wwo, а не руками: правка живёт
+    именно в источнике. Дождевой код 302 и вероятность 90% от wwo обязаны
+    быть отброшены, а 0.6 мм — дойти до weighted.precipitation.
+
+    min_sources=1, потому что код погоды у wwo намеренно None: без него
+    сухая модель «а» осталась бы единственным голосующим, и консенсус
+    кода вообще не собрался бы.
+    """
+    from datetime import datetime, timezone
+
+    class _Resp:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return self._payload
+
+    payload = {"data": {"weather": [
+        {"date": "2026-08-28", "hourly": [
+            {"time": "500", "tempC": "18", "FeelsLikeC": "17",
+             "humidity": "70", "precipMM": "0.6", "chanceofrain": "90",
+             "weatherCode": "302", "pressure": "1013",
+             "cloudcover": "60", "windspeedKmph": "10",
+             "WindGustKmph": "20", "winddirDegree": "180",
+             "visibility": "10"},
+        ]},
+    ]}}
+    monkeypatch.setattr(
+        meteo, "_request_get",
+        lambda url, params=None, timeout=None: _Resp(payload),
+    )
+    wwo_rows = meteo.fetch_wwo(57.63, 39.87, api_key="test")
+
+    hour = datetime(2026, 8, 28, 5, tzinfo=timezone.utc)
+    grid = ["2026-08-28T05:00"]
+    dry = [{"utc": hour, "precipitation": 0.0,
+            "precipitation_probability": 10.0, "weather_code": 0}]
+    other = [{"utc": hour, "precipitation": 0.0,
+              "precipitation_probability": 20.0, "weather_code": None}]
+    hourly = {
+        "a": meteo.align_to_grid(dry, grid, timezone.utc),
+        "b": meteo.align_to_grid(other, grid, timezone.utc),
+        meteo.WWO_CODE: meteo.align_to_grid(wwo_rows, grid, timezone.utc),
+    }
+    weights = {
+        "precipitation": {"a": 1.0, "b": 1.0, meteo.WWO_CODE: 1.0},
+        "precipitation_probability": {"a": 1.0, "b": 1.0,
+                                      meteo.WWO_CODE: 1.0},
+    }
+    out = meteo.assemble_consensus(
+        hourly,
+        ["weather_code", "precipitation", "precipitation_probability"],
+        weights, min_sources=1,
+    )
+
+    # 302 = дождь: с ним ничья 0/61 перетянула бы консенсус в дождь
+    assert out["weighted"]["weather_code"][0] == 0
+    # 90% от wwo подняли бы среднее с 15 до 40
+    assert out["weighted"]["precipitation_probability"][0] == 15.0
+    # 0.6 мм от wwo доходят: (0+0+0.6)/3, floor до десятых
+    assert abs(out["weighted"]["precipitation"][0] - 0.2) < 1e-9

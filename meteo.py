@@ -637,21 +637,6 @@ def fetch_mb_cached(lat=None, lon=None):
     return rows
 
 
-# WWO weather code -> WMO (worldweatheronline.com/weather-api/api/docs/weather-icons)
-WWO_WMO = {
-    113: 0, 116: 2, 119: 3, 122: 3, 143: 45,
-    176: 80, 179: 71, 182: 66, 185: 67,
-    200: 95, 227: 71, 230: 85, 248: 48,
-    260: 48, 263: 51, 266: 53, 281: 56, 284: 57,
-    293: 51, 296: 53, 299: 55, 302: 61, 305: 63,
-    308: 65, 311: 56, 314: 57, 317: 66, 320: 67,
-    323: 71, 326: 73, 329: 77, 332: 75, 335: 77,
-    338: 75, 350: 67, 353: 80, 356: 81, 359: 82,
-    362: 66, 365: 67, 368: 71, 371: 77, 374: 67,
-    377: 67, 386: 95, 389: 96, 392: 99, 395: 99,
-}
-
-
 def fetch_wwo(lat=None, lon=None, api_key=None):
     """World Weather Online 14-day hourly forecast -> строки YR-подобного вида."""
     if lat is None:
@@ -691,11 +676,6 @@ def fetch_wwo(lat=None, lon=None, api_key=None):
             wind_kph = h.get("windspeedKmph")
             gust_kph = h.get("WindGustKmph")
             pressure = h.get("pressure")
-            wwo_code = h.get("weatherCode")
-            try:
-                wmo_code = WWO_WMO.get(int(wwo_code)) if wwo_code is not None else None
-            except (TypeError, ValueError):
-                wmo_code = None
             rows.append({
                 "utc": dt,
                 "temperature_2m": _float(h.get("tempC")),
@@ -703,8 +683,12 @@ def fetch_wwo(lat=None, lon=None, api_key=None):
                 "dew_point_2m": _float(h.get("DewPointC")),
                 "relative_humidity_2m": _float(h.get("humidity")),
                 "precipitation": _float(h.get("precipMM")),
-                "precipitation_probability": _float(h.get("chanceofrain")),
-                "weather_code": wmo_code,
+                # Вероятность и код погоды у WWO ненадёжны: chanceofrain
+                # приходит всегда, даже в сухие часы, и тянет ложные осадки
+                # в консенсус и в подсчёт «по N моделям». Количество
+                # (precipMM) оставляем.
+                "precipitation_probability": None,
+                "weather_code": None,
                 "pressure_msl": round(float(pressure) * HPA_TO_MMHG, 1)
                 if pressure is not None else None,
                 "cloud_cover": _float(h.get("cloudcover")),

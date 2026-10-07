@@ -191,7 +191,7 @@ def test_fetch_mb_requires_key(monkeypatch, capsys):
     assert "METEOBLUE_KEY" in capsys.readouterr().out
 
 
-def test_fetch_wwo_parses_string_weathercode(monkeypatch):
+def test_fetch_wwo_drops_probability_and_weather_code(monkeypatch):
     captured = {}
 
     def fake_get(url, params, timeout):
@@ -210,9 +210,10 @@ def test_fetch_wwo_parses_string_weathercode(monkeypatch):
 
     monkeypatch.setattr(meteo, "_request_get", fake_get)
     rows = meteo.fetch_wwo(57.63, 39.87, api_key="test")
-    assert rows[0]["weather_code"] == 80
-    assert rows[0]["precipitation_probability"] == 30
+    assert rows[0]["precipitation_probability"] is None
+    assert rows[0]["weather_code"] is None
     assert rows[0]["precipitation"] == 0.2
+    assert rows[0]["temperature_2m"] == 18
 
 
 def test_fetch_wwo_requires_key(monkeypatch, capsys):

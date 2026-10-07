@@ -135,11 +135,20 @@ World Weather (WWO) в `fetch_wwo` отдаёт `chanceofrain` в **каждом
    живы), `rows[0]["temperature_2m"] == 18` (остальное живо). Это главный
    гард: поля в `fetch_wwo` больше не появятся.
 2. `tests/test_consensus.py` — новый
-   `test_wwo_neither_votes_nor_weighs_but_still_adds_mm`: строка wwo, собранная
-   как её даёт `fetch_wwo` (два поля `None`, `precipitation` 0.2), идёт через
-   `align_to_grid` → `assemble_consensus`; проверяем, что `weighted.weather_code`
-   не стал дождевым, `weighted.precipitation_probability` равен консенсусу без
-   wwo, а `weighted.precipitation` вклад wwo получил.
+   `test_wwo_neither_votes_nor_weighs_but_still_adds_mm`: строка берётся через
+   настоящий `fetch_wwo` (с фикстурой HTTP), а не руками — правка живёт в
+   источнике, и тест обязан падать до неё. Дальше `align_to_grid` →
+   `assemble_consensus`; проверяем, что `weighted.weather_code` не стал
+   дождевым (код 302 → 61 в никей бы перетянул ничью), что
+   `weighted.precipitation_probability` равен консенсусу без wwo (15, а не 40),
+   и что `weighted.precipitation` вклад wwo получил.
+
+   Два числа в тесте отличаются от первоначального замысла и почему: мм у
+   wwo в фикстуре 0.6, а не 0.2 — среднее трёх моделей `(0+0+0.2)/3 = 0.067`
+   после `_floor_precip` схлопнулось бы в `0.0`, и проверка «вклад дошёл» не
+   увидела бы разницы. `min_sources=1`, потому что с `None` у wwo сухая
+   модель «а» осталась бы единственным голосующим, и консенсус кода не
+   собрался бы вообще.
 3. `tests/test_radar.py` — без правок: строки шаблона не меняются, существующие
    тесты на `hasRainAt` / `conAt` обязаны пройти как есть.
 4. Полный прогон: `.venv\Scripts\python.exe -m pytest tests\ -m "not integration"
