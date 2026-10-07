@@ -314,7 +314,7 @@ samlab-bot/
 
 **`match.py`**
 - `slug_from_link` на URL без числового хвоста (`…/reaper` → `reaper`);
-- гибрид `foo-bar-2` не срезается, как и раньше.
+- хвост `-<digits>` срезается, дефисы slug остаются (`foo-bar-2` → `foo-bar`), слитные цифры сохраняются (`foo-bar2`).
 
 **`run.py`**
 - второй источник после уже обработанного slug → `duplicate-source`;
@@ -324,7 +324,7 @@ samlab-bot/
 
 - Не пишем ссылки источников в `.ini`.
 - Не меняем правила kaldata — `has_slash_versions` там остаётся.
-- Не меняем `plan_entry`, `find_match`, `is_ambiguous`, `iniwrite`.
+- Не меняем логику `find_match`, `is_ambiguous`, `iniwrite`. `plan_entry` получает параметр `profile` (словарь prepare/pick/multi/channel); без профиля он работает как раньше, поведение kaldata не меняется.
 - Не разбираем страницу статьи для обычных записей — только для очереди.
 - Не переносим существующие 6 алиасов: они работают по нормализованному имени.
   Из них в текущем фиде softexia встречается один — `shark007codecs`; `flstudio`
