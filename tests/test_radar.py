@@ -1058,7 +1058,7 @@ def test_rain_model_count_uses_min_per_hour():
     assert "if(mn===Infinity)mn=0;" in tpl
     assert "if(mx===-Infinity)mx=0;" in tpl
     assert "if(has)mCnt++" not in tpl
-    assert "const R=rainModelRangeCons(c0,c1);rows.push('<div class=\"wr2\">'+conWord+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}" in tpl
+    assert """const R=rainModelRangeCons(c0,c1);rows.push('<div class="wr2">'+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');}""" in tpl
     assert "const R=rainModelRange(c0,c1);rows.push" not in tpl
     assert "const R=rainModelRangeCons(s,sE);" not in tpl
     assert "n>=1?' · по '+(n===1?'1 модели':n+' моделям'):''" not in tpl
@@ -1068,10 +1068,6 @@ def test_rain_model_count_uses_min_per_hour():
     assert "const eh=ce>curIdx?endLabel(ts[Math.min(ce+1,ts.length-1)]):'';" not in tpl
     assert "endLabel(ts[Math.min(cE+1,ts.length-1)],ts[c].slice(0,10))" in tpl
     assert "const n=sourceCountAt(c,list,precipMin)" not in tpl
-    # Подтверждённая строка осадков начинается со слова «Осадки », ближайшая —
-    # нет: слово нужно, чтобы строка читалась как фраза, а не как обрывок.
-    assert "'wcol-precip','Осадки ')" in tpl
-    assert "conWord=''" in tpl
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
@@ -1092,6 +1088,19 @@ def test_rain_model_count_uses_min_per_hour():
     with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
         m = f.read()
     assert "function rcCnt(mn,mx){if(mn<1)return '';return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
+
+
+def test_warning_confirmed_rain_line_has_no_prefix():
+    # Подтверждённая строка осадков в «Предупреждениях» начинается с метки
+    # времени ровно так же, как ближайшая: слово-префикс «Осадки » убрано.
+    # Заодно удалён параметр conWord — после этой правки он передавался бы
+    # пустым и читался бы как «здесь должно быть слово, но его нет».
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "'wcol-precip','Осадки ')" not in tpl, "префикс «Осадки » остался"
+    assert "conWord" not in tpl, "параметр conWord не удалён"
+    assert "rows.push('<div class=\"wr2\">'+cLbl+wv+(R.mn>=1?' · по '+rcLbl(R.mn,R.mx):'')+'</div>');" in tpl, \
+        "wr2 собирается не без префикса"
 
 
 def test_index_has_sputnik_tab_and_iframe():
