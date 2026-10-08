@@ -255,7 +255,7 @@ function buildSummary(times, data, rawData, idx){
   var timeStr=(rainHour===idx)?('до '+en):(st===en?'в '+st:st+'-'+en);
   var cntStr=peakModels>=1?(' '+rcCnt(peakModels,peakMax)):'';
   var conCnt=conPeak>=1?(' '+rcCnt(conPeak,conMax)):'';
-  var stats='['+fmtP(sumPr)+'мм,'+Math.round(maxPp)+'%]';
+  var stats='['+fmtP(sumPr)+'*'+Math.round(maxPp)+'%]';
   var txt=rainType+' '+timeStr+' '+stats+conCnt;
   if(fromModels) return 'Вероятны Осадки '+timeStr+' '+stats+cntStr;
   return txt;

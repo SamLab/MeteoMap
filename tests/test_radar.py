@@ -1411,10 +1411,10 @@ def test_widget_header_separates_temp_from_summary():
     # эмодзи в виджете не обязателен для проверки разделителя, но строка
     # должна собираться ровно так же, как в JS
     for sensor_temp, summary, want in (
-        ("+14", "Дождь Пн 5 22ч-Вт 6 23ч [0мм,34%] 3-10м",
-         "\u2600\uFE0F +14, Дождь Пн 5 22ч-Вт 6 23ч [0мм,34%] 3-10м"),
-        ("", "Дождь сегодня 10ч-12ч [0.2мм,60%] 2м",
-         "\u2600\uFE0F Дождь сегодня 10ч-12ч [0.2мм,60%] 2м"),
+        ("+14", "Дождь Пн 5 22ч-Вт 6 23ч [0*34%] 3-10м",
+         "☀️ +14, Дождь Пн 5 22ч-Вт 6 23ч [0*34%] 3-10м"),
+        ("", "Дождь сегодня 10ч-12ч [0.2*60%] 2м",
+         "☀️ Дождь сегодня 10ч-12ч [0.2*60%] 2м"),
         ("+14", "Остаток дня без дождя",
          "\u2600\uFE0F +14, Остаток дня без дождя"),
         ("", "Остаток дня без дождя",
@@ -1657,6 +1657,33 @@ def test_widget_typography_is_half_a_pixel_smaller():
         ".d10day{font-size:9.5px",
     ):
         assert needle in w, f"meteow.html: нет {needle}"
+
+
+def test_widget_summary_join_is_star_not_mm_comma():
+    # В скобках сводки виджета — «3.1*81%»: без единицы и без запятой.
+    # Значения зафиксированы тестом: такая правка глазом почти неразличима,
+    # без проверки она выглядит как «ничего не изменилось» и легко
+    # откатывается. Сравниваем раскодированный текст, иначе в meteow.html
+    # «мм» уезжает в \u043C\u043C и отрицательная проверка не видит его.
+    import re as _re
+
+    def unescape(src):
+        return _re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), src)
+
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = unescape(f.read())
+        assert "'+fmtP(sumPr)+'*'" in w, f"{fname}: сводка скобок не через «*»"
+        assert "'+fmtP(sumPr)+'мм,'" not in w, f"{fname}: осталась «мм,»"
+
+
+def test_help_widget_summary_format_matches_widget():
+    # Справка на главной странице показывает вид сводки виджета примером —
+    # он обязан совпадать с тем, что реально печатает виджет.
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "[0.4*28%]" in tpl, "справка: пример сводки не через «*»"
+    assert "[0.4мм,28%]" not in tpl, "справка: остался старый пример"
 
 
 def test_widget_card_has_no_frame_and_sits_in_the_corner():
