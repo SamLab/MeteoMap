@@ -306,12 +306,15 @@ def test_widget_summary_prefers_nearest_rain_not_later_confirmed():
     # Регрессия: виджет прыгал на далёкий подтверждённый консенсусом дождь,
     # пропуская ближайший эпизод, который отмечают >=2 модели. «Вероятны
     # Осадки» — когда начало ближайшего эпизода не подтверждено консенсусом.
+    # Проверяем только тело buildSummary: в summaryConfirmed чисто консенсусный
+    # скан уместен по замыслу.
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
-        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" not in w, fname
-        assert "if(rainHour>=0)fromModels=true;" not in w, fname
-        assert "var fromModels=rainHour>=0&&!hasRainAt(rainHour);" in w, fname
+        bs = w.split("function buildSummary")[1].split("function summaryConfirmed")[0]
+        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" not in bs, fname
+        assert "if(rainHour>=0)fromModels=true;" not in bs, fname
+        assert "var fromModels=rainHour>=0&&!hasRainAt(rainHour);" in bs, fname
 
 
 def test_hourly_interval_continues_on_consensus_even_if_models_below_threshold():
@@ -1363,7 +1366,7 @@ def test_widget_shows_sensor_temperature_with_directional_rounding():
         # тело функции, а не весь файл: Math.ceil остался в таймере обновления.
         body = w.split("function roundSensorTemp")[1][:400].split("\n}")[0]
         assert "Math.ceil" not in body and "Math.floor" not in body, fname
-        assert "var sensorTemp = widgetSensorTemp(data, idx);" in w, fname
+        assert "var sensorTemp=widgetSensorTemp(hData,hIdx);" in w, fname
         # Шапка собирается из частей через join(', '), а не склейкой строки:
         # тогда запятая появляется ровно между непустыми частями, и пропуск
         # температуры не оставляет висячей запятой. Эмодзи в исходниках —
@@ -1446,6 +1449,43 @@ def test_widget_header_separates_temp_from_summary():
         line = [ln.strip() for ln in w.splitlines() if "headParts.join(', ')" in ln]
         assert len(line) == 1, (fname, line)
         assert "cityEl.innerHTML" in line[0], (fname, line[0])
+
+
+def test_widget_header_toggle_between_nearest_and_confirmed():
+    # Шапка виджета переключается кликом по иконке погоды: «ближайшие»
+    # (buildSummary, режим по умолчанию) и «подтверждённые» (summaryConfirmed,
+    # интервал по консенсусу) — как две строки «Предупреждений» на главной.
+    # Кликабельность видна по cursor:pointer и title, режим живёт в headMode
+    # и переживает автообновления; иконка пересоздаётся при каждой перерисовке,
+    # поэтому слушатель вешается заново в refreshHeader.
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        # вторая строка: консенсус-интервал, счётчик по консенсусу
+        assert "function summaryConfirmed(times, data, rawData, idx){" in w, fname
+        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+        assert "return rainType+' '+timeStr+' '+stats+conCnt;" in w, fname
+        # переключатель: режим, перерисовка только шапки, клик по иконке
+        assert "var headMode='nearest';" in w, fname
+        assert "function refreshHeader(){" in w, fname
+        assert "(headMode==='confirmed')?summaryConfirmed(hTimes,hWdg,hRaw,hIdx):buildSummary(hTimes,hWdg,hRaw,hIdx)" in w, fname
+        assert "addEventListener('click',toggleHead)" in w, fname
+        # аффорданс: курсор и подсказка с названием обоих режимов
+        assert ".city .cico{font-size:18px;line-height:1;vertical-align:-1px;cursor:pointer}" in w, fname
+        # во втором виджете кириллица хранится escape-последовательностями,
+        # поэтому смотрим на расшифрованный текст, а не на исходник
+        un = re.sub(
+            r"\\u([0-9a-fA-F]{4})",
+            lambda m: chr(int(m.group(1), 16)),
+            w,
+        )
+        assert "Ближайшие осадки" in un, fname
+        assert "Подтверждённые осадки" in un, fname
+        # виджеты остаются ES5
+        assert "?." not in w and "const " not in w, fname
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "Клик по значку погоды в шапке переключает её между «ближайшими осадками» и «подтверждёнными»" in tpl
 
 
 def test_widget_header_wind_arrow_rotates_to_direction():

@@ -31,7 +31,7 @@ body{
   max-width:600px;margin:0;padding:2px 2px 0 2px;
 }
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px}
-.city{font-size:13.5px;font-weight:600}.city .cico{font-size:18px;line-height:1;vertical-align:-1px}
+.city{font-size:13.5px;font-weight:600}.city .cico{font-size:18px;line-height:1;vertical-align:-1px;cursor:pointer}
 .updated{font-size:11px;color:var(--muted)}
 .strip{
   display:flex;
@@ -261,6 +261,66 @@ function buildSummary(times, data, rawData, idx){
   return txt;
 }
 
+// Вторая строка шапки — «Подтверждённые» — тот же расчёт, но интервал только
+// по консенсусу (все модели согласны), без учёта одиночных моделей. Текст
+// повторяет подтверждённую ветку buildSummary, вместе с её счётчиком conCnt.
+function summaryConfirmed(times, data, rawData, idx){
+  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
+  var rainHour=-1,jLast=-1;
+  for(var j=idx;j<times.length;j++){
+    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+  }
+  if(rainHour<0) return 'Остаток дня без дождя';
+  var sumPr=0,maxPp=0;
+  for(var j=rainHour;j<=jLast;j++){
+    var p=data.precipitation?data.precipitation[j]:0;
+    if(p!=null)sumPr+=p;
+    var pp=data.precipitation_probability?data.precipitation_probability[j]:0;
+    if(pp!=null&&pp>maxPp)maxPp=pp;
+  }
+  var conPeak=Infinity,conMax=-Infinity;
+  for(var j=rainHour;j<=jLast;j++){var cn=0;
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;}
+    if(cn<conPeak)conPeak=cn;
+    if(cn>conMax)conMax=cn;
+  }
+  if(conPeak===Infinity)conPeak=0;
+  if(conMax===-Infinity)conMax=0;
+  var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;
+  var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'Дождь';
+  var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';
+  var endIdx=Math.min(jLast+1,times.length-1);
+  var en=(times[endIdx].getHours()===0)?'00ч':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'ч':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч');
+  var timeStr=(rainHour===idx)?('до '+en):(st===en?'в '+st:st+'-'+en);
+  var conCnt=conPeak>=1?(' '+rcCnt(conPeak,conMax)):'';
+  var stats='['+fmtP(sumPr)+'*'+Math.round(maxPp)+'%]';
+  return rainType+' '+timeStr+' '+stats+conCnt;
+}
+
+// Переключатель шапки: клик по иконке погоды меняет «Ближайшие осадки»
+// (buildSummary, интервал по любым моделям) на «Подтверждённые»
+// (summaryConfirmed, консенсус-интервал) и обратно. Режим живёт в headMode
+// и переживает автообновления; иконка пересоздаётся при каждой перерисовке,
+// поэтому слушатель вешается заново в refreshHeader.
+var headMode='nearest';
+var hTimes=null,hData=null,hWdg=null,hRaw=null,hIdx=-1;
+function refreshHeader(){
+  if(hTimes===null) return;
+  var summary=(headMode==='confirmed')?summaryConfirmed(hTimes,hWdg,hRaw,hIdx):buildSummary(hTimes,hWdg,hRaw,hIdx);
+  var sensorTemp=widgetSensorTemp(hData,hIdx);
+  var headParts = [];
+  if (sensorTemp) headParts.push(sensorTemp);
+  headParts.push(summary);
+  cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');
+  var cico=cityEl.querySelector('.cico');
+  if(cico){
+    cico.title=(headMode==='confirmed')?'Подтверждённые осадки — клик: ближайшие':'Ближайшие осадки — клик: подтверждённые';
+    cico.addEventListener('click',toggleHead);
+  }
+}
+function toggleHead(){headMode=(headMode==='confirmed')?'nearest':'confirmed';refreshHeader();}
+
 // Половины округляются от нуля — тем же правилом, что на главной странице
 // (template.html) и во втором виджете (meteow.html).
 function rnd(v){ return Math.sign(v)*Math.round(Math.abs(v)); }
@@ -417,12 +477,8 @@ function render(data){
   }
   if (idx < 0) idx = 0;
 
-  var summary = buildSummary(times, data.weighted, data.models, idx);
-  var sensorTemp = widgetSensorTemp(data, idx);
-  var headParts = [];
-  if (sensorTemp) headParts.push(sensorTemp);
-  headParts.push(summary);
-  cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');
+  hTimes=times;hData=data;hWdg=data.weighted;hRaw=data.models;hIdx=idx;
+  refreshHeader();
 
   var html = '';
   // Сколько часов показываем: столько, сколько просят, но не больше
