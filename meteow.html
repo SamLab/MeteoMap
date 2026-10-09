@@ -259,12 +259,29 @@ function summaryConfirmed(times, data, rawData, idx){
   return rainType+' '+timeStr+' '+stats+conCnt;
 }
 
-// Сводка в шапке чередуется при каждом обновлении: «Ближайшие осадки»
+// Сводка в шапке чередуется при каждом обновлении (авто раз в 5 минут,
+// возврат на вкладку и перезагрузка страницы): «Ближайшие осадки»
 // (buildSummary, интервал по любым моделям) и «Подтверждённые»
-// (summaryConfirmed, консенсус-интервал). Режим живёт в headMode; первый
-// показ — ближайшие, дальше render() меняет его на противоположный.
+// (summaryConfirmed, интервал по консенсусу). Последний показанный режим
+// хранится в localStorage, поэтому после перезагрузки страница показывает
+// противоположную строку, а первый в жизни показ — «ближайшие».
 var headMode='nearest';
+var HEAD_MODE_KEY='meteow.headMode';
 var hTimes=null,hData=null,hWdg=null,hRaw=null,hIdx=-1;
+function readHeadMode(){
+  try{ return localStorage.getItem(HEAD_MODE_KEY); }catch(e){}
+  try{ return sessionStorage.getItem(HEAD_MODE_KEY); }catch(e){}
+  return null;
+}
+function writeHeadMode(m){
+  try{ localStorage.setItem(HEAD_MODE_KEY,m); return; }catch(e){}
+  try{ sessionStorage.setItem(HEAD_MODE_KEY,m); return; }catch(e){}
+}
+function pickHeadMode(){
+  var m=(readHeadMode()==='nearest')?'confirmed':'nearest';
+  writeHeadMode(m);
+  return m;
+}
 function refreshHeader(){
   if(hTimes===null) return;
   var summary=(headMode==='confirmed')?summaryConfirmed(hTimes,hWdg,hRaw,hIdx):buildSummary(hTimes,hWdg,hRaw,hIdx);
@@ -433,7 +450,7 @@ function render(data){
   }
   if (idx < 0) idx = 0;
 
-  if(hTimes!==null)headMode=(headMode==='confirmed')?'nearest':'confirmed';
+  headMode=pickHeadMode();
   hTimes=times;hData=data;hWdg=data.weighted;hRaw=data.models;hIdx=idx;
   refreshHeader();
 

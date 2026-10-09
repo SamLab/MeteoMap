@@ -1452,12 +1452,12 @@ def test_widget_header_separates_temp_from_summary():
 
 
 def test_widget_header_alternates_on_refresh():
-    # Сводка в шапке виджета чередуется при каждом автообновлении: «ближайшие»
-    # (buildSummary, режим по умолчанию и первый показ) и «подтверждённые»
-    # (summaryConfirmed, интервал по консенсусу) — как две строки
-    # «Предупреждений» на главной. Режим живёт в headMode; render() меняет его
-    # на противоположный при каждом следующем вызове. Клик убран: значок не
-    # кликабелен (нет cursor:pointer, title и слушателя).
+    # Сводка в шапке виджета чередуется при каждом обновлении: «ближайшие»
+    # (buildSummary, первый в жизни показ) и «подтверждённые» (summaryConfirmed,
+    # интервал по консенсусу) — как две строки «Предупреждений» на главной.
+    # Последний показанный режим хранится в localStorage, поэтому и авто-обнов-
+    # ление, и перезагрузка страницы показывают противоположную строку.
+    # Клик убран: значок не кликабелен (нет cursor:pointer, title и слушателя).
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
@@ -1465,11 +1465,14 @@ def test_widget_header_alternates_on_refresh():
         assert "function summaryConfirmed(times, data, rawData, idx){" in w, fname
         assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
         assert "return rainType+' '+timeStr+' '+stats+conCnt;" in w, fname
-        # чередование: первый показ ближайшие, дальше режим инвертируется
+        # чередование: режим выбирается с запоминанием в браузере
         assert "var headMode='nearest';" in w, fname
         assert "function refreshHeader(){" in w, fname
         assert "(headMode==='confirmed')?summaryConfirmed(hTimes,hWdg,hRaw,hIdx):buildSummary(hTimes,hWdg,hRaw,hIdx)" in w, fname
-        assert "if(hTimes!==null)headMode=(headMode==='confirmed')?'nearest':'confirmed';" in w, fname
+        assert "function pickHeadMode(){" in w, fname
+        assert "headMode=pickHeadMode();" in w, fname
+        assert "localStorage.getItem(HEAD_MODE_KEY)" in w, fname
+        assert "localStorage.setItem(HEAD_MODE_KEY,m)" in w, fname
         # клик убран: ни слушателя, ни toggleHead, ни курсора, ни подсказки
         assert "toggleHead" not in w, fname
         assert "addEventListener('click'" not in w, fname
@@ -1479,8 +1482,9 @@ def test_widget_header_alternates_on_refresh():
         assert "?." not in w and "const " not in w, fname
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "каждое автообновление" in tpl
-    assert "меняет её на противоположную" in tpl
+    assert "перезагрузка страницы" in tpl and "противоположную строку" in tpl
+    # виджет выводят на рабочий стол смартфона через приложение Web Widget
+    assert "Web Widget" in tpl
 
 
 def test_widget_header_wind_arrow_rotates_to_direction():
