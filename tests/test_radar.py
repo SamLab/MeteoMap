@@ -1451,13 +1451,13 @@ def test_widget_header_separates_temp_from_summary():
         assert "cityEl.innerHTML" in line[0], (fname, line[0])
 
 
-def test_widget_header_toggle_between_nearest_and_confirmed():
-    # Шапка виджета переключается кликом по иконке погоды: «ближайшие»
-    # (buildSummary, режим по умолчанию) и «подтверждённые» (summaryConfirmed,
-    # интервал по консенсусу) — как две строки «Предупреждений» на главной.
-    # Кликабельность видна по cursor:pointer и title, режим живёт в headMode
-    # и переживает автообновления; иконка пересоздаётся при каждой перерисовке,
-    # поэтому слушатель вешается заново в refreshHeader.
+def test_widget_header_alternates_on_refresh():
+    # Сводка в шапке виджета чередуется при каждом автообновлении: «ближайшие»
+    # (buildSummary, режим по умолчанию и первый показ) и «подтверждённые»
+    # (summaryConfirmed, интервал по консенсусу) — как две строки
+    # «Предупреждений» на главной. Режим живёт в headMode; render() меняет его
+    # на противоположный при каждом следующем вызове. Клик убран: значок не
+    # кликабелен (нет cursor:pointer, title и слушателя).
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
@@ -1465,27 +1465,22 @@ def test_widget_header_toggle_between_nearest_and_confirmed():
         assert "function summaryConfirmed(times, data, rawData, idx){" in w, fname
         assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
         assert "return rainType+' '+timeStr+' '+stats+conCnt;" in w, fname
-        # переключатель: режим, перерисовка только шапки, клик по иконке
+        # чередование: первый показ ближайшие, дальше режим инвертируется
         assert "var headMode='nearest';" in w, fname
         assert "function refreshHeader(){" in w, fname
         assert "(headMode==='confirmed')?summaryConfirmed(hTimes,hWdg,hRaw,hIdx):buildSummary(hTimes,hWdg,hRaw,hIdx)" in w, fname
-        assert "addEventListener('click',toggleHead)" in w, fname
-        # аффорданс: курсор и подсказка с названием обоих режимов
-        assert ".city .cico{font-size:18px;line-height:1;vertical-align:-1px;cursor:pointer}" in w, fname
-        # во втором виджете кириллица хранится escape-последовательностями,
-        # поэтому смотрим на расшифрованный текст, а не на исходник
-        un = re.sub(
-            r"\\u([0-9a-fA-F]{4})",
-            lambda m: chr(int(m.group(1), 16)),
-            w,
-        )
-        assert "Ближайшие осадки" in un, fname
-        assert "Подтверждённые осадки" in un, fname
+        assert "if(hTimes!==null)headMode=(headMode==='confirmed')?'nearest':'confirmed';" in w, fname
+        # клик убран: ни слушателя, ни toggleHead, ни курсора, ни подсказки
+        assert "toggleHead" not in w, fname
+        assert "addEventListener('click'" not in w, fname
+        assert "cursor:pointer" not in w, fname
+        assert "querySelector('.cico')" not in w, fname
         # виджеты остаются ES5
         assert "?." not in w and "const " not in w, fname
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "Клик по значку погоды в шапке переключает её между «ближайшими осадками» и «подтверждёнными»" in tpl
+    assert "каждое автообновление" in tpl
+    assert "меняет её на противоположную" in tpl
 
 
 def test_widget_header_wind_arrow_rotates_to_direction():

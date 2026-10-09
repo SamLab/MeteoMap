@@ -31,7 +31,7 @@ body{
   max-width:600px;margin:0;padding:2px 2px 0 2px;
 }
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:6px}
-.city{font-size:13.5px;font-weight:600}.city .cico{font-size:18px;line-height:1;vertical-align:-1px;cursor:pointer}
+.city{font-size:13.5px;font-weight:600}.city .cico{font-size:18px;line-height:1;vertical-align:-1px}
 .updated{font-size:11px;color:var(--muted)}
 .strip{display:flex;gap:2px;padding:2px 0 1px;position:relative}
 .hour{
@@ -259,11 +259,10 @@ function summaryConfirmed(times, data, rawData, idx){
   return rainType+' '+timeStr+' '+stats+conCnt;
 }
 
-// Переключатель шапки: клик по иконке погоды меняет «Ближайшие осадки»
-// (buildSummary, интервал по любым моделям) на «Подтверждённые»
-// (summaryConfirmed, консенсус-интервал) и обратно. Режим живёт в headMode
-// и переживает автообновления; иконка пересоздаётся при каждой перерисовке,
-// поэтому слушатель вешается заново в refreshHeader.
+// Сводка в шапке чередуется при каждом обновлении: «Ближайшие осадки»
+// (buildSummary, интервал по любым моделям) и «Подтверждённые»
+// (summaryConfirmed, консенсус-интервал). Режим живёт в headMode; первый
+// показ — ближайшие, дальше render() меняет его на противоположный.
 var headMode='nearest';
 var hTimes=null,hData=null,hWdg=null,hRaw=null,hIdx=-1;
 function refreshHeader(){
@@ -274,13 +273,7 @@ function refreshHeader(){
   if (sensorTemp) headParts.push(sensorTemp);
   headParts.push(summary);
   cityEl.innerHTML = '<span class="cico">\uD83C\uDF24</span> ' + headParts.join(', ');
-  var cico=cityEl.querySelector('.cico');
-  if(cico){
-    cico.title=(headMode==='confirmed')?'\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u044B\u0435 \u043E\u0441\u0430\u0434\u043A\u0438 \u2014 \u043A\u043B\u0438\u043A: \u0431\u043B\u0438\u0436\u0430\u0439\u0448\u0438\u0435':'\u0411\u043B\u0438\u0436\u0430\u0439\u0448\u0438\u0435 \u043E\u0441\u0430\u0434\u043A\u0438 \u2014 \u043A\u043B\u0438\u043A: \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043D\u043D\u044B\u0435';
-    cico.addEventListener('click',toggleHead);
-  }
 }
-function toggleHead(){headMode=(headMode==='confirmed')?'nearest':'confirmed';refreshHeader();}
 
 function fmtP(v){
   if(v==null) return '\u2014';
@@ -440,6 +433,7 @@ function render(data){
   }
   if (idx < 0) idx = 0;
 
+  if(hTimes!==null)headMode=(headMode==='confirmed')?'nearest':'confirmed';
   hTimes=times;hData=data;hWdg=data.weighted;hRaw=data.models;hIdx=idx;
   refreshHeader();
 
