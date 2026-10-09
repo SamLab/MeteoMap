@@ -1455,8 +1455,9 @@ def test_widget_header_alternates_on_refresh():
     # Сводка в шапке виджета чередуется при каждом обновлении: «ближайшие»
     # (buildSummary, первый в жизни показ) и «подтверждённые» (summaryConfirmed,
     # интервал по консенсусу) — как две строки «Предупреждений» на главной.
-    # Последний показанный режим хранится в localStorage, поэтому и авто-обнов-
-    # ление, и перезагрузка страницы показывают противоположную строку.
+    # Последний показанный режим хранится в localStorage, а если он недоступен
+    # (домашний виджет Web Widget не держит DOM storage) — в cookie, поэтому и
+    # авто-обновление, и перезагрузка показывают противоположную строку.
     # Клик убран: значок не кликабелен (нет cursor:pointer, title и слушателя).
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
@@ -1473,6 +1474,10 @@ def test_widget_header_alternates_on_refresh():
         assert "headMode=pickHeadMode();" in w, fname
         assert "localStorage.getItem(HEAD_MODE_KEY)" in w, fname
         assert "localStorage.setItem(HEAD_MODE_KEY,m)" in w, fname
+        # запасное хранилище — cookie (Web Widget без DOM storage)
+        assert "var HEAD_MODE_COOKIE='" in w, fname
+        assert "document.cookie.match" in w, fname
+        assert "document.cookie=HEAD_MODE_COOKIE+'='" in w, fname
         # клик убран: ни слушателя, ни toggleHead, ни курсора, ни подсказки
         assert "toggleHead" not in w, fname
         assert "addEventListener('click'" not in w, fname
