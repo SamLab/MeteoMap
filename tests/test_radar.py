@@ -581,10 +581,14 @@ def test_wind_warning_uses_model_count_never_model_name():
     assert "function rcLbl(mn,mx){" in tpl
 
 
-def test_warnings_do_not_duplicate_when_nearest_confirmed_coincide():
+def test_warnings_show_nearest_even_when_confirmed_coincide():
+    # Ближайшую строку дождя показываем всегда, даже когда её начало совпало
+    # с подтверждённой (s===c) — условие s!==c убрано. По ветру скрытие
+    # дубля осталось: там совпадающие строки были бы идентичны.
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "if(s>=0&&s!==c" in tpl
+    assert "if(s>=0&&sourceCountAt(s,list,precipMin)>=minProb){" in tpl
+    assert "if(s>=0&&s!==c" not in tpl
     assert "if(g1>=0&&g1!==g2)" in tpl
 
 
