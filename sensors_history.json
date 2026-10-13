@@ -25929,40 +25929,46 @@
       "updated_at": "2026-10-13T03:56:00+03:00"
     },
     "2026-10-13T04:00": {
-      "samples": 6,
+      "samples": 12,
       "stations": {
         "penaty": {
           "temperature_2m": [
-            11.68
+            11.68,
+            11.71
           ]
         },
         "frunze": {
           "temperature_2m": [
+            11.93,
             11.93
           ]
         },
         "east": {
           "temperature_2m": [
+            12.62,
             12.62
           ]
         },
         "yartemp": {
           "temperature_2m": [
-            11.99
+            11.99,
+            12.07
           ]
         },
         "uudl": {
           "temperature_2m": [
+            11.0,
             11.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
+            11.0,
             11.0
           ]
         }
       },
-      "updated_at": "2026-10-13T04:06:00+03:00"
+      "updated_at": "2026-10-13T04:16:00+03:00"
     }
   }
 }
