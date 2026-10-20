@@ -192,7 +192,7 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "if(n>mX)mX=n;" in tpl
     assert "ccCnt>=1?' · '+ccLbl:''" in tpl
     assert "ccCnt>=2?' · '+ccLbl:''" not in tpl
-    assert "if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;" in tpl
+    assert "if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
     assert "'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
@@ -207,7 +207,7 @@ def test_hourstitle_interval_breaks_on_first_dry_hour():
 
 
 def test_consensus_rain_confirmed_by_code_mm_or_prob_in_all_four():
-    consensus = "(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20)"
+    consensus = "(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25)"
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const conAt=i=>{const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return (c!=null&&rainCodesLocal.includes(Number(c)))||" + consensus + ";};" in tpl
@@ -330,7 +330,7 @@ def test_widget_nearest_uses_warnings_rule_and_hides_duplicate():
         bs = w.split("function buildSummary")[1].split("function summaryConfirmed")[0]
         assert "if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;" in bs, fname
         assert "if(code?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;" not in bs, fname
-        assert "for(var j=idx;j<times.length;j++){if(hasRainAt(j)){conStart=j;break;}}" in bs, fname
+        assert "for(var j=idx;j<times.length;j++){if(hasRainAt(j)&&conModelCount(j)>=2){conStart=j;break;}}" in bs, fname
         assert "if(rainHour<0||rainHour===conStart) return summaryConfirmed(times,data,rawData,idx);" in bs, fname
 
 
@@ -344,7 +344,7 @@ def test_hourly_interval_continues_on_consensus_even_if_models_below_threshold()
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
         assert "if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
-        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+        assert "if(hasRainAt(j)&&conModelCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
 
 
 def test_hourstitle_rain_interval():
@@ -490,7 +490,7 @@ def test_d10_title_line_over_days():
 def test_d10_rain_uses_consensus_and_crosses_midnight():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}" in tpl
+    assert "function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}" in tpl
     assert "if(!D.time[i]||!hasRainAt(i))continue;" in tpl
     assert "const endLabel=(eTime==='00ч'&&eDay!==D.time[rainA].slice(0,10))?'00ч':(eDay===D.time[rainA].slice(0,10)?eTime:relDay(eTs)+' '+eTime);" in tpl
     assert "'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+endLabel" in tpl
@@ -595,12 +595,36 @@ def test_warnings_show_nearest_even_when_confirmed_coincide():
 def test_warnings_confirmed_requires_two_models():
     # Подтверждённая строка дождя требует не только взвешенного консенсуса, но
     # и >=2 моделей по тому же критерию. Иначе одна модель с большим весом
-    # вытягивала среднюю вероятность за 20%, и на «подтверждено» стояло
+    # вытягивала среднюю вероятность за порог, и на «подтверждено» стояло
     # «по 1 модели».
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "const consModelAt=i=>{" in tpl
     assert "const isConfirmed=(i,list,pm)=>list===R?(conAt(i)&&consModelAt(i)>=2):sourceCountAt(i,list,pm)>=2;" in tpl
+    # порог вероятности консенсус-критерия — 25% (был 20%) и на странице,
+    # и в подписи «по N-K моделям» у подтверждённой строки
+    assert "const conAt=i=>{const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return (c!=null&&rainCodesLocal.includes(Number(c)))||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);};" in tpl
+    assert "if(RAIN_CODES.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;" in tpl
+
+
+def test_widget_confirmed_requires_two_models_and_threshold_25():
+    # Виджет приведён к тому же правилу, что «Предупреждения»: подтверждённая
+    # строка идёт только там, где консенсус держат >=2 модели (conModelCount),
+    # а порог вероятности консенсус-критерия — 25%. Ближайшее (>=2 модели по
+    # коду/осадкам) не менялось.
+    needle = "if(hasRainAt(j)&&conModelCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;"
+    for fname in ("meteo.html", "meteow.html"):
+        with open(os.path.join(HERE, fname), encoding="utf-8") as f:
+            w = f.read()
+        bs = w.split("function buildSummary")[1].split("function summaryConfirmed")[0]
+        sc = w.split("function summaryConfirmed")[1]
+        assert "function conModelCount(j){" in bs, fname
+        assert "function conModelCount(j){" in sc, fname
+        assert needle in sc, fname
+        assert "pp>25))n++;}return n;" in w, fname
+        assert "pp>20" not in w, fname
+        assert "q>20" not in w, fname
+        assert "if(hasRainAt(j)&&conModelCount(j)>=2){conStart=j;break;}" in bs, fname
 
 
 def test_warnings_frost_column_replaces_thunderstorm():
@@ -1122,7 +1146,7 @@ def test_rain_model_count_uses_min_per_hour():
         assert "var conCnt=conPeak>=2?(' '+rcCnt(conPeak,conMax)):'';" not in w, fname
         assert "if(cn<conPeak)conPeak=cn;" in w, fname
         assert "if(cn>conMax)conMax=cn;" in w, fname
-        assert "if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;" in w, fname
+        assert "if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;" in w, fname
     with open(os.path.join(HERE, "meteo.html"), encoding="utf-8") as f:
         m = f.read()
     assert "function rcCnt(mn,mx){if(mn<1)return '';return mn===mx?mn+'м':mn+'-'+mx+'м';}" in m
@@ -1499,7 +1523,7 @@ def test_widget_header_alternates_on_refresh():
             w = f.read()
         # вторая строка: консенсус-интервал, счётчик по консенсусу
         assert "function summaryConfirmed(times, data, rawData, idx){" in w, fname
-        assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+        assert "if(hasRainAt(j)&&conModelCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
         assert "return rainType+' '+timeStr+' '+stats+conCnt;" in w, fname
         # чередование: режим выбирается с запоминанием в браузере
         assert "var headMode='nearest';" in w, fname

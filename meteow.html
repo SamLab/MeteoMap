@@ -175,16 +175,22 @@ function relDay(d){
 }
 function buildSummary(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
   function modelRainCount(j){
     var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;
+  }
+  // Модели по консенсус-критерию (код, осадки >= 0.1 мм, или вероятность
+  // > 25% без осадков). Подтверждённая строка требует минимум двух таких
+  // моделей — как «Предупреждения» на главной.
+  function conModelCount(j){
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
     if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
   var conStart=-1;
-  for(var j=idx;j<times.length;j++){if(hasRainAt(j)){conStart=j;break;}}
+  for(var j=idx;j<times.length;j++){if(hasRainAt(j)&&conModelCount(j)>=2){conStart=j;break;}}
   if(rainHour<0||rainHour===conStart) return summaryConfirmed(times,data,rawData,idx);
   var fromModels=rainHour>=0&&!hasRainAt(rainHour);
   var sumPr=0,maxPp=0,modelCnt=0;
@@ -196,7 +202,7 @@ function buildSummary(times, data, rawData, idx){
   }
   var peakModels=Infinity,peakMax=-Infinity,conPeak=Infinity,conMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var n=0,cn=0;
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code!=null?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;}
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code!=null?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
     if(n<peakModels)peakModels=n;
     if(n>peakMax)peakMax=n;
     if(cn<conPeak)conPeak=cn;
@@ -225,14 +231,18 @@ function buildSummary(times, data, rawData, idx){
 }
 
 // Вторая строка шапки — «Подтверждённые» — тот же расчёт, но интервал только
-// по консенсусу (все модели согласны), без учёта одиночных моделей. Текст
-// повторяет подтверждённую ветку buildSummary, вместе с её счётчиком conCnt.
+// по консенсусу, поддержанному минимум двумя моделями (как «Предупреждения»
+// на главной). Текст повторяет подтверждённую ветку buildSummary, вместе с её
+// счётчиком conCnt.
 function summaryConfirmed(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>20);}
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+  function conModelCount(j){
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
+  }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
-    if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+    if(hasRainAt(j)&&conModelCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
   if(rainHour<0) return '\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0434\u043D\u044F \u0431\u0435\u0437 \u0434\u043E\u0436\u0434\u044F';
   var sumPr=0,maxPp=0;
@@ -244,7 +254,7 @@ function summaryConfirmed(times, data, rawData, idx){
   }
   var conPeak=Infinity,conMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var cn=0;
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>20))cn++;}
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
     if(cn<conPeak)conPeak=cn;
     if(cn>conMax)conMax=cn;
   }
@@ -365,14 +375,14 @@ var SENSOR_RAIN_CODES = [51,53,55,56,57,61,63,65,66,67,80,81,82];
 function sensorHourWet(data, j){
   // Идут ли в час j осадки по консенсусу. Пороги те же, что в сводке по
   // дождю и на главной странице: дождевой код, либо не меньше 0.1 мм,
-  // либо (когда осадков по сумме нет) вероятность выше 20%.
+  // либо (когда осадков по сумме нет) вероятность выше 25%.
   var w = data.weighted || {};
   var c = w.weather_code ? w.weather_code[j] : null;
   var p = w.precipitation ? w.precipitation[j] : null;
   var q = w.precipitation_probability ? w.precipitation_probability[j] : null;
   return (c!=null && SENSOR_RAIN_CODES.indexOf(Math.round(c))>=0) ||
          (p!=null && p>=0.1) ||
-         ((p==null || p<0.1) && q!=null && q>20);
+         ((p==null || p<0.1) && q!=null && q>25);
 }
 
 function sensorShowsMean(data, j){
