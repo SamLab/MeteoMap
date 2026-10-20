@@ -1354,3 +1354,79 @@ def test_widget_nearest_starts_from_a_single_model(tmp_path):
         assert lines, (fname, out.stdout[-500:])
         summary = lines[-1][len("SUMMARY:"):]
         assert "Небольшой дождь 10ч-13ч" in summary, (fname, summary)
+
+
+def _page_wet_span_source():
+    """Вырезает из страницы чистые функции диапазона, чтобы прогнать их в node.
+
+    `wetSpan`/`wetVal` не зависят ни от DOM, ни от Chart.js — их можно взять
+    текстом и исполнить с подставленным `D`, вместо того чтобы проверять
+    формат строки поиском подстроки.
+    """
+    html = read_template()
+    lines = html.splitlines()
+
+    def one_line(prefix):
+        for ln in lines:
+            if ln.strip().startswith(prefix):
+                return ln.strip()
+        raise AssertionError("не найдено: " + prefix)
+
+    start = None
+    for i, ln in enumerate(lines):
+        if ln.strip().startswith("const wetSpan=(a,b)=>{"):
+            start = i
+            break
+    assert start is not None, "wetSpan не найден"
+    end = None
+    for i in range(start, len(lines)):
+        if lines[i].strip() == "};":
+            end = i
+            break
+    assert end is not None, "конец wetSpan не найден"
+    return "\n".join([
+        one_line("const fmtP=v=>"),
+        one_line("const num=v=>"),
+        one_line("const wetRng="),
+        one_line("const wetVal="),
+        "\n".join(lines[start:end + 1]),
+    ])
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_warnings_span_shows_ranges_min_to_max(tmp_path):
+    """В «Предупреждениях» мм и % — диапазон по часам интервала, а не сумма/максимум.
+
+    Раньше строка показывала сумму осадков за интервал и максимум вероятности,
+    из-за чего «на 1.8мм с 11%» не говорило, что в каком-то часу осадков может
+    не быть вовсе, а максимум вероятности мог стоять в часу без осадков. Теперь
+    и мм, и % идут как минимум-максимум: если минимум совпал с максимумом —
+    одно число, нулевой максимум по мм (консенсус сухой) блок «мм» не рисует,
+    а часы без данных в диапазон не попадают.
+    """
+    js = tmp_path / "warn_span.js"
+    js.write_text(
+        "const code=" + json.dumps(_page_wet_span_source()) + ";\n"
+        "const D={weighted:{\n"
+        "  precipitation:[0.3,0.4,1.5,0.4,0,0,0,0,0,0,0.1,0.5,0.2,0.3,null,null],\n"
+        "  precipitation_probability:[4,7,11,7,0,0,6,8,11,8,8,8,null,null,10,20]}};\n"
+        "const f=new Function('D',code+'\\nreturn {wetSpan:wetSpan};')(D);\n"
+        "console.log(JSON.stringify({\n"
+        "  range:f.wetSpan(0,2),\n"
+        "  single:f.wetSpan(3,3),\n"
+        "  zeroMm:f.wetSpan(6,8),\n"
+        "  zeroInside:f.wetSpan(9,11),\n"
+        "  noProb:f.wetSpan(12,13),\n"
+        "  noMm:f.wetSpan(14,15)}));\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(["node", str(js)], capture_output=True, text=True,
+                         timeout=60, encoding="utf-8", errors="replace")
+    assert out.returncode == 0, (out.stdout[-500:], out.stderr[-500:])
+    got = json.loads(out.stdout.strip().splitlines()[-1])
+    assert got["range"] == " на 0.3-1.5мм с 4-11%", got
+    assert got["single"] == " на 0.4мм с 7%", got
+    assert got["zeroMm"] == " с 6-11%", got
+    assert got["zeroInside"] == " на 0-0.5мм с 8%", got
+    assert got["noProb"] == " на 0.2-0.3мм", got
+    assert got["noMm"] == " с 10-20%", got

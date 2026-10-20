@@ -195,7 +195,16 @@ const isConfirmed=(i,list,pm)=>list===R?(conAt(i)&&consModelAt(i)>=2):sourceCoun
 данных, день отсекается только границей данных» отменено
 (`test_hourstitle_search_limited_to_today`).
 
-Тесты: `test_hourstitle_interval_requires_two_models_and_breaks_on_first_dry_hour`,
+Строки дождя в «Предупреждениях» показывают осадки и вероятность **диапазоном по
+часам интервала** (минимум-максимум, при равенстве — одно число) вместо суммы
+осадков и максимума вероятности: `wetSpan`/`wetVal` больше не складывают мм,
+поэтому строка читается «на 0.3-1.5мм с 4-11%». Нулевой максимум по осадкам
+(консенсус сухой во всех часах интервала) блок «мм» не рисует, а часы без данных
+в диапазон не попадают. Виджет и «По часам» сохранили прежний формат (сумма мм,
+максимум %). Мёртвая обёртка `wet(i)` удалена.
+
+Тесты: `test_render.py::test_warnings_span_shows_ranges_min_to_max` (поведенческий,
+node), `test_hourstitle_interval_requires_two_models_and_breaks_on_first_dry_hour`,
 `test_warnings_nearest_row_uses_one_model_threshold_and_first_dry_boundary`,
 `test_widget_interval_breaks_on_first_dry_hour`,
 `test_widget_nearest_uses_one_model_while_confirmed_needs_consensus`,

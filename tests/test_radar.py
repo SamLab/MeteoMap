@@ -691,7 +691,7 @@ def test_warnings_precip_column_wider_than_wind():
         tpl = f.read()
     assert "const fmtP=v=>" in tpl
     assert "Math.round(v*100)/100" in tpl
-    assert "fmtP(pr)+'мм'" in tpl
+    assert "fmtP(pr)+'мм</div>'" in tpl
     assert "fmtP(x.pr))+'мм / '" in tpl
     assert "fmtP(prSum)+' мм'" in tpl
 
