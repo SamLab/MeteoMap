@@ -1286,3 +1286,71 @@ def test_last_sensor_hour_label_falls_back_to_bucket_hour():
     assert "||D.time[j]" in body, "нужен запасной вариант на ключ бакета часа"
     # Подпись не должна превратиться в «null» или «undefined»
     assert "String(stamp" not in body
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_widget_nearest_starts_from_a_single_model(tmp_path):
+    """«Ближайшее» в виджете стартует уже с одной модели, а не с двух.
+
+    Пользователь убрал у ближайшей строки порог «>=2 модели»: и на странице, и
+    в шапке виджета ближайшее — первый час, где дождь даёт хотя бы одна модель
+    (дождевой код или осадки >= 0.1 мм; вероятность не смотрится). В пробе час
+    10:00 даёт одна модель, вторая подключается к 11:00: ближайшее обязано
+    начаться в 10:00, тогда как подтверждённая строка осталась бы с 11:00.
+    """
+    probe = (
+        "var times=[new Date('2026-10-05T08:00:00'),new Date('2026-10-05T09:00:00'),\n"
+        "  new Date('2026-10-05T10:00:00'),new Date('2026-10-05T11:00:00'),\n"
+        "  new Date('2026-10-05T12:00:00'),new Date('2026-10-05T13:00:00')];\n"
+        "var data={weather_code:[0,0,61,61,61,61],\n"
+        "  precipitation:[0,0,0.3,0.3,0.3,0.3],\n"
+        "  precipitation_probability:[0,0,80,80,80,80]};\n"
+        "var rawData={a:{weather_code:[0,0,61,61,61,61]},\n"
+        "  b:{weather_code:[0,0,0,61,61,61]}};\n"
+        "console.log('SUMMARY:'+buildSummary(times,data,rawData,0));\n"
+        "process.exit(0);\n"
+    )
+    driver = (
+        "const fs=require('fs');\n"
+        "const src=fs.readFileSync(process.argv[2],'utf8');\n"
+        "let body=src.slice(src.indexOf('<script>')+8, src.lastIndexOf('</script>'));\n"
+        # buildSummary живёт внутри IIFE — пробу вставляем до её закрытия
+        "const k=body.lastIndexOf('})();');\n"
+        "body=body.slice(0,k)+" + json.dumps(probe) + "+'\\n'+body.slice(k);\n"
+        "const NODES={};\n"
+        "function stub(id){return {id:id,innerHTML:'',textContent:'',style:{},\n"
+        "  classList:{add:function(){},remove:function(){}},\n"
+        "  insertAdjacentHTML:function(){},appendChild:function(){},\n"
+        "  setAttribute:function(){},getAttribute:function(){return null;},\n"
+        "  addEventListener:function(){},querySelector:function(){return null;},\n"
+        "  querySelectorAll:function(){return [];}};}\n"
+        "function node(id){if(!NODES[id])NODES[id]=stub(id);return NODES[id];}\n"
+        "global.document={getElementById:node,\n"
+        "  querySelector:function(){return stub('q');},\n"
+        "  querySelectorAll:function(){return [];},\n"
+        "  createElement:function(){return stub('new');},\n"
+        "  addEventListener:function(){},hidden:false,\n"
+        "  documentElement:stub('html'),body:stub('body')};\n"
+        "global.window=global;\n"
+        "global.location={href:'https://example.invalid/',search:'',protocol:'https:'};\n"
+        "global.navigator={userAgent:'node'};\n"
+        "global.Intl=Intl;\n"
+        # fetch висит вечно: load() не завершается и не мешает пробе
+        "global.fetch=function(){return new Promise(function(){});};\n"
+        "try{(new Function(body))();}\n"
+        "catch(e){console.log('ERR '+e.message);process.exit(1);}\n"
+        "process.exit(0);\n"
+    )
+    js = tmp_path / "widget_nearest_once.js"
+    js.write_text(driver, encoding="utf-8")
+    for fname in ("meteo.html", "meteow.html"):
+        out = subprocess.run(
+            ["node", str(js), os.path.join(HERE, fname)],
+            capture_output=True, text=True, timeout=60,
+            encoding="utf-8", errors="replace",
+        )
+        assert out.returncode == 0, (fname, out.stdout[-500:], out.stderr[-500:])
+        lines = [x for x in out.stdout.splitlines() if x.startswith("SUMMARY:")]
+        assert lines, (fname, out.stdout[-500:])
+        summary = lines[-1][len("SUMMARY:"):]
+        assert "Небольшой дождь 10ч-13ч" in summary, (fname, summary)

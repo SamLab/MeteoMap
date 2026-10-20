@@ -82,10 +82,11 @@ def test_hours_title_uses_remaining_today_window():
     assert "const start=curIdx;" in tpl
     # окно «по часам» считает от текущего часа включительно — цифры совпадают с виджетом и предупреждениями
     assert "const hs=Math.min(curIdx,D.time.length-1);" in tpl
-    assert "const isToday=j=>D.time[j]&&j>=hs;" in tpl
-    assert "isToday=j=>D.time[j]&&D.time[j].slice(0,10)===today&&j>=hs" not in tpl
+    # сводка — только на сегодня: часы за полночь в интервал не берутся
+    assert "const dayStr=D.time[hs]?D.time[hs].slice(0,10):'';" in tpl
+    assert "const isToday=j=>D.time[j]&&j>=hs&&D.time[j].slice(0,10)===dayStr;" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
-    assert "th.textContent=(rainHour>=0?'':'Остаток дня ')+parts.join(', ')" in tpl
+    assert "th.textContent='Сегодня — '+parts.join(', ');" in tpl
 
 
 def test_compare_rows_highlight_day_max_min():
@@ -195,14 +196,21 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;" in tpl
     assert "на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%" in tpl
     assert "rainHour>=0?'Далее '" not in tpl
-    assert "'Сегодня — Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
+    assert "'Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+" in tpl
+    assert "'Сегодня — Подтвержденного дождя нет" not in tpl
     assert "Сегодня подтвержденного дождя нет" not in tpl
 
 
-def test_hourstitle_interval_breaks_on_first_dry_hour():
+def test_hourstitle_interval_requires_two_models_and_breaks_on_first_dry_hour():
+    # «По часам» переведено на строгое правило ближайшего из «Предупреждений»:
+    # интервал — первый непрерывный эпизод, где >= 2 модели дают дождь
+    # (дождевой код или осадки >= 0.1 мм; вероятность не смотрится), и тянется,
+    # пока в каждом следующем часу >= 2 модели дают дождь. Консенсусный
+    # fallback остаётся для остатка дня, где двух моделей нет ни в одном часу.
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    assert "if(sourceCountAt(j,rainCodes,0.1)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" not in tpl
     assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
 
 
@@ -294,13 +302,14 @@ def test_tomorrow_23h_interval_with_00h_edge_keeps_day():
 
 
 def test_widget_interval_breaks_on_first_dry_hour():
-    # Ближайший эпизод — как в «Предупреждениях»: первый час, где >=2 модели
-    # дают дождь (код из дождливых или осадки >= 0.1 мм, вероятность не
-    # учитывается); интервал рвётся на первом часу, где моделей меньше двух.
+    # Виджетовое «ближайшее» ослаблено до одной модели — как ближайшее в
+    # «Предупреждениях» на странице: первый час, где дождь даёт хотя бы одна
+    # модель (дождевой код или осадки >= 0.1 мм; вероятность не смотрится);
+    # интервал рвётся на первом часу, где дождя нет ни у одной модели.
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
-        assert "if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+        assert "if(modelRainCount(j)>=1){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
 
 
 def test_widget_summary_prefers_nearest_rain_not_later_confirmed():
@@ -334,16 +343,16 @@ def test_widget_nearest_uses_warnings_rule_and_hides_duplicate():
         assert "if(rainHour<0||rainHour===conStart) return summaryConfirmed(times,data,rawData,idx);" in bs, fname
 
 
-def test_hourly_interval_continues_on_consensus_even_if_models_below_threshold():
+def test_widget_nearest_uses_one_model_while_confirmed_needs_consensus():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
-    # виджет: ближайшее теперь по >=2 моделям (как «Предупреждения»), а
+    # виджет: ближайшее с одной модели (как ближайшее в «Предупреждениях»), а
     # продолжение интервала по консенсусу живёт в подтверждённой строке.
     for fname in ("meteo.html", "meteow.html"):
         with open(os.path.join(HERE, fname), encoding="utf-8") as f:
             w = f.read()
-        assert "if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
+        assert "if(modelRainCount(j)>=1){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
         assert "if(hasRainAt(j)&&conModelCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in w, fname
 
 
@@ -371,14 +380,28 @@ def test_hourstitle_includes_current_hour_when_raining():
     assert tpl.count("if(!inWin(j))continue;") >= 2
 
 
-def test_hourstitle_search_not_limited_to_today():
+def test_hourstitle_search_limited_to_today():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    # эпизод ищется от curIdx до конца данных; день отсекается только границей данных, не календарём
-    assert "const isToday=j=>D.time[j]&&j>=hs;" in tpl
+    # эпизод ищется от curIdx и обрывается на границе СЕГОДНЯШНЕГО дня: сводка
+    # не заходит за полночь, поэтому «Сегодня — …» всегда описывает только
+    # сегодня, а завтрашний дождь в заголовке не показывается.
+    assert "const isToday=j=>D.time[j]&&j>=hs&&D.time[j].slice(0,10)===dayStr;" in tpl
+    assert "const isToday=j=>D.time[j]&&j>=hs;" not in tpl
     assert "const inWin=j=>j>=ws&&D.time[j];" in tpl
-    assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
-    assert "enDay!==today" not in tpl
+    assert "th.textContent='Сегодня — '+parts.join(', ');" in tpl
+
+
+def test_hourstitle_always_prefixed_with_today():
+    # «Сегодня — » ставится один раз на всю строку, включая сухой случай
+    # «Сегодня — Остаток дня без дождя»; в ветке «Вероятны Осадки» префикс
+    # больше не дублируется.
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "th.textContent='Сегодня — '+parts.join(', ');" in tpl
+    assert "'Сегодня — Подтвержденного дождя нет" not in tpl
+    assert "parts.push('Остаток дня без дождя')" in tpl
+    assert "parts.push('без дождя')" not in tpl
 
 
 def test_rain_intensity_helper_by_wmo_code_removed():
@@ -522,10 +545,14 @@ def test_cmp_row_highlight_uses_consensus_not_model_extreme():
     assert "Math.max(...nums),mn=Math.min(...nums)" not in tpl
 
 
-def test_warnings_nearest_row_uses_two_model_threshold_and_first_dry_boundary():
+def test_warnings_nearest_row_uses_one_model_threshold_and_first_dry_boundary():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" in tpl
+    # ближайшее в «Предупреждениях» — с одной модели: порог строки (minProb) и
+    # порог продолжения интервала совпадают, жёстких «двух моделей» больше нет.
+    assert "if(sourceCountAt(k,list,precipMin)<minProb)break;sE=k;" in tpl
+    assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" not in tpl
+    assert "'Вероятен','Дождь',1,'wcol-precip')" in tpl
     assert "sourceList(s,list,precipMin)" not in tpl
     assert "const R=rainModelRange(s,sE);const sLabel=R.mn>=1?'по '+rcLbl(R.mn,R.mx):''" in tpl
     assert "endLabel(ts[Math.min(sE+1,ts.length-1)]," in tpl
@@ -806,10 +833,10 @@ def test_weather_now_parameter_table_with_sun_and_rain():
 def test_hours_title_has_rain_only():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "parts.push('без дождя')" in tpl
+    assert "parts.push('Остаток дня без дождя')" in tpl
     assert "const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);" in tpl
-    assert "'Остаток дня '" in tpl
+    assert "th.textContent='Сегодня — '+parts.join(', ');" in tpl
     assert "tiMax" not in tpl
     assert "tiMin" not in tpl
 

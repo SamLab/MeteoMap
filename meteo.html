@@ -225,7 +225,7 @@ function buildSummary(times, data, rawData, idx){
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
-    if(modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+    if(modelRainCount(j)>=1){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
   var conStart=-1;
   for(var j=idx;j<times.length;j++){if(hasRainAt(j)&&conModelCount(j)>=2){conStart=j;break;}}
