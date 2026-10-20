@@ -217,7 +217,7 @@ a{color:var(--accent)}
       <li><b>По часам</b> — ближайшие 48 часов; заливка на графике — облачность и дождь. Подсчёт дождя: код погоды из «дождевых» (есть) → осадки ≥ 0.1 мм (нет кода) → вероятность осадков &gt; 33% (нет кода и осадков).</li>
       <li><b>Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с). Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу. В строке ветра указывается число моделей («по 1 модели»), а не название модели: так все предупреждения читаются одинаково и не зависят от того, какая именно модель попалась первой. Дождь: ближайшее — первый час, где хотя бы одна модель даёт дождь (дождевой код или осадки ≥ 0.1 мм); интервал тянется непрерывно, пока дождь даёт хотя бы одна модель. Подтверждённое — консенсус (дождевой код, или осадки ≥ 0.1 мм, или осадки &lt; 0.1 мм с вероятностью &gt; 25%), поддержанный ещё и ≥ 2 моделями по тому же критерию: от первого такого часа до последнего непрерывного. Ближайшая строка показывается всегда, даже если её интервал совпал с подтверждённым. Если дождь идёт прямо сейчас — строка «до 16ч» («до» — час после последнего подтверждённого дождливого часа) с консенсусными значениями; для будущих периодов — «с 08ч до 09ч» (сегодня, без названия дня) или «Завтра с 08ч до 10ч» (для других дней впереди название дня). В строках дождя «по N-K моделям» — диапазон (минимум-максимум по часам) числа моделей с дождём в каком-то часу интервала (модель даёт дождь по строгому критерию: дождевой код, или осадки ≥ 0.1 мм, или отсутствие кода с вероятностью &gt; 33%; для подтверждённой строки — по консенсусу: дождевой код, или осадки ≥ 0.1 мм, или отсутствие кода с вероятностью &gt; 25%; при 0 не показывается). Осадки и вероятность в строке дождя — тоже диапазон по часам интервала (минимум-максимум; при равенстве — одно число), а не сумма за интервал: нулевой минимум виден как «0-1.5мм», а если консенсус сухой во всех часах интервала, осадки не показываются. Возможный минимум — абсолютный минимум среди всех моделей за весь прогноз. Заморозки (жирным) — интервал, где консенсус ≤ 0 °C. Без данных — «Заморозков в ближайшие дни не ожидается».</li>
       <li><b>На 16 дней</b> — день, погода, температура, осадки, облачность.</li>
-      <li><b>Подробно на 16 дней</b> — почасовый прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Восход/закат и долгота дня.</li>
+      <li><b>Подробно на 16 дней</b> — почасовой прогноз с шагом 2 часа на каждый день: погода, температура, ветер, осадки. Фоном ленты идёт облачность (как в «По часам»), а осадки показывает столбик снизу ячейки. Восход/закат и долгота дня.</li>
       <li>Заголовок «По часам» — сводка по дождю на сегодня (часы за полночь не берутся), всегда с «Сегодня — »; дождя на сегодня нет — «Сегодня — Остаток дня без дождя». Сначала дождь ищется по моделям: первый час, где ≥ 2 модели дают дождевой код или осадки ≥ 0.1 мм (вероятность не смотрится), и непрерывная серия, пока таких моделей не меньше двух. Если такого дождя на сегодня нет, берётся консенсус (дождевой код, или осадки ≥ 0.1 мм, или осадки &lt; 0.1 мм с вероятностью &gt; 25%) («Подтвержденного дождя нет, но по N-K моделям (диапазон числа моделей по часам интервала) вероятны Осадки …»). Интервал — непрерывная серия дождливых часов от первого; при первом «сухом» часу — обрыв. «до Nч» — час после последнего дождливого часа интервала. Если дождь идёт сейчас — начало не указывается («до 14ч»).</li>
     </ul>
     <h2>Графики</h2>
@@ -663,6 +663,24 @@ function buildWeatherNow(){
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' rng">'+c.mx+'</td>').join('')+'</tr>'+
     '<tr>'+cells.map((c,i)=>'<td class="wcol'+i+' rng">'+c.mn+'</td>').join('')+'</tr></table></div></div>';
 }
+// Фон ленты часов: облачность заливкой сверху, дождь — снизу. left — сдвиг до
+// первой ячейки (в «Подробно» перед ними колонка-сводка дня .hour.hsum, 104px),
+// rain=false — заливку дождя не рисуем: там дождь показывает столбик .hprc.
+function hourLayer(idx,left,w,rain){
+  const cc=[],pr=[];
+  for(let hi=0;hi<idx.length;hi++){
+    const j=idx[hi];
+    const c=D.weighted.cloud_cover?.[j];
+    const r=D.weighted.precipitation?.[j];
+    const x=hi/idx.length*100;
+    if(c!=null)cc.push(x.toFixed(2)+','+(c).toFixed(1));
+    if(r!=null)pr.push(x.toFixed(2)+','+((1-Math.min(1,r/5))*100).toFixed(1));
+  }
+  let hb='';
+  if(cc.length>=2)hb+='<polygon points="'+cc.join(' ')+' 100,0 0,0" class="d10ccf"/>';
+  if(rain&&pr.length>=2)hb+='<polygon points="'+pr.join(' ')+' 100,100 0,100" class="d10prf"/>';
+  return hb?'<svg class="hbg" style="left:'+left+'px;width:'+w+'px" viewBox="0 0 100 100" preserveAspectRatio="none">'+hb+'</svg>':'';
+}
 function buildWeatherHours(){
   const w=D.weighted;
   const start=curIdx;
@@ -753,19 +771,10 @@ function buildWeatherHours(){
         '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div></div>';
     }).join('');
   const hN=Math.min(48,D.time.length-start);
-  const cc=[],pr=[];
-  for(let hi=0;hi<hN;hi++){
-    const j=start+hi;
-    const c=w.cloud_cover?.[j];
-    const r=w.precipitation?.[j];
-    const x=(hi)/hN*100;
-    if(c!=null)cc.push(x.toFixed(2)+','+(c/100*100).toFixed(1));
-    if(r!=null)pr.push(x.toFixed(2)+','+((1-Math.min(1,r/5))*100).toFixed(1));
-  }
-  let hb='';
-  if(cc.length>=2)hb+='<polygon points="'+cc.join(' ')+' 100,0 0,0" class="d10ccf"/>';
-  if(pr.length>=2)hb+='<polygon points="'+pr.join(' ')+' 100,100 0,100" class="d10prf"/>';
-  if(hb)hsel.insertAdjacentHTML('afterbegin','<svg class="hbg" style="width:'+(hN*64)+'px" viewBox="0 0 100 100" preserveAspectRatio="none">'+hb+'</svg>');
+  const hrIdx=[];
+  for(let hi=0;hi<hN;hi++)hrIdx.push(start+hi);
+  const lay=hourLayer(hrIdx,0,hN*64,true);
+  if(lay)hsel.insertAdjacentHTML('afterbegin',lay);
 }
 function buildWeather16Title(){
   const dt=D.daily_time||[];
@@ -982,11 +991,12 @@ function buildWeatherDetail(){
       const ms=new Date(D.daily.sunset[di])-new Date(D.daily.sunrise[di]);
       if(!isNaN(ms))dl=Math.floor(ms/3600000)+' ч '+Math.round((ms%3600000)/60000)+' мин';
     }
-    const blocks=[];
+    const blocks=[];const hIdx=[];
     for(let h=0;h<24;h+=2){
       const hh=String(h).padStart(2,'0')+'ч';
       const j=D.time.findIndex(t=>t.slice(0,10)===day&&t.slice(11,13)===hh.slice(0,2));
       if(j<0)continue;
+      hIdx.push(j);
       const [wtext,we]=wcode(w.weather_code?.[j]);
       const pp=w.precipitation_probability?.[j];
       const pr=w.precipitation?.[j];
@@ -999,6 +1009,8 @@ function buildWeatherDetail(){
         '<div class="hpp">'+(pp>0||pr>0?'<div>'+num(pp)+'%</div><div>'+fmtP(pr)+'мм</div>':'&nbsp;')+'</div>'+
         '<div class="hprc" style="height:'+(pr>0?Math.min(100,Math.round(pr/5*100)):0)+'%"></div></div>');
     }
+    // колонка-сводка дня занимает 104px, дальше — ячейки по 64px
+    const lay=hourLayer(hIdx,104,hIdx.length*64,false);
     const tmin=aggPart(day,'00','24','temperature_2m','min');
     const tmax=aggPart(day,'00','24','temperature_2m','max');
     const psum=aggPart(day,'00','24','precipitation','sum');
@@ -1026,7 +1038,7 @@ function buildWeatherDetail(){
       '<div class="sunl">Закат</div><div class="sunv">'+ss+'</div>'+
       '<div class="sunl">Долгота</div><div class="sunv">'+dl+'</div>'+
       '</div>';
-    return '<div class="hours">'+sumCol+blocks.join('')+sunCol+'</div>';
+    return '<div class="hours">'+lay+sumCol+blocks.join('')+sunCol+'</div>';
   }).join('');
 }
 

@@ -1430,3 +1430,62 @@ def test_warnings_span_shows_ranges_min_to_max(tmp_path):
     assert got["zeroInside"] == " на 0-0.5мм с 8%", got
     assert got["noProb"] == " на 0.2-0.3мм", got
     assert got["noMm"] == " с 10-20%", got
+
+
+def _page_function(name):
+    """Возвращает исходник функции страницы по имени (с балансировкой скобок)."""
+    html = read_template()
+    i = html.find("function " + name + "(")
+    assert i >= 0, "не найдено: function " + name
+    j = html.find("{", i)
+    depth = 0
+    k = j
+    while k < len(html):
+        if html[k] == "{":
+            depth += 1
+        elif html[k] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        k += 1
+    assert depth == 0, "не закрылась: function " + name
+    return html[i:k + 1]
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_hour_layer_builds_cloud_fill_with_offset(tmp_path):
+    """Фоновый слой ленты — общий для «По часам» и «Подробно на 16 дней».
+
+    «Подробно на 16 дней» собиралось из тех же ячеек `.hour`, но фоновый
+    svg ему не строили: облачность там видна только цифрой, заливки нет (в
+    «По часам», «На 16 дней» и виджете — есть). Слой должен сам нести сдвиг,
+    потому что в подробной ленте перед ячейками стоит колонка-сводка дня
+    (`.hour.hsum`, 104px), и без сдвига заливка накрыла бы её.
+    """
+    js = tmp_path / "hour_layer.js"
+    js.write_text(
+        "const D={weighted:{cloud_cover:[90,0,45,10,20,30],\n"
+        "  precipitation:[0,0.5,0,0,0,0]}};\n"
+        "const hourLayer=new Function('D'," + json.dumps(_page_function("hourLayer")) +
+        "+'\\nreturn hourLayer;')(D);\n"
+        "console.log(JSON.stringify({\n"
+        "  cloud:hourLayer([0,1,2],104,192,false),\n"
+        "  rain:hourLayer([0,1,2],104,192,true),\n"
+        "  one:hourLayer([0],104,64,true)}));\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(["node", str(js)], capture_output=True, text=True,
+                         timeout=60, encoding="utf-8", errors="replace")
+    assert out.returncode == 0, (out.stdout[-500:], out.stderr[-500:])
+    got = json.loads(out.stdout.strip().splitlines()[-1])
+    assert got["cloud"] == (
+        '<svg class="hbg" style="left:104px;width:192px" '
+        'viewBox="0 0 100 100" preserveAspectRatio="none">'
+        '<polygon points="0.00,90.0 33.33,0.0 66.67,45.0 100,0 0,0" '
+        'class="d10ccf"/></svg>'
+    ), got["cloud"]
+    # дождь в подробной ленте рисует столбик .hprc, поэтому заливка дождя там не нужна
+    assert "d10prf" not in got["cloud"], got["cloud"]
+    assert "d10prf" in got["rain"], got["rain"]
+    # одной точки мало для полигона — фон не рисуется вовсе
+    assert got["one"] == "", got["one"]

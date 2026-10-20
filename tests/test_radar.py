@@ -852,17 +852,29 @@ def test_hour_ribbon_no_precip_rects():
         tpl = f.read()
     assert ".hour{flex:none;width:64px;text-align:center;font-size:12px;padding:4px 2px;border-right:1px solid var(--line);position:relative;overflow:hidden;z-index:1}" in tpl
     assert ".hours .hbg{position:absolute;left:0;top:0;height:100%;pointer-events:none;z-index:0;overflow:hidden}" in tpl
-    assert "hsel.insertAdjacentHTML('afterbegin','<svg class=\"hbg\"" in tpl
-    assert "(hN*64)+'px\"" in tpl
+    assert "if(lay)hsel.insertAdjacentHTML('afterbegin',lay);" in tpl
+    assert "hourLayer(hrIdx,0,hN*64,true)" in tpl
     # в почасовой ленте осадки рисует только график-заливка, прямоугольники убраны;
-    # .hprc остался лишь в детальных строках «Подробно», где графика нет
+    # .hprc остался лишь в детальных строках «Подробно» — там дождь столбиком,
+    # а фоном идёт одна облачность
     assert ".hour .hprc{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(#b3e5fc,#4fc3f7);opacity:.45;pointer-events:none}" in tpl
     assert ".hour .ht,.hour .he,.hour .htemp,.hour .hwnd,.hour .hpp{position:relative}" in tpl
     assert tpl.count('class="hprc"') == 1
     assert "class=\"hcl\"" not in tpl
-    assert "const x=(hi)/hN*100;" in tpl
+    assert "const x=hi/idx.length*100;" in tpl
     assert "(hi+0.5)" not in tpl
     assert "Math.min(100,Math.round(pr/5*100))" in tpl
+
+
+def test_detail_ribbon_gets_cloud_fill_after_summary_column():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # «Подробно на 16 дней» собирается из тех же ячеек .hour, что и лента
+    # «По часам», поэтому фоновый слой нужен и там; 104px — ширина колонки-сводки
+    # дня (.hour.hsum), иначе облачная заливка накрыла бы её.
+    assert "const lay=hourLayer(hIdx,104,hIdx.length*64,false);" in tpl
+    assert "return '<div class=\"hours\">'+lay+sumCol+blocks.join('')+sunCol+'</div>';" in tpl
+    assert "hIdx.push(j);" in tpl
 
 
 def test_d10_unified_cloud_rain_graph():
@@ -1212,7 +1224,7 @@ def test_day_verdict_removed_completely():
     assert "verdictCol" not in tpl
     # блок «Сейчас» вернулся к таблице без вердикта; 16 дней — столбцы без вердикта
     assert "'<div class=\"wdet\"><table class=\"wnowtbl\"><tr>'" in tpl
-    assert "'<div class=\"hours\">'+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
+    assert "'<div class=\"hours\">'+lay+sumCol+blocks.join('')+sunCol+'</div>'" in tpl
 
 
 def test_current_hour_uses_city_timezone():
