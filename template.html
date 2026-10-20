@@ -1116,7 +1116,7 @@ function buildWarnings(){
   const findCon=(list,pm)=>{for(let i=from;i<ts.length;i++){if(isConfirmed(i,list,pm))return i;}return -1;};
   const tstr=i=>{const d=new Date(ts[i]);return '<span class="tlu">'+relDay(ts[i].slice(0,10))+' в '+ts[i].slice(11,13)+'ч</span>';};
   // Диапазон по часам интервала: «0.3-1.5», «6-11», а при равенстве — одно число.
-  const wetRng=(mn,mx,f)=>mn===null?'':(mn===mx?''+f(mn):f(mn)+'-'+f(mx));
+  const wetRng=(mn,mx,f)=>{if(mn===null)return '';const a=''+f(mn),b=''+f(mx);return a===b?a:a+'-'+b;};
   const wetVal=(prMn,prMx,ppMn,ppMx)=>(prMx?' на '+wetRng(prMn,prMx,fmtP)+'мм':'')+(ppMx?' с '+wetRng(ppMn,ppMx,num)+'%':'');
   const wetSpan=(a,b)=>{
     let prMn=null,prMx=null,ppMn=null,ppMx=null;
@@ -1206,11 +1206,6 @@ function setVar(v){
   d.datasets=cc.map((c,i)=>({label:names[c],data:(D.models[c]?D.models[c][v]:[])||[],borderColor:modelColor(i),borderWidth:1,pointRadius:0,tension:0.2,spanGaps:false}));
   d.datasets.push({label:'Консенсус',data:(D.weighted[v]||[]).map(x=>x),borderColor:'#e09b00',borderWidth:3,pointRadius:0,tension:0.2});
   d.datasets.push({label:'Среднее',data:(D.mean[v]||[]).map(x=>x),borderColor:'#2563eb',borderWidth:2,borderDash:[6,4],pointRadius:0,tension:0.2});
-  if(v==='precipitation'){
-    d.datasets.push({label:'Вероятность осадков (%)',data:(D.weighted.precipitation_probability||[]).map(x=>x),borderColor:'#0891b2',borderWidth:2,borderDash:[2,2],pointRadius:0,yAxisID:'y1'});
-  }else{
-    d.datasets=d.datasets.filter(ds=>ds.label!=='Вероятность осадков (%)');
-  }
   mainChart.options.scales.y.title.text=VAR_NAMES[v];
   mainChart.options.scales.y.title.display=true;
   mainChart.options.scales.y.beginAtZero=(v==='precipitation');
@@ -1288,8 +1283,7 @@ function makeMainChart(){
     responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},layout:{padding:{top:26}},
     scales:{
       x:{afterBuildTicks:hourTicks,ticks:{color:'#5c6579',maxRotation:0,autoSkip:false,callback:hourLabel},grid:{color:'#dde2ed'}},
-      y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'},title:{display:false,text:''}},
-      y1:{position:'right',min:0,max:100,ticks:{color:'#0891b2',callback:v=>v+'%'},grid:{display:false}}
+      y:{ticks:{color:'#5c6579'},grid:{color:'#dde2ed'},title:{display:false,text:''}}
     },
     plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,itemSort:tSort,callbacks:{afterLabel:tAfter}}}
   }});

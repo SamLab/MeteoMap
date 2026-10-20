@@ -877,6 +877,21 @@ def test_detail_ribbon_gets_cloud_fill_after_summary_column():
     assert "hIdx.push(j);" in tpl
 
 
+def test_precip_chart_has_no_probability_overlay():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # «Осадки (мм)» — только осадки: раньше сюда подмешивалась линия
+    # «Вероятность осадков (%)» по правой оси y1. Подсказка по наведённому часу
+    # показывает все видимые линии, а порядок задавался по сырому значению —
+    # процент (0–100) всплывал выше любых осадков (0–5 мм), из-за чего
+    # подсказка читалась как «вероятность вместо количества». Проценты остались
+    # на своей вкладке «Вероятность осадков (%)».
+    assert "label:'Вероятность осадков (%)'" not in tpl
+    assert "yAxisID:'y1'" not in tpl
+    assert "y1:{position:'right'" not in tpl
+    assert "'precipitation_probability'" in tpl
+
+
 def test_d10_unified_cloud_rain_graph():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()

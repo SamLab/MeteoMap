@@ -1408,8 +1408,8 @@ def test_warnings_span_shows_ranges_min_to_max(tmp_path):
     js.write_text(
         "const code=" + json.dumps(_page_wet_span_source()) + ";\n"
         "const D={weighted:{\n"
-        "  precipitation:[0.3,0.4,1.5,0.4,0,0,0,0,0,0,0.1,0.5,0.2,0.3,null,null],\n"
-        "  precipitation_probability:[4,7,11,7,0,0,6,8,11,8,8,8,null,null,10,20]}};\n"
+        "  precipitation:[0.3,0.4,1.5,0.4,0,0,0,0,0,0,0.1,0.5,0.2,0.3,null,null,0.32,0.34],\n"
+        "  precipitation_probability:[4,7,11,7,0,0,6,8,11,8,8,8,null,null,10,20,3.6,4.4]}};\n"
         "const f=new Function('D',code+'\\nreturn {wetSpan:wetSpan};')(D);\n"
         "console.log(JSON.stringify({\n"
         "  range:f.wetSpan(0,2),\n"
@@ -1417,7 +1417,8 @@ def test_warnings_span_shows_ranges_min_to_max(tmp_path):
         "  zeroMm:f.wetSpan(6,8),\n"
         "  zeroInside:f.wetSpan(9,11),\n"
         "  noProb:f.wetSpan(12,13),\n"
-        "  noMm:f.wetSpan(14,15)}));\n",
+        "  noMm:f.wetSpan(14,15),\n"
+        "  sameMm:f.wetSpan(16,17)}));\n",
         encoding="utf-8",
     )
     out = subprocess.run(["node", str(js)], capture_output=True, text=True,
@@ -1430,6 +1431,9 @@ def test_warnings_span_shows_ranges_min_to_max(tmp_path):
     assert got["zeroInside"] == " на 0-0.5мм с 8%", got
     assert got["noProb"] == " на 0.2-0.3мм", got
     assert got["noMm"] == " с 10-20%", got
+    # 3.6 и 4.4 — разные числа, но оба округляются до 4: «4-4%» читается как
+    # опечатка, поэтому диапазон сводится, если концы равны уже после формата
+    assert got["sameMm"] == " на 0.3мм с 4%", got
 
 
 def _page_function(name):
