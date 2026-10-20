@@ -592,6 +592,17 @@ def test_warnings_show_nearest_even_when_confirmed_coincide():
     assert "if(g1>=0&&g1!==g2)" in tpl
 
 
+def test_warnings_confirmed_requires_two_models():
+    # Подтверждённая строка дождя требует не только взвешенного консенсуса, но
+    # и >=2 моделей по тому же критерию. Иначе одна модель с большим весом
+    # вытягивала среднюю вероятность за 20%, и на «подтверждено» стояло
+    # «по 1 модели».
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    assert "const consModelAt=i=>{" in tpl
+    assert "const isConfirmed=(i,list,pm)=>list===R?(conAt(i)&&consModelAt(i)>=2):sourceCountAt(i,list,pm)>=2;" in tpl
+
+
 def test_warnings_frost_column_replaces_thunderstorm():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
