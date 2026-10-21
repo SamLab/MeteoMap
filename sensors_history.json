@@ -42474,40 +42474,46 @@
       "updated_at": "2026-10-21T13:58:00+03:00"
     },
     "2026-10-21T14:00": {
-      "samples": 15,
+      "samples": 23,
       "stations": {
         "penaty": {
           "temperature_2m": [
             9.86,
-            10.09
+            10.09,
+            10.16
           ]
         },
         "frunze": {
           "temperature_2m": [
             8.49,
-            8.7
+            8.7,
+            8.91
           ]
         },
         "east": {
           "temperature_2m": [
             10.25,
-            10.38
+            10.38,
+            10.44
           ]
         },
         "bereg": {
           "temperature_2m": [
             3.6,
-            3.8
+            3.8,
+            4.1
           ]
         },
         "yartemp": {
           "temperature_2m": [
             8.97,
-            9.09
+            9.09,
+            9.2
           ]
         },
         "uudl": {
           "temperature_2m": [
+            11.0,
             11.0,
             11.0
           ]
@@ -42515,16 +42521,18 @@
         "wu-ananyino": {
           "temperature_2m": [
             10.0,
+            10.0,
             10.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
+            11.0,
             11.0
           ]
         }
       },
-      "updated_at": "2026-10-21T14:16:00+03:00"
+      "updated_at": "2026-10-21T14:26:00+03:00"
     }
   },
   "runs": [
@@ -42951,6 +42959,35 @@
         },
         "yartemp": {
           "temperature_2m": 9.09
+        },
+        "uudl": {
+          "temperature_2m": 11.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 10.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 11.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-21T14:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 10.16
+        },
+        "frunze": {
+          "temperature_2m": 8.91
+        },
+        "east": {
+          "temperature_2m": 10.44
+        },
+        "bereg": {
+          "temperature_2m": 4.1
+        },
+        "yartemp": {
+          "temperature_2m": 9.2
         },
         "uudl": {
           "temperature_2m": 11.0
