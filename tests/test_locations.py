@@ -156,6 +156,34 @@ def test_sensor_hour_value_is_mean_of_station_means(tmp_path):
     assert model["data"]["temperature_2m"] == [15.0]
 
 
+def test_sensor_model_publishes_per_station_series(tmp_path):
+    """Ряды каждой станции — среднее за час и последний замер.
+
+    В опубликованных данных раньше были только агрегаты (среднее по станциям,
+    минимум, максимум, число станций), и построить почасовую таблицу по
+    конкретным станциям было не с чего. Порядок станций берётся из
+    tools/stations.json, чтобы колонки на странице не менялись местами от
+    порядка ключей в бакете.
+    """
+    hist = {"hours": {"2026-09-28T10:00": {"samples": 3, "stations": {
+        "east": {"temperature_2m": [20.0]},
+        "custom": {"temperature_2m": [5.0]},
+        "penaty": {"temperature_2m": [10.0, 12.0]},
+    }}}}
+    path = _write_history(tmp_path, hist)
+    model = load_sensor_model(["2026-09-28T09:00", "2026-09-28T10:00"], path)
+    stations = model["stations"]
+    # порядок конфига, а не порядок ключей бакета; станция вне конфига — в конец
+    assert list(stations) == ["penaty", "east", "custom"]
+    assert stations["penaty"]["name"] == "Пенаты"
+    assert stations["penaty"]["mean"] == [None, 11.0]
+    assert stations["penaty"]["last"] == [None, 12.0]
+    assert stations["east"]["mean"] == [None, 20.0]
+    assert stations["east"]["last"] == [None, 20.0]
+    # заголовок колонки берётся из name: без фолбэка на id он превратился бы в None
+    assert stations["custom"]["name"] == "custom"
+
+
 def test_sensor_model_missing_history_is_none(tmp_path):
     assert load_sensor_model(["2026-09-28T10:00"], str(tmp_path / "nope.json")) is None
 

@@ -1969,3 +1969,17 @@ def test_main_chart_reused_not_recreated():
     assert "const exists=Chart.getChart(maeEl);" in tpl
     assert "exists.data.datasets[0].data=data;" in tpl
     assert "exists.update();" in tpl
+
+
+def test_sensors_tab_chip_follows_weather_code():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # «Датчики (Ярославль)» — ещё один чип в ряду переменных вкладки «Часы»,
+    # сразу после «Погода (WMO)» (weather_code), а не отдельная вкладка
+    assert "const SENSOR_TAB='sensors_table',SENSOR_TAB_NAME='Датчики (Ярославль)';" in tpl
+    assert ("CHART_VARS.concat(['weather_code'])"
+            ".concat(D.sensor_stations?[SENSOR_TAB]:[]);") in tpl
+    # на других городах ряда станций нет — чипа и таблицы там не появляется
+    assert "if(v===SENSOR_TAB){" in tpl
+    assert "function sensorTableHtml(" in tpl
+    assert "VAR_NAMES[SENSOR_TAB]=SENSOR_TAB_NAME;" in tpl

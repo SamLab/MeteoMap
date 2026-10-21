@@ -221,6 +221,12 @@ def _sensor_payload():
             "now_value": {"temperature_2m": [20.5, None]},
             "now_min": {"temperature_2m": [9.0, None]},
             "now_max": {"temperature_2m": [11.5, None]},
+            "stations": {
+                "penaty": {"name": "Пенаты", "mean": [20.5, None],
+                           "last": [21.0, None]},
+                "east": {"name": "Восток", "mean": [19.5, None],
+                         "last": [19.0, None]},
+            },
         },
     }
     consensus = {
@@ -287,6 +293,21 @@ def test_payload_publishes_sensor_now_arrays_at_top_level():
         assert key not in p["models"][meteo.SENSOR_CODE]
 
 
+def test_payload_publishes_sensor_stations_at_top_level():
+    """Ряды станций едут отдельным верхнеуровневым ключом sensor_stations.
+
+    Вкладка «Датчики (Ярославль)» сравнивает конкретные станции между собой,
+    а не их агрегат: нужны имя и два ряда каждой станции — среднее за час и
+    последний замер. Как и остальная статистика датчиков, ключ живёт на
+    верхнем уровне: models[code] читается как параллельные ряды по переменным.
+    """
+    p = _sensor_payload()
+    assert p["sensor_stations"]["penaty"] == {
+        "name": "Пенаты", "mean": [20.5, None], "last": [21.0, None]}
+    assert list(p["sensor_stations"]) == ["penaty", "east"]
+    assert "stations" not in p["models"][meteo.SENSOR_CODE]
+
+
 def test_payload_without_sensor_has_no_station_counts():
     """Город без датчика не получает ключа: двух станций рядом с ним нет."""
     assert "sensor_station_counts" not in _payload()
@@ -295,6 +316,7 @@ def test_payload_without_sensor_has_no_station_counts():
     assert "sensor_now_value" not in _payload()
     assert "sensor_now_min" not in _payload()
     assert "sensor_now_max" not in _payload()
+    assert "sensor_stations" not in _payload()
 
 
 def test_sensor_column_header_comes_from_model_names():
@@ -1493,3 +1515,53 @@ def test_hour_layer_builds_cloud_fill_with_offset(tmp_path):
     assert "d10prf" in got["rain"], got["rain"]
     # одной точки мало для полигона — фон не рисуется вовсе
     assert got["one"] == "", got["one"]
+
+
+def _page_line(prefix):
+    """Возвращает строку страницы, начинающуюся с prefix (без ведущих пробелов)."""
+    for ln in read_template().splitlines():
+        if ln.strip().startswith(prefix):
+            return ln.strip()
+    raise AssertionError("не найдено: " + prefix)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_sensors_table_lists_stations_with_two_values(tmp_path):
+    """Вкладка «Датчики (Ярославль)»: колонки — станции, в ячейке два числа.
+
+    В опубликованных данных есть только агрегаты по станциям (среднее, минимум,
+    максимум, число станций), поэтому таблица опирается на отдельный ряд
+    sensor_stations. Строки — только прошедшие часы сегодняшнего дня: датчики
+    пишут только прошлое, а таблица «Часов» иначе тянулась бы на 16 дней
+    прочерков. В ячейке «последний замер / среднее за час».
+    """
+    code = "\n".join([_page_line("const rnd="), _page_line("const fmt="),
+                      _page_function("sensorTableHtml")])
+    js = tmp_path / "sensors_table.js"
+    js.write_text(
+        "const code=" + json.dumps(code) + ";\n"
+        "const D={time:['2026-10-21T06:00','2026-10-21T07:00',"
+        "'2026-10-21T08:00','2026-10-21T09:00','2026-10-22T00:00'],"
+        "sensor_stations:{"
+        "penaty:{name:'Пенаты',mean:[1,2,3,null,null],last:[1.5,2.5,3.5,null,null]},"
+        "east:{name:'Восток',mean:[null,2,null,null,null],"
+        "last:[null,2.5,null,null,null]}}};\n"
+        "const html=new Function('D','curIdx','cityToday',"
+        "code+'\\nreturn sensorTableHtml();')"
+        "(D,2,function(){return '2026-10-21';});\n"
+        "console.log(html);\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(["node", str(js)], capture_output=True, text=True,
+                         timeout=60, encoding="utf-8", errors="replace")
+    assert out.returncode == 0, (out.stdout[-500:], out.stderr[-500:])
+    html = out.stdout.strip()
+    assert "<th>Время</th><th>Пенаты</th><th>Восток</th>" in html, html
+    assert "<td>06ч</td><td>1.5 / 1</td><td>—</td>" in html, html
+    assert "<td>07ч</td><td>2.5 / 2</td><td>2.5 / 2</td>" in html, html
+    assert "<td>08ч</td><td>3.5 / 3</td><td>—</td>" in html, html
+    # шапка плюс три часа: 09:00 пуст по всем станциям, 22-го вовсе нет
+    assert html.count("<tr") == 4, html
+    assert html.count('class="now"') == 1, html
+    assert "09ч" not in html, html
+    assert "00ч" not in html, html
