@@ -175,6 +175,26 @@ def test_help_documents_sensor_section():
     assert "Датчики на карте" not in tpl
 
 
+def test_header_refresh_caption_is_fifteen_minutes():
+    """Подпись «Обновлено» обязана совпадать с реальным ритмом пересборки.
+
+    Деплой запускается внешним workflow_dispatch каждые 15 минут (в deploy.yml
+    cron '0 * * * *' — только подстраховка), станции коллектор опрашивает
+    каждые 10 минут, а виджет переспрашивает страницу раз в 5 минут — все три
+    числа разные, и подписи шапки достаётся ритм пересборки. Подпись уже дважды
+    расходилась с фактом по памяти: a59918f поставил 15 минут, 8a44499
+    переделал на 5, хотя запуски деплоя шли с шагом 15 минут (см. gh run list).
+    """
+    tpl = read_template()
+    header = [ln for ln in tpl.splitlines() if 'class="meta"' in ln]
+    assert header, "подпись «Обновлено» в шапке должна быть"
+    # Число, а не подстрока: «5 минут» входит в «15 минут», поэтому
+    # проверка на отсутствие обманула бы саму себя.
+    caption = re.search(r"\(каждые (\d+) минут\)", header[0])
+    assert caption, header[0]
+    assert caption.group(1) == "15", header[0]
+
+
 def _payload():
     hourly = {
         "a": {"time": ["h0"], "data": {"temperature_2m": [1.0]}},
