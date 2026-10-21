@@ -222,11 +222,16 @@ def _sensor_payload():
             "now_min": {"temperature_2m": [9.0, None]},
             "now_max": {"temperature_2m": [11.5, None]},
             "stations": {
-                "penaty": {"name": "Пенаты", "mean": [20.5, None],
-                           "last": [21.0, None]},
-                "east": {"name": "Восток", "mean": [19.5, None],
-                         "last": [19.0, None]},
+                "penaty": {"name": "Пенаты"},
+                "east": {"name": "Восток"},
             },
+            "runs": [
+                {"t": "2026-08-03T12:04:00+03:00",
+                 "stations": {"penaty": {"temperature_2m": 21.0},
+                              "east": {"temperature_2m": 19.0}}},
+                {"t": "2026-08-03T12:14:00+03:00",
+                 "stations": {"penaty": {"temperature_2m": 20.5}}},
+            ],
         },
     }
     consensus = {
@@ -296,16 +301,33 @@ def test_payload_publishes_sensor_now_arrays_at_top_level():
 def test_payload_publishes_sensor_stations_at_top_level():
     """Ряды станций едут отдельным верхнеуровневым ключом sensor_stations.
 
-    Вкладка «Датчики (Ярославль)» сравнивает конкретные станции между собой,
-    а не их агрегат: нужны имя и два ряда каждой станции — среднее за час и
-    последний замер. Как и остальная статистика датчиков, ключ живёт на
-    верхнем уровне: models[code] читается как параллельные ряды по переменным.
+    Вкладка «Датчики (Ярославль)» строит колонки по конкретным станциям, а не
+    по их агрегату: нужны имя и порядок колонок. Значения в ячейках приходят
+    отдельно — из sensor_runs, по одному на прогон.
     """
     p = _sensor_payload()
-    assert p["sensor_stations"]["penaty"] == {
-        "name": "Пенаты", "mean": [20.5, None], "last": [21.0, None]}
+    assert p["sensor_stations"]["penaty"] == {"name": "Пенаты"}
     assert list(p["sensor_stations"]) == ["penaty", "east"]
     assert "stations" not in p["models"][meteo.SENSOR_CODE]
+
+
+def test_payload_publishes_sensor_runs_at_top_level():
+    """Прогоны сбора едут отдельным верхнеуровневым ключом sensor_runs.
+
+    Строки вкладки «Датчики (Ярославль)» — это прогоны, а не часы: в бакете
+    часа лежат списки чисел без времени, построчное сравнение коллектор пишит
+    в runs. Как и остальная статистика датчиков, ключ живёт на верхнем уровне:
+    models[code] читается как параллельные ряды по переменным.
+    """
+    p = _sensor_payload()
+    assert p["sensor_runs"] == [
+        {"t": "2026-08-03T12:04:00+03:00",
+         "stations": {"penaty": {"temperature_2m": 21.0},
+                      "east": {"temperature_2m": 19.0}}},
+        {"t": "2026-08-03T12:14:00+03:00",
+         "stations": {"penaty": {"temperature_2m": 20.5}}},
+    ]
+    assert "runs" not in p["models"][meteo.SENSOR_CODE]
 
 
 def test_payload_without_sensor_has_no_station_counts():
@@ -317,6 +339,7 @@ def test_payload_without_sensor_has_no_station_counts():
     assert "sensor_now_min" not in _payload()
     assert "sensor_now_max" not in _payload()
     assert "sensor_stations" not in _payload()
+    assert "sensor_runs" not in _payload()
 
 
 def test_sensor_column_header_comes_from_model_names():
@@ -1526,29 +1549,34 @@ def _page_line(prefix):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
-def test_sensors_table_lists_stations_with_two_values(tmp_path):
-    """Вкладка «Датчики (Ярославль)»: колонки — станции, в ячейке два числа.
+def test_sensors_table_rows_are_collection_runs(tmp_path):
+    """Вкладка «Датчики (Ярославль)»: строка — прогон сбора, ячейка — одно число.
 
-    В опубликованных данных есть только агрегаты по станциям (среднее, минимум,
-    максимум, число станций), поэтому таблица опирается на отдельный ряд
-    sensor_stations. Строки — только прошедшие часы сегодняшнего дня: датчики
-    пишут только прошлое, а таблица «Часов» иначе тянулась бы на 16 дней
-    прочерков. В ячейке «последний замер / среднее за час».
+    Почасовые ряды для этого не годятся: в бакете часа лежат только списки
+    чисел, времени у замера нет, и прогон в 10:04 не отличить от прогона в
+    10:56 — коллектор поэтому пишет каждый сбор отдельной строкой в runs.
+    Последний прогон подсвечен как текущий (как строка now в таблице моделей),
+    по каждой колонке выделены min и max за сутки: красный максимум, синий
+    минимум — те же цвета, что у mxrow/mnrow.
     """
     code = "\n".join([_page_line("const rnd="), _page_line("const fmt="),
                       _page_function("sensorTableHtml")])
     js = tmp_path / "sensors_table.js"
     js.write_text(
         "const code=" + json.dumps(code) + ";\n"
-        "const D={time:['2026-10-21T06:00','2026-10-21T07:00',"
-        "'2026-10-21T08:00','2026-10-21T09:00','2026-10-22T00:00'],"
-        "sensor_stations:{"
-        "penaty:{name:'Пенаты',mean:[1,2,3,null,null],last:[1.5,2.5,3.5,null,null]},"
-        "east:{name:'Восток',mean:[null,2,null,null,null],"
-        "last:[null,2.5,null,null,null]}}};\n"
-        "const html=new Function('D','curIdx','cityToday',"
+        "const D={"
+        "sensor_stations:{penaty:{name:'Пенаты'},east:{name:'Восток'}},"
+        "sensor_runs:["
+        "{t:'2026-10-21T10:04:00+03:00',"
+        "stations:{penaty:{temperature_2m:1.5},east:{temperature_2m:5.0}}},"
+        "{t:'2026-10-21T10:14:00+03:00',"
+        "stations:{penaty:{temperature_2m:-4.0}}},"
+        "{t:'2026-10-21T10:24:00+03:00',"
+        "stations:{penaty:{temperature_2m:9.0},east:{temperature_2m:2.0}}}]\n"
+        "};\n"
+        "const html=new Function('D','SENSOR_VARS',"
         "code+'\\nreturn sensorTableHtml();')"
-        "(D,2,function(){return '2026-10-21';});\n"
+        "(D,['temperature_2m']);\n"
         "console.log(html);\n",
         encoding="utf-8",
     )
@@ -1557,11 +1585,13 @@ def test_sensors_table_lists_stations_with_two_values(tmp_path):
     assert out.returncode == 0, (out.stdout[-500:], out.stderr[-500:])
     html = out.stdout.strip()
     assert "<th>Время</th><th>Пенаты</th><th>Восток</th>" in html, html
-    assert "<td>06ч</td><td>1.5 / 1</td><td>—</td>" in html, html
-    assert "<td>07ч</td><td>2.5 / 2</td><td>2.5 / 2</td>" in html, html
-    assert "<td>08ч</td><td>3.5 / 3</td><td>—</td>" in html, html
-    # шапка плюс три часа: 09:00 пуст по всем станциям, 22-го вовсе нет
+    # одно значение в ячейке, подпись строки — время прогона
+    assert "<td>10:04</td><td>1.5</td><td class=\"smax\">5</td>" in html, html
+    # станция в прогоне молчала — прочерк; её минимум в другом прогоне
+    assert "<td>10:14</td><td class=\"smin\">-4</td><td>—</td>" in html, html
+    # последний прогон — текущий, у него же экстремумы по обоим станциям
+    assert ("<tr class=\"now\"><td>10:24</td>"
+            "<td class=\"smax\">9</td><td class=\"smin\">2</td>") in html, html
+    # шапка плюс три прогона, текущая строка одна
     assert html.count("<tr") == 4, html
     assert html.count('class="now"') == 1, html
-    assert "09ч" not in html, html
-    assert "00ч" not in html, html

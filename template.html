@@ -70,6 +70,20 @@ header .meta{color:var(--muted);font-size:12px}
 #tab-compare .tblwrap td sup{font-size:9px;line-height:0;color:var(--muted);vertical-align:super}
 #tab-compare .tblwrap thead th{position:sticky;top:0;background:var(--card);z-index:1}
 #tab-compare .tblwrap table{border-collapse:separate;border-spacing:0}
+/* Вкладка «Датчики (Ярославль)»: колонки станций одинаковой ширины.
+   Без table-layout:fixed таблица отдаёт колонке столько места, сколько занимает
+   её содержимое, а nowrap в шапке не даёт длинному имени перенестись —
+   «Ярославль, аэропорт (METAR)» забирает лишнее и сжимает соседей. Одинаковая
+   ширина тогда получается только у укороченных названий. min-width оставляет
+   числа читаемыми на телефоне: шире экрана .tblwrap прокручивает таблицу вбок. */
+#tab-compare .tblwrap table.sensorcols{table-layout:fixed;width:100%;min-width:760px}
+#tab-compare .tblwrap table.sensorcols th{white-space:normal}
+#tab-compare .tblwrap table.sensorcols td{padding:3px 2px}
+/* Экстремумы колонки станции: красный максимум и синий минимум — те же цвета,
+   что у строк mxrow/mnrow в таблице моделей, чтобы «красное — рост, синее —
+   падение» читалось одинаково во всей вкладке. */
+#tab-compare .tblwrap table.sensorcols td.smax{color:#d32f2f;font-weight:700}
+#tab-compare .tblwrap table.sensorcols td.smin{color:#1976d2;font-weight:700}
 table{border-collapse:collapse;font-size:12px;width:100%}
 th,td{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th{color:var(--muted);font-weight:500}
@@ -254,7 +268,7 @@ a{color:var(--accent)}
     <h2>Часы</h2>
     <ul>
       <li>Все модели по часам. Жирное — экстремум среди моделей, красное/синее — выше/ниже консенсуса, «—» — нет данных. Синяя/красная пунктирная обводка строки — час минимума/максимума дня по консенсусу. Вниз и вправо прокручивайте.</li>
-      <li>Чип <b>Датчики (Ярославль)</b> в том же ряду — другая таблица: колонки там станции, а не модели, и в каждой ячейке два числа через «/» — последний замер часа и среднее этого часа («7.6 / 7.5»), «—» если станция в этот час молчала. Строки идут только с 00:00 текущего дня до последнего часа, где есть замеры: датчики пишут только прошлое, дальше данных в истории нет. Чип появляется только у Ярославля и Цеденево — у остальных городов своих станций нет.</li>
+      <li>Чип <b>Датчики (Ярославль)</b> в том же ряду — другая таблица: колонки там станции, а не модели, а строки — прогоны сбора (≈6 в час): в каждой ячейке одно значение, что станция показала в этом прогоне, «—» если не отчиталась, и подпись строки — время прогона («10:04»). Последний прогон отмечен как текущий, по каждой колонке выделены максимум (красным) и минимум (синим) за сутки. Остальной диапазон «Часов» впрок не тащится: датчики пишут только прошлое, дальше данных в истории нет. Чип появляется только у Ярославля и Цеденево — у остальных городов своих станций нет.</li>
       <li>Надстрочная цифра у «Датчика» — сколько станций усреднилось в этом часе: «15.64⁴» — среднее по четырём станциям, «66.1¹» — по одной; станция без замера в этом часе не участвует.</li>
       <li>У Цеденево в столбце «Датчик» вне окна среднего (ночью и поутрам, пока воздух у земли не прогрелся) и при отсутствии осадков стоит минимум по станциям — та же величина, что в строке «По датчику», а не среднее. Идут осадки — снова среднее: низина остывает только под ясным небом, а под дождём или плотной облачностью все станции стоят рядом и минимум приписал бы низине несуществующий холод. Цифра сверху остаётся числом станций с замером в этом часе.</li>
       <li>Станции, чьи показания идут в среднее и минимум: четыре станции в Ярославле из сети <b>yar.gorod76.ru</b> (Пенаты, ул. Фрунзе, Восток, Берег), независимый датчик <a href="https://yartemp.com/" target="_blank" rel="noopener">YarTemp</a> в самом Ярославле, аэропорт по сводкам METAR и две станции Weather Underground (Ананьино и Заволжское). YarTemp обновляет данные раз в 5 минут, и его чтение отбрасывается, если оно старше 15 минут, — тогда в этом часе остаётся среднее по остальным станциям. METAR выходит раз в 30 минут, его порог — 40 минут, у станций Weather Underground — 30 минут. У Цеденево своих станций нет, «датчики» там — те же восемь.</li>
@@ -1326,37 +1340,50 @@ function cmpColOrder(codes,v){
   return out;
 }
 // Таблица вкладки «Датчики (Ярославль)»: колонки — станции, не модели.
-// Датчики пишут только прошлое, поэтому строки идут с 00:00 сегодня до последнего
-// часа, где есть хоть один замер (к вечеру это все сутки). Остальной диапазон
-// «Часов» впрок не тащим: 16 дней прочерков в сравнении станций ничего не скажут.
-// В ячейке два числа через «/»: последний замер часа и среднее этого часа —
-// первое живёт в строке «Сейчас», второе кормит график и столбик «Датчик».
+// Строки — прогоны сбора (≈6 в час, cron */10), а не часы: в бакете часа
+// хранятся только списки чисел и времени у замера нет, поэтому отличить прогон
+// в 10:04 от прогона в 10:56 нельзя — коллектор пишит каждый сбор отдельной
+// строкой в runs. В ячейке поэтому одно значение: что станция показала в этом
+// прогоне, «—» если не отчиталась. Остальной диапазон «Часов» впрок не тащим:
+// 16 дней прочерков в сравнении станций ничего не скажут.
+// Подсветка как у остальных таблиц вкладки: строка последнего (текущего)
+// прогона — now, по каждой колонке максимум красным и минимум синим — теми же
+// цветами, что у mxrow/mnrow. Когда все значения станции равны, экстремумов
+// нет и не отмечаем, иначе вся колонка покрасилась бы без толку.
 function sensorTableHtml(){
+  const runs=D.sensor_runs;
   const st=D.sensor_stations;
   const ids=st?Object.keys(st):[];
-  if(!ids.length)return '';
-  const day=cityToday();
-  const hasData=i=>ids.some(id=>{
-    const s=st[id];
-    return typeof (s.mean?s.mean[i]:null)==='number'||typeof (s.last?s.last[i]:null)==='number';
+  if(!runs||!runs.length||!ids.length)return '';
+  const mx={},mn={};
+  ids.forEach(id=>{
+    runs.forEach(r=>{
+      const p=r.stations?r.stations[id]:null;
+      const v=p?p[SENSOR_VARS[0]]:null;
+      if(typeof v!=='number')return;
+      if(!(id in mx)||v>mx[id])mx[id]=v;
+      if(!(id in mn)||v<mn[id])mn[id]=v;
+    });
   });
-  let last=-1;
-  D.time.forEach((t,i)=>{if(t.slice(0,10)===day&&hasData(i))last=i;});
-  if(last<0)return '';
   let html='<colgroup><col style="width:44px">'+'<col>'.repeat(ids.length)+'</colgroup>';
   html+='<thead><tr><th>Время</th>'+ids.map(id=>'<th>'+st[id].name+'</th>').join('')+'</tr></thead><tbody>';
-  for(let i=0;i<=last;i++){
-    html+='<tr'+(i===curIdx?' class="now"':'')+'><td>'+D.time[i].slice(11,13)+'ч</td>';
+  runs.forEach((r,i)=>{
+    html+='<tr'+(i===runs.length-1?' class="now"':'')+'><td>'+r.t.slice(11,16)+'</td>';
     html+=ids.map(id=>{
-      const m=st[id].mean[i],l=st[id].last[i];
-      const any=typeof l==='number'||typeof m==='number';
-      return '<td>'+(any?fmt(l)+' / '+fmt(m):'—')+'</td>';
+      const p=r.stations?r.stations[id]:null;
+      const v=p?p[SENSOR_VARS[0]]:null;
+      if(typeof v!=='number')return '<td>—</td>';
+      if(mx[id]===mn[id])return '<td>'+fmt(v)+'</td>';
+      return '<td'+(v===mx[id]?' class="smax"':v===mn[id]?' class="smin"':'')+'>'+fmt(v)+'</td>';
     }).join('')+'</tr>';
-  }
+  });
   return html+'</tbody>';
 }
 function buildCmpTable(){
   const el=document.getElementById('cmpTable');
+  // На случай если класс остался от вкладки «Датчики»: таблица моделей
+  // обратно живёт по своим правилам ширины (width:max-content со скроллом).
+  el.classList.remove('sensorcols');
   const cc=cmpColOrder(codes,cmpVar);
   const cols=[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
   const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(1+cc.length)+'</colgroup>';
@@ -1489,7 +1516,7 @@ function renderAll(){
   const cmpVars=CHART_VARS.concat(['weather_code']).concat(D.sensor_stations?[SENSOR_TAB]:[]);
   buildVarSel('varsel2',v=>{
     // своя таблица вместо набора моделей: ей не нужен ни cmpVar, ни порядок колонок
-    if(v===SENSOR_TAB){document.getElementById('cmpTable').innerHTML=sensorTableHtml();return;}
+    if(v===SENSOR_TAB){const el=document.getElementById('cmpTable');el.classList.add('sensorcols');el.innerHTML=sensorTableHtml();return;}
     cmpVar=v;buildCmpTable();
   },cmpVars);
   if(mainChart){

@@ -156,32 +156,60 @@ def test_sensor_hour_value_is_mean_of_station_means(tmp_path):
     assert model["data"]["temperature_2m"] == [15.0]
 
 
-def test_sensor_model_publishes_per_station_series(tmp_path):
-    """Ряды каждой станции — среднее за час и последний замер.
+def test_sensor_model_publishes_today_runs_and_station_names(tmp_path):
+    """Прогоны сбора и имена станций едут отдельно от почасовых агрегатов.
 
-    В опубликованных данных раньше были только агрегаты (среднее по станциям,
-    минимум, максимум, число станций), и построить почасовую таблицу по
-    конкретным станциям было не с чего. Порядок станций берётся из
-    tools/stations.json, чтобы колонки на странице не менялись местами от
-    порядка ключей в бакете.
+    Бакет часа хранит только списки чисел — времени у замера там нет, поэтому
+    коллектор дописывает каждый прогон в верхнеуровневый ключ runs, а
+    load_sensor_model публикует его для вкладки «Датчики (Ярославль)»: строка —
+    один сбор, в ячейке одно значение станции. Публикуются только сутки, за
+    которые построена сетка (grid начинается с полуночи сегодня): остальные
+    29 дней истории на страницу не нужны.
+
+    Порядок колонок берётся из tools/stations.json, а не из порядка прогонов.
     """
-    hist = {"hours": {"2026-09-28T10:00": {"samples": 3, "stations": {
-        "east": {"temperature_2m": [20.0]},
-        "custom": {"temperature_2m": [5.0]},
-        "penaty": {"temperature_2m": [10.0, 12.0]},
-    }}}}
+    hist = {
+        "hours": {"2026-09-28T10:00": {"samples": 1, "stations": {
+            "east": {"temperature_2m": [6.6]}}}},
+        "runs": [
+            {"t": "2026-09-28T11:10:00+03:00",
+             "stations": {"east": {"temperature_2m": 7.1}}},
+            {"t": "2026-09-28T10:04:00+03:00",
+             "stations": {"penaty": {"temperature_2m": 7.35},
+                          "east": {"temperature_2m": 6.6}}},
+            # вчерашний прогон в сутки сетки не входит
+            {"t": "2026-09-27T10:04:00+03:00",
+             "stations": {"penaty": {"temperature_2m": 1.0}}},
+            # станция не-словарь: значение не прочитать, прогон пустой
+            {"t": "2026-09-28T11:20:00+03:00", "stations": {"broken": "нет"}},
+        ],
+    }
     path = _write_history(tmp_path, hist)
-    model = load_sensor_model(["2026-09-28T09:00", "2026-09-28T10:00"], path)
-    stations = model["stations"]
-    # порядок конфига, а не порядок ключей бакета; станция вне конфига — в конец
-    assert list(stations) == ["penaty", "east", "custom"]
-    assert stations["penaty"]["name"] == "Пенаты"
-    assert stations["penaty"]["mean"] == [None, 11.0]
-    assert stations["penaty"]["last"] == [None, 12.0]
-    assert stations["east"]["mean"] == [None, 20.0]
-    assert stations["east"]["last"] == [None, 20.0]
-    # заголовок колонки берётся из name: без фолбэка на id он превратился бы в None
-    assert stations["custom"]["name"] == "custom"
+    model = load_sensor_model(
+        ["2026-09-28T10:00", "2026-09-28T11:00", "2026-09-29T00:00"], path)
+    assert model["runs"] == [
+        {"t": "2026-09-28T10:04:00+03:00",
+         "stations": {"penaty": {"temperature_2m": 7.35},
+                      "east": {"temperature_2m": 6.6}}},
+        {"t": "2026-09-28T11:10:00+03:00",
+         "stations": {"east": {"temperature_2m": 7.1}}},
+    ]
+    # колонки в порядке конфига; station появилась в прогоне — значит в таблице
+    assert list(model["stations"]) == ["penaty", "east"]
+    assert model["stations"]["penaty"]["name"] == "Пенаты"
+    assert model["stations"]["east"] == {"name": "Восток"}
+    # агрегаты часа не тронуты: ими кормятся «Датчик», график и «Сейчас»
+    assert model["data"]["temperature_2m"] == [6.6, None, None]
+
+
+def test_sensor_model_without_runs_has_empty_runs_and_stations(tmp_path):
+    """Прогонов ещё не было — и ключей нет: вкладки на странице тогда нет."""
+    hist = {"hours": {"2026-09-28T10:00": {"samples": 1, "stations": {
+        "east": {"temperature_2m": [6.6]}}}}}
+    path = _write_history(tmp_path, hist)
+    model = load_sensor_model(["2026-09-28T10:00"], path)
+    assert model["runs"] == []
+    assert model["stations"] == {}
 
 
 def test_sensor_model_missing_history_is_none(tmp_path):

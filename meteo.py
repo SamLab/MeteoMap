@@ -1193,8 +1193,13 @@ def load_sensor_model(grid, path=None):
     каждой станции, а не по среднему часа. Показ «сейчас» берёт именно их,
     чтобы не отставать на усреднение; история (data) остаётся средним.
 
-    stations — ряды отдельных станций ({id: {"name", "mean", "last"}}), из
-    которых собраны те же агрегаты. Их читает вкладка «Датчики (Ярославль)».
+    stations — имена колонок вкладки «Датчики (Ярославль)» ({id: {"name"}}),
+    в порядке tools/stations.json. Значения в ячейках приходят отдельно — в runs.
+
+    runs — прогоны сбора за сутки сетки ([{"t", "stations": {id: {param: v}}}]),
+    по одному на каждый прогон коллектора: строка таблицы станций — это сбор,
+    а не час. Почасовые агрегаты при этом не тронуты: ими кормятся «Датчик» в
+    «Часах», график, «Сейчас» и «По датчику».
     """
     try:
         with open(path or SENSOR_HISTORY, encoding="utf-8") as f:
@@ -1258,55 +1263,79 @@ def load_sensor_model(grid, path=None):
         now_maxs[var] = nxcolumn
     if not found:
         return None
+    runs = _sensor_runs(history.get("runs"), grid)
     return {"time": list(grid), "data": data, "station_counts": counts,
             "station_min": minimums, "station_max": maximums,
             "updated_at": updated,
             "now_value": now_values, "now_min": now_mins,
             "now_max": now_maxs,
-            "stations": _sensor_station_series(grid, hours,
-                                               _sensor_station_names())}
+            "stations": _sensor_station_columns(runs, _sensor_station_names()),
+            "runs": runs}
 
 
-def _sensor_station_series(grid, hours, names):
-    """Ряды каждой станции на grid: {id: {"name", "mean", "last"}}.
+def _sensor_runs(raw, grid):
+    """Прогоны сбора за сутки сетки, отсортированные по времени.
 
-    mean — среднее замеров станции за час, last — последний замер этого часа;
-    оба None там, где станция в этот час молчала. Агрегаты (station_counts,
-    station_min, station_max) такого не умеют: они складывают станции в одну
-    кучу, а вкладке «Датчики (Ярославль)» нужно сравнивать станции между собой.
+    raw — верхнеуровневый ключ runs из истории, который пишет
+    tools/collect_sensors.py:record_history. Бакет часа хранит только списки
+    чисел — времени у замера там нет, и по ним не отличить прогон в 10:04 от
+    прогона в 10:56, а вкладке «Датчики (Ярославль)» нужны строки по сборам
+    с одним значением в ячейке.
 
-    Порядок ключей берётся из names (tools/stations.json), потом идут станции,
-    которых в конфиге нет, — иначе колонки прыгали бы местами от порядка ключей
-    в бакете, а он зависит от того, кто раньше подключился к MQTT. Станция без
-    единого значения в grid в результат не попадает: колонка прочерков на 16
-    дней никому не нужна.
+    Публикуются только сутки, с которых построена сетка (grid начинается с
+    полуночи сегодня): остальные 29 дней истории на страницу не нужны, а два
+    города не должны тащить их в payload. Отбор повторяет уровень
+    _sensor_hour_value: не-словари, bool и не-числа отбрасываются, пустой
+    прогон пропадает целиком, а файла без runs читается как пустой список.
+    """
+    day = grid[0][:10] if grid else None
+    if day is None or not isinstance(raw, list):
+        return []
+    out = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        stamp = entry.get("t")
+        stations = entry.get("stations")
+        if not isinstance(stamp, str) or not isinstance(stations, dict):
+            continue
+        if stamp[:10] != day:
+            continue
+        clean = {}
+        for sid, params in stations.items():
+            if not isinstance(sid, str) or not isinstance(params, dict):
+                continue
+            values = {}
+            for var, value in params.items():
+                if var not in SENSOR_VARS:
+                    continue
+                if not isinstance(value, (int, float)) or isinstance(value, bool):
+                    continue
+                values[var] = round(value, 2)
+            if values:
+                clean[sid] = values
+        if clean:
+            out.append({"t": stamp, "stations": clean})
+    out.sort(key=lambda run: run["t"])
+    return out
+
+
+def _sensor_station_columns(runs, names):
+    """Колонки вкладки станций: {id: {"name"}} в порядке tools/stations.json.
+
+    Отбираются станции, попавшие хотя бы в один прогон: колонка, где все
+    значения прочерки, никому не нужна. Порядок берётся из names, потом идут
+    станции вне конфига (в алфавитном порядке) — иначе колонки прыгали бы
+    местами от порядка ключей в прогоне, а он зависит от того, кто раньше
+    подключился к MQTT. Без прогонов возвращается пустой словарь, и ключ не
+    едет в payload: вкладки на странице тогда нет.
     """
     seen = set()
-    for bucket in hours.values():
-        seen.update(bucket["stations"])
+    for run in runs:
+        seen.update(run["stations"])
     ordered = [i for i in names if i in seen]
-    ordered += sorted(i for i in seen
-                      if isinstance(i, str) and i not in names)
-    var = SENSOR_VARS[0]
-    series = {}
-    for sid in ordered:
-        means = []
-        lasts = []
-        for hour in grid:
-            bucket = hours.get(hour)
-            entry = bucket["stations"].get(sid) if bucket else None
-            samples = entry.get(var) if isinstance(entry, dict) else None
-            # Тот же отбор, что в _sensor_hour_value: список чисел, пустой
-            # список и bool — это «станция молчала»
-            ok = isinstance(samples, list) and bool(samples) and all(
-                isinstance(x, (int, float)) and not isinstance(x, bool)
-                for x in samples)
-            means.append(round(sum(samples) / len(samples), 2) if ok else None)
-            lasts.append(round(samples[-1], 2) if ok else None)
-        if any(v is not None for v in means):
-            series[sid] = {"name": names.get(sid, sid),
-                           "mean": means, "last": lasts}
-    return series
+    ordered += sorted(i for i in seen if i not in names)
+    return {sid: {"name": names.get(sid, sid)} for sid in ordered}
 
 
 def force_min_weight(weights, code):
@@ -1664,13 +1693,19 @@ def build_payload(model_codes, model_names, hourly_by_model, daily_by_model,
         series = sensor_model.get(source)
         if series:
             payload[key] = series
-    # Ряды отдельных станций — для вкладки «Датчики (Ярославль)»: в ней колонки
-    # идут по станциям, а агрегата (среднее, минимум, максимум, число станций)
-    # для этого мало. Как и остальная статистика датчиков, ключ живёт на
-    # верхнем уровне, а не в models: там читают параллельные ряды по переменным.
+    # Колонки и строки вкладки «Датчики (Ярославль)»: stations — имена и порядок
+    # станций (пусто без прогонов — тогда и вкладки нет), runs — сами прогоны
+    # сбора за сутки, по одному значению станции в ячейке. Почасовые агрегаты
+    # выше не заменяются, а дополняются: в бакете часа времени у замера нет,
+    # отличить прогон в 10:04 от прогона в 10:56 нельзя. Как и остальная
+    # статистика датчиков, ключи живут на верхнем уровне, а не в models:
+    # там читают параллельные ряды по переменным.
     sensor_stations = sensor_model.get("stations")
     if sensor_stations:
         payload["sensor_stations"] = sensor_stations
+    sensor_runs = sensor_model.get("runs")
+    if sensor_runs:
+        payload["sensor_runs"] = sensor_runs
     return payload
 
 

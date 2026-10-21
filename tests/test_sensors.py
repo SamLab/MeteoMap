@@ -687,6 +687,23 @@ def test_trim_history_keeps_bucket_at_exact_cutoff():
     assert list(got["hours"]) == ["2026-08-29T12:00"]
 
 
+def test_trim_history_keeps_runs_within_history_days():
+    """Прогоны живут столько же, сколько и часы: та же отсечка, те же 30 дней.
+
+    И сравнение строк: t в формате ISO, отсечка — ключ часа, у обоих
+    совпадающий префикс 'YYYY-MM-DDTHH:', поэтому лексикографики хватает.
+    """
+    now = moscow_now_ts("2026-09-28T12:00")
+    hours = {"hours": {}, "runs": [
+        {"t": cs.moscow_iso(now - 31 * 86400), "stations": {}},
+        {"t": cs.moscow_iso(now), "stations": {}},
+        "битая строка вместо прогона",
+        {"stations": {}},
+    ]}
+    got = trim_history(hours, 30, now)
+    assert [r["t"] for r in got["runs"]] == [cs.moscow_iso(now)]
+
+
 # --- ключ бакета: московский час, а не локальный ---
 
 
@@ -1253,6 +1270,48 @@ def test_record_history_uses_max_across_stations():
          "value_ts": {"temperature_2m": slow}}])
     assert hours["hours"]["2026-09-28T10:00"]["updated_at"].startswith(
         "2026-09-28T10:40")
+
+
+# --- прогоны: строка истории по времени сбора ----------------------------
+# Бакет часа хранит только списки чисел: по ним не отличить прогон в 10:04
+# от прогона в 10:56, а таблице «Датчики (Ярославль)» нужны строки по сборам
+# с одним значением в ячейке. Прогон пишется в верхнеуровневый ключ runs.
+
+
+def test_record_history_appends_run_with_run_time():
+    hours = {"hours": {}}
+    # 10:04 МСК = 07:04 UTC
+    ts = datetime(2026, 9, 28, 7, 4, tzinfo=timezone.utc).timestamp()
+    record_history(hours, "2026-09-28T10:00", [
+        {"id": "penaty", "values": {"temperature_2m": 7.35},
+         "value_hours": {"temperature_2m": "2026-09-28T10:00"},
+         "value_ts": {"temperature_2m": ts}},
+        {"id": "east", "values": {"temperature_2m": 6.6},
+         "value_hours": {"temperature_2m": "2026-09-28T10:00"}}], run_ts=ts)
+    assert hours["runs"] == [{
+        "t": "2026-09-28T10:04:00+03:00",
+        "stations": {"penaty": {"temperature_2m": 7.35},
+                     "east": {"temperature_2m": 6.6}}}]
+    # почасовые бакеты как раньше: ими кормятся «Датчик», график и «Сейчас»
+    bucket = hours["hours"]["2026-09-28T10:00"]
+    assert bucket["stations"]["penaty"]["temperature_2m"] == [7.35]
+    assert bucket["samples"] == 2
+
+
+def test_record_history_without_run_time_writes_no_run():
+    """Прогон без времени в runs не пишется: поставить строку в порядок нечем."""
+    hours = {"hours": {}}
+    record_history(hours, "2026-09-28T10:00",
+                   [{"id": "a", "values": {"temperature_2m": 10.0}}])
+    assert "runs" not in hours
+    assert hours["hours"]["2026-09-28T10:00"]["samples"] == 1
+
+
+def test_record_history_empty_run_leaves_no_runs_key():
+    hours = {"hours": {}}
+    record_history(hours, "2026-09-28T10:00",
+                   [{"id": "a", "values": {}}], run_ts=1790708310.0)
+    assert "runs" not in hours
 
 
 # --- порог свежести у каждой станции свой -------------------------------

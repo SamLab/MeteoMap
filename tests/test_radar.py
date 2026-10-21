@@ -1983,3 +1983,35 @@ def test_sensors_tab_chip_follows_weather_code():
     assert "if(v===SENSOR_TAB){" in tpl
     assert "function sensorTableHtml(" in tpl
     assert "VAR_NAMES[SENSOR_TAB]=SENSOR_TAB_NAME;" in tpl
+
+
+def test_sensor_table_columns_have_equal_width():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # Колонки станций одинаковой ширины. Без table-layout:fixed таблица по
+    # умолчанию растягивает каждую колонку под её содержимое, а nowrap в шапке
+    # не даёт длинному имени перенестись — «Ярославль, аэропорт (METAR)» забирает
+    # себе лишнее место и сжимает соседей. min-width оставляет числа читаемыми
+    # на телефоне: шире экрана .tblwrap прокручивает таблицу вбок.
+    assert ("#tab-compare .tblwrap table.sensorcols"
+            "{table-layout:fixed;width:100%;min-width:760px}") in tpl
+    assert "#tab-compare .tblwrap table.sensorcols th{white-space:normal}" in tpl
+    assert "#tab-compare .tblwrap table.sensorcols td{padding:3px 2px}" in tpl
+    # класс вешается только на таблицу станций и снимается при возврате к моделям
+    assert "el.classList.add('sensorcols')" in tpl
+    assert "el.classList.remove('sensorcols')" in tpl
+
+
+def test_sensor_table_marks_extremes_and_current_run():
+    with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
+        tpl = f.read()
+    # Выделение как у экстремумов в таблице моделей: по колонке максимум красным
+    # и минимум синим — те же цвета, что у строк mxrow/mnrow. Текущий прогон —
+    # строка now, как в остальных таблицах вкладки.
+    assert ("#tab-compare .tblwrap table.sensorcols td.smax"
+            "{color:#d32f2f;font-weight:700}") in tpl
+    assert ("#tab-compare .tblwrap table.sensorcols td.smin"
+            "{color:#1976d2;font-weight:700}") in tpl
+    assert "i===runs.length-1" in tpl
+    # источник строк — прогоны сбора, а не часы
+    assert "const runs=D.sensor_runs;" in tpl

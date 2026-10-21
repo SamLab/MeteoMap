@@ -666,7 +666,7 @@ def load_history(path):
     return data
 
 
-def record_history(hours, hour_key, per_station):
+def record_history(hours, hour_key, per_station, run_ts=None):
     """Дописывает значения станций в бакеты часов. Пустой прогон не пишется.
 
     Замер кладётся в бакет часа, который шёл в момент его прихода
@@ -679,8 +679,16 @@ def record_history(hours, hour_key, per_station):
     из нескольких прогонов, и старая арифметика "+1 за прогон" перестала бы
     описывать содержимое. Читатель meteo.py:_sensor_hour_value поле samples
     не читает - он считает по stations, поэтому смена смысла безопасна.
+
+    Прогон дополнительно пишется строкой в верхнеуровневый ключ runs:
+    в бакете часа лежат только списки чисел и по ним не отличить замер в 10:04
+    от замера в 10:56, а таблице «Датчики (Ярославль)» нужны строки по сборам
+    с одним значением в ячейке. Без времени прогона строка не пишется —
+    поставить её в хронологический порядок нечем; на боевом пути время есть
+    всегда (run() передаёт now), а в тестах на старые бакеты run_ts не нужен.
     """
     wrote = False
+    run = {}
     for station in per_station:
         values = station.get('values')
         if not values:
@@ -706,7 +714,11 @@ def record_history(hours, hour_key, per_station):
             stamp = moscow_iso(ts) if ts is not None else key
             if bucket.get('updated_at') is None or stamp > bucket['updated_at']:
                 bucket['updated_at'] = stamp
+            run.setdefault(station['id'], {})[param] = value
             wrote = True
+    if wrote and run and run_ts is not None:
+        hours.setdefault('runs', []).append(
+            {'t': moscow_iso(run_ts), 'stations': run})
     return wrote
 
 
@@ -743,9 +755,16 @@ def history_hour_value(bucket, param):
 
 
 def trim_history(hours, history_days, now):
-    """Удаляет бакеты старше history_days."""
+    """Удаляет бакеты и прогоны старше history_days."""
     cutoff = moscow_hour_key(now - history_days * 86400)
     hours['hours'] = {k: v for k, v in hours['hours'].items() if k >= cutoff}
+    runs = hours.get('runs')
+    if isinstance(runs, list):
+        # Сравнение строк здесь работает: у t и у отсечки общий префикс
+        # 'YYYY-MM-DDTHH:', поэтому ISO-прогон сравнивается так же, как ключ
+        # часа. Битые записи отбрасываются, чтобы один мусор не ронял прогон.
+        hours['runs'] = [r for r in runs if isinstance(r, dict)
+                         and isinstance(r.get('t'), str) and r['t'] >= cutoff]
     return hours
 
 
@@ -854,7 +873,8 @@ def run(config=DEFAULT_CONFIG, out=DEFAULT_OUT, window_s=None, client_factory=No
     snapshot = build_snapshot(stations, received, window_s, now, seen)
 
     accumulated = load_history(history)
-    record_history(accumulated, moscow_hour_key(now), snapshot['stations'])
+    record_history(accumulated, moscow_hour_key(now), snapshot['stations'],
+                   run_ts=now)
     trim_history(accumulated, history_days(settings), now)
     write_json_atomic(history, accumulated)
 
