@@ -42301,50 +42301,58 @@
       "updated_at": "2026-10-21T11:56:00+03:00"
     },
     "2026-10-21T12:00": {
-      "samples": 8,
+      "samples": 16,
       "stations": {
         "penaty": {
           "temperature_2m": [
-            8.11
+            8.11,
+            8.19
           ]
         },
         "frunze": {
           "temperature_2m": [
+            6.34,
             6.34
           ]
         },
         "east": {
           "temperature_2m": [
+            7.69,
             7.69
           ]
         },
         "bereg": {
           "temperature_2m": [
-            1.2
+            1.2,
+            1.4
           ]
         },
         "yartemp": {
           "temperature_2m": [
-            6.89
+            6.89,
+            7.03
           ]
         },
         "uudl": {
           "temperature_2m": [
+            9.0,
             9.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
+            8.0,
             8.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
+            8.0,
             8.0
           ]
         }
       },
-      "updated_at": "2026-10-21T12:06:00+03:00"
+      "updated_at": "2026-10-21T12:16:00+03:00"
     }
   },
   "runs": [
@@ -42394,6 +42402,35 @@
         },
         "yartemp": {
           "temperature_2m": 6.89
+        },
+        "uudl": {
+          "temperature_2m": 9.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 8.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 8.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-21T12:16:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 8.19
+        },
+        "frunze": {
+          "temperature_2m": 6.34
+        },
+        "east": {
+          "temperature_2m": 7.69
+        },
+        "bereg": {
+          "temperature_2m": 1.4
+        },
+        "yartemp": {
+          "temperature_2m": 7.03
         },
         "uudl": {
           "temperature_2m": 9.0
