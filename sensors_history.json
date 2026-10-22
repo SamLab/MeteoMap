@@ -44303,34 +44303,39 @@
       "updated_at": "2026-10-22T13:56:00+03:00"
     },
     "2026-10-22T14:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             11.03,
-            11.06
+            11.06,
+            11.14
           ]
         },
         "frunze": {
           "temperature_2m": [
             9.68,
-            9.68
+            9.68,
+            9.89
           ]
         },
         "bereg": {
           "temperature_2m": [
             4.0,
-            4.3
+            4.3,
+            4.6
           ]
         },
         "yartemp": {
           "temperature_2m": [
             9.76,
-            9.84
+            9.84,
+            9.92
           ]
         },
         "uudl": {
           "temperature_2m": [
+            11.0,
             11.0,
             11.0
           ]
@@ -44338,17 +44343,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             11.0,
-            10.0
+            10.0,
+            11.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             11.0,
+            11.0,
             11.0
           ]
         }
       },
-      "updated_at": "2026-10-22T14:16:00+03:00"
+      "updated_at": "2026-10-22T14:26:00+03:00"
     }
   },
   "runs": [
@@ -48591,6 +48598,32 @@
         },
         "wu-ananyino": {
           "temperature_2m": 10.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 11.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-22T14:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 11.14
+        },
+        "frunze": {
+          "temperature_2m": 9.89
+        },
+        "bereg": {
+          "temperature_2m": 4.6
+        },
+        "yartemp": {
+          "temperature_2m": 9.92
+        },
+        "uudl": {
+          "temperature_2m": 11.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 11.0
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 11.0
