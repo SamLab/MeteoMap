@@ -32,15 +32,6 @@
       }
     },
     {
-      "id": "bereg",
-      "name": "Берег",
-      "lat": 57.55,
-      "lon": 39.76,
-      "sensors": {
-        "temperature_2m": "/bereg/2708554-1458260/tmp315/status"
-      }
-    },
-    {
       "id": "yartemp",
       "name": "Ярославль, yartemp.com",
       "lat": 57.62,

@@ -1299,17 +1299,17 @@ def test_help_credits_yartemp_as_a_station_source():
     assert 'YarTemp' in template or 'yartemp' in template
 
 
-def test_help_lists_eight_stations_and_credits_noaa_metar():
-    """В справке восемь станций, аэропорт назван, источники данных указаны.
+def test_help_lists_seven_stations_and_credits_noaa_metar():
+    """В справке семь станций, аэропорт назван, источники данных указаны.
 
     NOAA отдаёт открытые данные без требования атрибуции, но ссылка нужна
     пользователю, чтобы проверить, откуда взялось число. Weather Underground
     добавлены двумя любительскими станциями, поэтому и они должны быть названы
-    со ссылкой на источник.
+    со ссылкой на источник. Берег из списка выпал вместе с уходом из состава.
     """
     with open('template.html', encoding='utf-8') as f:
         template = f.read()
-    assert 'Станций восемь' in template
+    assert 'Станций семь' in template
     assert 'https://aviationweather.gov/' in template
     assert 'METAR' in template
     assert 'раз в 30 минут' in template
@@ -1318,11 +1318,29 @@ def test_help_lists_eight_stations_and_credits_noaa_metar():
 
 
 def test_help_does_not_promise_an_outdated_station_count():
-    """Старые «пять» и «шесть станций» должны уйти вместе со сменой состава."""
+    """Старые счётчики станций должны уходить вместе со сменой состава."""
     with open('template.html', encoding='utf-8') as f:
         template = f.read()
     assert 'Станций пять' not in template
     assert 'Станций шесть' not in template
+    assert 'Станций восемь' not in template
+
+
+def test_help_does_not_name_the_removed_bereg_station():
+    """Показания Берега признаны необоснованными — имени в справке быть не должно.
+
+    Станция убрана из tools/stations.json целиком (сбор, среднее, минимум и
+    вкладка прогонов), поэтому упоминание в списке источников читалось бы как
+    «она всё ещё считается». Счётчик станций рядом тоже обязан совпадать с
+    составом: «семь», а не «восемь», и три станции сети, а не четыре.
+    """
+    with open('template.html', encoding='utf-8') as f:
+        template = f.read()
+    assert 'Берег' not in template
+    assert 'Станций семь' in template
+    assert 'Станций восемь' not in template
+    assert 'три из сети' in template
+    assert 'четыре станции' not in template
 
 
 # --- подпись показывает время последнего обновления, а не начало часа -----

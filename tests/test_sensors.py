@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -230,30 +231,51 @@ def test_repository_stations_config_is_valid():
     stations = cs.load_stations(cs.DEFAULT_CONFIG)
     assert stations, 'stations.json must not be empty'
     assert len({s['id'] for s in stations}) == len(stations)
-    # Сеть меряет только температуру. Влажность и давление убраты из
+    # Сеть меряет только температуру. Влажность и давление убраны из
     # stations.json и из allowlist коллектора, поэтому load_stations не даст
     # вернуть их молча - проверка ниже это отдельно закрепляет.
     for st in stations:
         assert set(st['sensors']) == {'temperature_2m'}, st['id']
 
 
+def test_repository_stations_config_excludes_bereg():
+    """Берег убран из состава: его замеры признаны необоснованными.
+
+    Проверка сторожит не только конфиг, но и историю: meteo.py строит среднее,
+    минимум и «Сейчас» из sensors_history.json, поэтому станция, оставшаяся в
+    бакетах часов, продолжала бы портить агрегаты, даже отсутствуя в конфиге.
+    """
+    stations = cs.load_stations(cs.DEFAULT_CONFIG)
+    assert 'bereg' not in {s['id'] for s in stations}
+    with open(os.path.join(cs.ROOT, 'sensors_history.json'), encoding='utf-8') as f:
+        hist = json.load(f)
+    hours = hist.get('hours') or {}
+    offenders = [hour for hour, bucket in hours.items()
+                 if isinstance(bucket, dict) and 'bereg' in (bucket.get('stations') or {})]
+    assert offenders == [], f'Берег остался в бакетах часов: {offenders[:5]}'
+    runs = hist.get('runs') or []
+    offenders = [run.get('t') for run in runs
+                 if isinstance(run, dict) and 'bereg' in (run.get('stations') or {})]
+    assert offenders == [], f'Берег остался в прогонах: {offenders[:5]}'
+
+
 def test_repository_stations_config_window_covers_the_slowest_station():
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
     # Живой замер 700 с подписки (broker narodmon-mqtt public, tools/stations.json):
-    # bereg публикует раз в 30 с, east раз в 60 с, а frunze и penaty — раз в
-    # 300 с. Период был принят за ~2.5 мин, и на этом держалось обоснование
-    # окна в 600 с. Окно должно быть не меньше периода самой медленной станки:
-    # в любом интервале длиной >= периода гарантированно есть хотя бы одна
-    # публикация, поэтому «молчание» в окне значит «станция молчит», а не
-    # «мимо окна». 350 с — 50 с запаса сверх 300 с.
+    # east публикует раз в 60 с, а frunze и penaty — раз в 300 с. Берег выпал
+    # вместе с уходом станции из состава. Период был принят за ~2.5 мин, и на
+    # этом держалось обоснование окна в 600 с. Окно должно быть не меньше
+    # периода самой медленной станции: в любом интервале длиной >= периода
+    # гарантированно есть хотя бы одна публикация, поэтому «молчание» в окне
+    # значит «станция молчит», а не «мимо окна». 350 с — 50 с запаса сверх 300 с.
     assert settings['window_s'] >= 300, (
         "окно короче 300 с: frunze и penaty публикуют раз в 5 минут, и такие "
         "станции начнут выпадать из замеров"
     )
 
 
-def test_repository_stations_config_subscribes_only_four_topics():
+def test_repository_stations_config_subscribes_only_three_topics():
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
     # Считаются только mqtt-станции: у http-станции в sensors лежит URL, а не
@@ -261,11 +283,12 @@ def test_repository_stations_config_subscribes_only_four_topics():
     mqtt = [st for st in settings['stations']
             if st.get('source', 'mqtt') == 'mqtt']
     topics = [t for st in mqtt for t in st['sensors'].values()]
-    # Температуру отдают все четыре станции брокера, поэтому отказ от
-    # влажности и давления не обесценил ни одну: 4 топика вместо 9.
-    assert len(mqtt) == 4
-    assert len(topics) == 4
-    assert len(set(topics)) == 4
+    # Температуру отдают все три оставшиеся станции брокера, поэтому отказ от
+    # влажности и давления не обесценил ни одну: 3 топика вместо 9. Четвёртым
+    # был Берег — он убран из состава.
+    assert len(mqtt) == 3
+    assert len(topics) == 3
+    assert len(set(topics)) == 3
 
 
 def test_load_stations_rejects_humidity_now_unmeasured(tmp_path):
@@ -1058,11 +1081,18 @@ def test_http_station_is_never_subscribed_over_mqtt():
     assert client.subs == ['city/out/a']
 
 
-def test_repository_config_has_eight_stations_with_three_network_sources():
+def test_repository_config_has_seven_stations_with_three_network_sources():
+    """Состав станций закреплён конфигом: семь штук, из них три сети MQTT.
+
+    Берег выпал вместе с уходом из состава — его замеры признаны
+    необоснованными, и вместе с ним осталось три MQTT-станции, а не четыре.
+    """
     with open(cs.DEFAULT_CONFIG, encoding='utf-8') as f:
         settings = json.load(f)
     stations = settings['stations']
-    assert len(stations) == 8
+    assert len(stations) == 7
+    mqtt = [st for st in stations if st.get('source', 'mqtt') == 'mqtt']
+    assert {st['id'] for st in mqtt} == {'penaty', 'frunze', 'east'}
     http = [st for st in stations if st.get('source') == 'http']
     metar = [st for st in stations if st.get('source') == 'metar']
     wu = [st for st in stations if st.get('source') == 'wu']
