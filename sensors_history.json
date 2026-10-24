@@ -43210,7 +43210,7 @@
       "updated_at": "2026-10-24T16:56:00+03:00"
     },
     "2026-10-24T17:00": {
-      "samples": 41,
+      "samples": 44,
       "stations": {
         "penaty": {
           "temperature_2m": [
@@ -43226,6 +43226,7 @@
           "temperature_2m": [
             10.83,
             10.83,
+            10.62,
             10.62,
             10.62,
             10.62,
@@ -43259,11 +43260,13 @@
             11.0,
             10.0,
             10.0,
+            10.0,
             10.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
+            10.0,
             10.0,
             10.0,
             10.0,
@@ -43282,7 +43285,33 @@
           ]
         }
       },
-      "updated_at": "2026-10-24T17:55:00+03:00"
+      "updated_at": "2026-10-24T17:59:00+03:00"
+    },
+    "2026-10-24T18:00": {
+      "samples": 4,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            9.25
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            10.5
+          ]
+        },
+        "yartemp": {
+          "temperature_2m": [
+            9.26
+          ]
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": [
+            8.0
+          ]
+        }
+      },
+      "updated_at": "2026-10-24T18:02:00+03:00"
     }
   },
   "runs": [
@@ -54388,6 +54417,32 @@
         },
         "yartemp": {
           "temperature_2m": 9.27
+        },
+        "uudl": {
+          "temperature_2m": 10.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 10.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 8.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-24T18:02:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 9.25
+        },
+        "frunze": {
+          "temperature_2m": 10.62
+        },
+        "east": {
+          "temperature_2m": 10.5
+        },
+        "yartemp": {
+          "temperature_2m": 9.26
         },
         "uudl": {
           "temperature_2m": 10.0
