@@ -43599,34 +43599,39 @@
       "updated_at": "2026-10-24T21:56:00+03:00"
     },
     "2026-10-24T22:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             7.69,
-            7.6
+            7.6,
+            7.67
           ]
         },
         "frunze": {
           "temperature_2m": [
             10.14,
+            9.93,
             9.93
           ]
         },
         "east": {
           "temperature_2m": [
             10.5,
-            10.5
+            10.5,
+            10.44
           ]
         },
         "yartemp": {
           "temperature_2m": [
             9.15,
-            9.22
+            9.22,
+            9.26
           ]
         },
         "uudl": {
           "temperature_2m": [
+            10.0,
             10.0,
             10.0
           ]
@@ -43634,17 +43639,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             10.0,
-            10.0
+            10.0,
+            9.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             7.0,
+            6.0,
             6.0
           ]
         }
       },
-      "updated_at": "2026-10-24T22:16:00+03:00"
+      "updated_at": "2026-10-24T22:26:00+03:00"
     }
   },
   "runs": [
@@ -55472,6 +55479,32 @@
         },
         "wu-ananyino": {
           "temperature_2m": 10.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 6.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-24T22:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 7.67
+        },
+        "frunze": {
+          "temperature_2m": 9.93
+        },
+        "east": {
+          "temperature_2m": 10.44
+        },
+        "yartemp": {
+          "temperature_2m": 9.26
+        },
+        "uudl": {
+          "temperature_2m": 10.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 9.0
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 6.0
