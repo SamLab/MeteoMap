@@ -42757,19 +42757,21 @@
       "updated_at": "2026-10-24T10:56:00+03:00"
     },
     "2026-10-24T11:00": {
-      "samples": 19,
+      "samples": 26,
       "stations": {
         "penaty": {
           "temperature_2m": [
             10.31,
             9.85,
-            9.88
+            9.88,
+            10.16
           ]
         },
         "frunze": {
           "temperature_2m": [
             8.11,
             8.32,
+            8.54,
             8.54
           ]
         },
@@ -42777,37 +42779,42 @@
           "temperature_2m": [
             9.19,
             9.62,
-            9.88
+            9.88,
+            9.81
           ]
         },
         "yartemp": {
           "temperature_2m": [
             8.44,
             8.83,
-            9.06
+            9.06,
+            9.38
           ]
         },
         "uudl": {
           "temperature_2m": [
             9.0,
             9.0,
-            9.0
+            9.0,
+            10.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
             8.0,
             9.0,
+            9.0,
             9.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
-            9.0
+            9.0,
+            10.0
           ]
         }
       },
-      "updated_at": "2026-10-24T11:26:00+03:00"
+      "updated_at": "2026-10-24T11:36:00+03:00"
     }
   },
   "runs": [
@@ -52909,6 +52916,32 @@
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 9.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-24T11:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 10.16
+        },
+        "frunze": {
+          "temperature_2m": 8.54
+        },
+        "east": {
+          "temperature_2m": 9.81
+        },
+        "yartemp": {
+          "temperature_2m": 9.38
+        },
+        "uudl": {
+          "temperature_2m": 10.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 9.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 10.0
         }
       }
     }
