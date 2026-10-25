@@ -45478,7 +45478,7 @@
       "updated_at": "2026-10-25T22:59:00+03:00"
     },
     "2026-10-25T23:00": {
-      "samples": 29,
+      "samples": 36,
       "stations": {
         "penaty": {
           "temperature_2m": [
@@ -45486,7 +45486,8 @@
             6.03,
             6.08,
             5.95,
-            5.92
+            5.92,
+            5.87
           ]
         },
         "east": {
@@ -45495,7 +45496,8 @@
             7.56,
             7.5,
             7.38,
-            7.31
+            7.31,
+            7.19
           ]
         },
         "yartemp": {
@@ -45504,7 +45506,8 @@
             5.35,
             5.4,
             5.39,
-            5.36
+            5.36,
+            5.34
           ]
         },
         "frunze": {
@@ -45512,11 +45515,13 @@
             7.12,
             7.12,
             7.04,
+            7.04,
             7.04
           ]
         },
         "uudl": {
           "temperature_2m": [
+            6.0,
             6.0,
             6.0,
             6.0,
@@ -45528,17 +45533,19 @@
             7.0,
             7.0,
             7.0,
+            7.0,
             7.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             5.0,
+            5.0,
             5.0
           ]
         }
       },
-      "updated_at": "2026-10-25T23:36:00+03:00"
+      "updated_at": "2026-10-25T23:46:00+03:00"
     }
   },
   "runs": [
@@ -61359,6 +61366,32 @@
         },
         "yartemp": {
           "temperature_2m": 5.36
+        },
+        "uudl": {
+          "temperature_2m": 6.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 7.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 5.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-25T23:46:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 5.87
+        },
+        "frunze": {
+          "temperature_2m": 7.04
+        },
+        "east": {
+          "temperature_2m": 7.19
+        },
+        "yartemp": {
+          "temperature_2m": 5.34
         },
         "uudl": {
           "temperature_2m": 6.0
