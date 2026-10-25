@@ -1390,8 +1390,9 @@ function buildCmpTable(){
   // обратно живёт по своим правилам ширины (width:max-content со скроллом).
   el.classList.remove('sensorcols');
   const cc=cmpColOrder(codes,cmpVar);
-  const cols=[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
-  const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(1+cc.length)+'</colgroup>';
+  const isDew=cmpVar==='dew_point_2m';
+  const cols=isDew?[{t:'Время'},{t:'Консенсус'},{t:'Точка росы'}].concat(cc.map(c=>({t:names[c]}))).concat([{t:'Температура'},{t:'T–Тр'}]):[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
+  const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(cols.length-1)+'</colgroup>';
   const head=colg+'<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
   const dayMx={},dayMn={};
@@ -1408,7 +1409,7 @@ function buildCmpTable(){
   const rows=D.time.map((t,i)=>{
     const day=t.slice(0,10);
     let drow='';
-    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+(2+cc.length)+'">'+
+    if(day!==prevDay){prevDay=day;drow='<tr class="dayrow"><td colspan="'+cols.length+'">'+
       DAY_NAMES[new Date(t).getDay()]+' '+new Date(t).getDate()+' '+MONTH_NAMES[new Date(t).getMonth()]+'</td></tr>';}
     const w=D.weighted[cmpVar]?.[i];
     let cells=`<td>${t.slice(11,13)}ч</td>`;
@@ -1443,6 +1444,30 @@ function buildCmpTable(){
       const n=j===si&&typeof v==='number'&&sc&&typeof sc[i]==='number'&&sc[i]>0?`<sup>${sc[i]}</sup>`:'';
       cells+=`<td class="${cls}">${cell(v)}${n}</td>`;
     });
+    if(isDew){
+      const td=typeof w==='number'?w:null;
+      let T=null;
+      if(i===curIdx){
+        const sensorMin=D.sensor_station_min?D.sensor_station_min.temperature_2m:null;
+        const sv=D.weighted.temperature_2m?.[i];
+        if(typeof sensorValueFor==='function'){
+          T=sensorValueFor({value:sv,min:sensorMin?sensorMin[i]:null,index:i});
+        }else{
+          T=sv;
+        }
+        if(T===undefined||T===null) T=sv;
+      }else{
+        T=D.weighted.temperature_2m?.[i]??null;
+      }
+      cells+=`<td>${T===null||T===undefined?'—':fmt(T)}</td>`;
+      if(T!==null&&td!==null){
+        const diff=Math.round((T-td)*10)/10;
+        const dcls=diff<=0.5?' ext':'';
+        cells+=`<td class="${dcls}">${diff.toFixed(1)}</td>`;
+      }else{
+        cells+=`<td>—</td>`;
+      }
+    }
     const inMx=dayMx[day]&&dayMx[day][0]===i;
     const inMn=dayMn[day]&&dayMn[day][0]===i;
     return drow+`<tr class="${i===curIdx?'now':''}${inMx?' mxrow':''}${inMn?' mnrow':''}">${cells}</tr>`;
