@@ -45085,38 +45085,43 @@
       "updated_at": "2026-10-25T17:56:00+03:00"
     },
     "2026-10-25T18:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             8.33,
             8.26,
-            8.29
+            8.29,
+            8.15
           ]
         },
         "frunze": {
           "temperature_2m": [
             9.43,
             9.22,
-            8.8
+            8.8,
+            8.58
           ]
         },
         "east": {
           "temperature_2m": [
             9.44,
             9.06,
-            9.06
+            9.06,
+            8.94
           ]
         },
         "yartemp": {
           "temperature_2m": [
             7.63,
             7.42,
-            7.28
+            7.28,
+            7.14
           ]
         },
         "uudl": {
           "temperature_2m": [
+            9.0,
             9.0,
             9.0,
             9.0
@@ -45126,6 +45131,7 @@
           "temperature_2m": [
             9.0,
             9.0,
+            8.0,
             8.0
           ]
         },
@@ -45133,11 +45139,12 @@
           "temperature_2m": [
             8.0,
             8.0,
-            8.0
+            8.0,
+            7.0
           ]
         }
       },
-      "updated_at": "2026-10-25T18:26:00+03:00"
+      "updated_at": "2026-10-25T18:36:00+03:00"
     }
   },
   "runs": [
@@ -60109,6 +60116,32 @@
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 8.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-25T18:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 8.15
+        },
+        "frunze": {
+          "temperature_2m": 8.58
+        },
+        "east": {
+          "temperature_2m": 8.94
+        },
+        "yartemp": {
+          "temperature_2m": 7.14
+        },
+        "uudl": {
+          "temperature_2m": 9.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 8.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 7.0
         }
       }
     }
