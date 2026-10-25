@@ -118,6 +118,41 @@ def test_cmp_table_uses_the_same_sensor_value_as_now():
     )
 
 
+def test_dew_table_has_four_columns_and_no_model_columns():
+    """«Точка росы» — своя короткая таблица: точка росы, температура, разница.
+
+    Девятнадцать колонок моделей на этой вкладке прячут главное: роса выпадает
+    тогда, когда температура опускается до точки росы, и разницу T–Tр надо
+    видеть рядом, а не за восемнадцатью чужими столбцами. Источники на этой
+    вкладке не нужны — для анализа достаточно консенсуса.
+    """
+    body = _cmp_table_js()
+    m = re.search(r"const isDew=cmpVar==='dew_point_2m';\s*const cols=isDew\?\[(.*?)\]:", body)
+    assert m, "у точки росы свой набор колонок"
+    assert re.findall(r"t:'([^']+)'", m.group(1)) == [
+        'Время', 'Точка росы', 'Температура', 'T–Тр']
+    # колонок моделей в этом наборе быть не должно
+    assert 'cc.map' not in m.group(1)
+
+
+def test_dew_spread_uses_sensor_temperature_for_the_current_hour():
+    """В текущем часу температура — с датчиков, как в блоке «Сейчас».
+
+    Иначе разница T–Tр в строке «сейчас» считалась бы по модельной температуре
+    и расходилась бы с крупным числом в виджете: на вопрос «выпадет ли роса
+    сейчас» отвечает замер, а не консенсус.
+    """
+    body = _cmp_table_js()
+    assert 'lastSensorHour()' in body, "текущий час берёт замер станций"
+    assert 'sensorValueFor(sn)' in body, "минимум/среднее выбираются тем же хелпером"
+
+
+def test_dew_spread_highlights_hours_near_saturation():
+    """Разница <= 0.5 °С — та самая ночь, когда выпадает роса, и её видно."""
+    body = _cmp_table_js()
+    assert re.search(r"diff<=0\.5\?' ext'", body), "близкие к насыщению часы подсвечены"
+
+
 def test_sensor_superscript_is_styled_without_breaking_the_column():
     """Надстрочная цифра обязана не раздувать строку таблицы."""
     html = read_template()

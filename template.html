@@ -1417,17 +1417,13 @@ function buildCmpTable(){
       cells+=`<td><b>${cell(w)}</b></td>`;
       let T=null;
       if(i===curIdx){
-        const sensorMin=D.sensor_station_min?D.sensor_station_min.temperature_2m:null;
-        const sv=D.weighted.temperature_2m?.[i];
-        if(typeof sensorValueFor==='function'){
-          T=sensorValueFor({value:sv,min:sensorMin?sensorMin[i]:null,index:i});
-        }else{
-          T=sv;
-        }
-        if(T===undefined||T===null) T=sv;
-      }else{
-        T=D.weighted.temperature_2m?.[i]??null;
+        // Текущий час — замер станций, а не консенсус моделей: строка должна
+        // совпадать с крупным числом «Сейчас», иначе разница T–Tр в ней
+        // отвечает про другую температуру.
+        const sn=lastSensorHour();
+        if(sn)T=sensorValueFor(sn);
       }
+      if(T===null||T===undefined)T=D.weighted.temperature_2m?.[i]??null;
       cells+=`<td>${T===null||T===undefined?'—':fmt(T)}</td>`;
       if(T!==null&&typeof w==='number'){
         const diff=Math.round((T-w)*10)/10;
