@@ -1391,7 +1391,7 @@ function buildCmpTable(){
   el.classList.remove('sensorcols');
   const cc=cmpColOrder(codes,cmpVar);
   const isDew=cmpVar==='dew_point_2m';
-  const cols=isDew?[{t:'Время'},{t:'Консенсус'},{t:'Точка росы'}].concat(cc.map(c=>({t:names[c]}))).concat([{t:'Температура'},{t:'T–Тр'}]):[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
+  const cols=isDew?[{t:'Время'},{t:'Точка росы'},{t:'Температура'},{t:'T–Тр'}]:[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
   const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(cols.length-1)+'</colgroup>';
   const head=colg+'<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
