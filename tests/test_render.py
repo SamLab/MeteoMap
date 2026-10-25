@@ -130,7 +130,7 @@ def test_dew_table_has_four_columns_and_no_model_columns():
     m = re.search(r"const isDew=cmpVar==='dew_point_2m';\s*const cols=isDew\?\[(.*?)\]:", body)
     assert m, "у точки росы свой набор колонок"
     assert re.findall(r"t:'([^']+)'", m.group(1)) == [
-        'Время', 'Точка росы', 'Температура', 'T–Тр']
+        'Время', 'Разница Температуры и Точки росы', 'Точка росы', 'Температура']
     # колонок моделей в этом наборе быть не должно
     assert 'cc.map' not in m.group(1)
 

@@ -1393,7 +1393,7 @@ function buildCmpTable(){
   el.classList.remove('sensorcols');
   const cc=cmpColOrder(codes,cmpVar);
   const isDew=cmpVar==='dew_point_2m';
-  const cols=isDew?[{t:'Время'},{t:'Точка росы'},{t:'Температура'},{t:'T–Тр'}]:[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
+  const cols=isDew?[{t:'Время'},{t:'Разница Температуры и Точки росы'},{t:'Точка росы'},{t:'Температура'}]:[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));
   const colg='<colgroup><col style="width:44px">'+'<col>'.repeat(cols.length-1)+'</colgroup>';
   const head=colg+'<thead><tr>'+cols.map(c=>`<th>${c.t}</th>`).join('')+'</tr></thead>';
   const isWc=cmpVar==='weather_code';
@@ -1416,7 +1416,6 @@ function buildCmpTable(){
     const w=D.weighted[cmpVar]?.[i];
     let cells=`<td>${t.slice(11,13)}ч</td>`;
     if(isDew){
-      cells+=`<td><b>${cell(w)}</b></td>`;
       let T=null;
       if(i===curIdx){
         // Текущий час — замер станций, а не консенсус моделей: строка должна
@@ -1426,6 +1425,7 @@ function buildCmpTable(){
         if(sn)T=sensorValueFor(sn);
       }
       if(T===null||T===undefined)T=D.weighted.temperature_2m?.[i]??null;
+      cells+=`<td><b>${cell(w)}</b></td>`;
       cells+=`<td>${T===null||T===undefined?'—':fmt(T)}</td>`;
       if(T!==null&&typeof w==='number'){
         const diff=Math.round((T-w)*10)/10;
