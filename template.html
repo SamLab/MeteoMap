@@ -90,6 +90,8 @@ th{color:var(--muted);font-weight:500}
 td.plus{color:#d32f2f}
 td.minus{color:#1976d2}
 td.ext{font-weight:700}
+/* Роса: разница T–Tр <= 0.5 °С — температура подошла к точке росы. */
+td.dewrisk{background:#ffe3ef;font-weight:700}
 .tstab{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:8px}
 .tstab .tlu{text-decoration:underline}
 .tconcl{font-size:13px;background:var(--sel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:8px}
@@ -1427,7 +1429,7 @@ function buildCmpTable(){
       cells+=`<td>${T===null||T===undefined?'—':fmt(T)}</td>`;
       if(T!==null&&typeof w==='number'){
         const diff=Math.round((T-w)*10)/10;
-        const dcls=diff<=0.5?' ext':'';
+        const dcls=diff<=0.5?' dewrisk':'';
         cells+=`<td class="${dcls}">${diff.toFixed(1)}</td>`;
       }else{
         cells+=`<td>—</td>`;

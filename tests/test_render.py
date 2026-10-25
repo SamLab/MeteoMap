@@ -150,7 +150,9 @@ def test_dew_spread_uses_sensor_temperature_for_the_current_hour():
 def test_dew_spread_highlights_hours_near_saturation():
     """Разница <= 0.5 °С — та самая ночь, когда выпадает роса, и её видно."""
     body = _cmp_table_js()
-    assert re.search(r"diff<=0\.5\?' ext'", body), "близкие к насыщению часы подсвечены"
+    assert re.search(r"diff<=0\.5\?' dewrisk'", body), "близкие к насыщению часы подсвечены"
+    css = read_template()
+    assert re.search(r"td\.dewrisk\{[^}]*background:#ffe3ef", css), "подсветка розовая, а не только жирная"
 
 
 def test_sensor_superscript_is_styled_without_breaking_the_column():
