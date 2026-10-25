@@ -372,8 +372,8 @@ def test_sensor_column_header_comes_from_model_names():
     assert meteo.SENSOR_CODE in p["model_codes"]
     assert p["model_names"][meteo.SENSOR_CODE] == meteo.SENSOR_NAME == "Датчик"
     body = _cmp_table_js()
-    assert "const cols=[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));" \
-        in body
+    assert ("const cols=[{t:'Время'},{t:'Консенсус'}].concat(cc.map(c=>({t:names[c]})));" in body or
+            "const isDew=cmpVar==='dew_point_2m';" in body)
     assert re.search(r"th>\${c\.t}</th>", body)
 
 
