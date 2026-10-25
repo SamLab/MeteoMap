@@ -44315,14 +44315,15 @@
       "updated_at": "2026-10-25T07:59:00+03:00"
     },
     "2026-10-25T08:00": {
-      "samples": 26,
+      "samples": 33,
       "stations": {
         "penaty": {
           "temperature_2m": [
             3.75,
             3.83,
             3.94,
-            4.16
+            4.16,
+            4.41
           ]
         },
         "frunze": {
@@ -44330,6 +44331,7 @@
             5.58,
             5.58,
             5.58,
+            5.51,
             5.51
           ]
         },
@@ -44338,7 +44340,8 @@
             5.69,
             5.75,
             5.81,
-            5.94
+            5.94,
+            6.12
           ]
         },
         "yartemp": {
@@ -44346,7 +44349,8 @@
             4.41,
             4.55,
             4.68,
-            4.82
+            4.82,
+            4.95
           ]
         },
         "wu-zavolzhskoe": {
@@ -44354,25 +44358,28 @@
             2.0,
             2.0,
             2.0,
-            2.0
+            2.0,
+            3.0
           ]
         },
         "uudl": {
           "temperature_2m": [
             5.0,
             5.0,
-            5.0
+            5.0,
+            6.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
             5.0,
             5.0,
+            5.0,
             5.0
           ]
         }
       },
-      "updated_at": "2026-10-25T08:26:00+03:00"
+      "updated_at": "2026-10-25T08:36:00+03:00"
     }
   },
   "runs": [
@@ -57764,6 +57771,32 @@
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 2.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-25T08:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 4.41
+        },
+        "frunze": {
+          "temperature_2m": 5.51
+        },
+        "east": {
+          "temperature_2m": 6.12
+        },
+        "yartemp": {
+          "temperature_2m": 4.95
+        },
+        "uudl": {
+          "temperature_2m": 6.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 5.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 3.0
         }
       }
     }
