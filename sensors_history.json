@@ -49455,25 +49455,28 @@
       "updated_at": "2026-10-28T02:56:00+03:00"
     },
     "2026-10-28T03:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             5.28,
             5.16,
-            5.13
+            5.13,
+            5.1
           ]
         },
         "frunze": {
           "temperature_2m": [
             5.52,
             5.31,
+            5.1,
             5.1
           ]
         },
         "east": {
           "temperature_2m": [
             5.5,
+            5.44,
             5.44,
             5.44
           ]
@@ -49482,11 +49485,13 @@
           "temperature_2m": [
             5.11,
             5.13,
-            5.17
+            5.17,
+            5.16
           ]
         },
         "uudl": {
           "temperature_2m": [
+            4.0,
             4.0,
             4.0,
             4.0
@@ -49496,6 +49501,7 @@
           "temperature_2m": [
             5.0,
             5.0,
+            4.0,
             4.0
           ]
         },
@@ -49503,11 +49509,12 @@
           "temperature_2m": [
             0.0,
             0.0,
-            0.0
+            0.0,
+            1.0
           ]
         }
       },
-      "updated_at": "2026-10-28T03:22:00+03:00"
+      "updated_at": "2026-10-28T03:28:00+03:00"
     }
   },
   "runs": [
@@ -73586,6 +73593,32 @@
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 0.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-28T03:28:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 5.1
+        },
+        "frunze": {
+          "temperature_2m": 5.1
+        },
+        "east": {
+          "temperature_2m": 5.44
+        },
+        "yartemp": {
+          "temperature_2m": 5.16
+        },
+        "uudl": {
+          "temperature_2m": 4.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 4.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 1.0
         }
       }
     }
