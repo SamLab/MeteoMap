@@ -50224,34 +50224,39 @@
       "updated_at": "2026-10-28T12:56:00+03:00"
     },
     "2026-10-28T13:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             11.26,
-            11.38
+            11.38,
+            11.62
           ]
         },
         "frunze": {
           "temperature_2m": [
             9.78,
-            9.99
+            9.99,
+            10.42
           ]
         },
         "east": {
           "temperature_2m": [
             11.06,
-            11.38
+            11.38,
+            11.25
           ]
         },
         "yartemp": {
           "temperature_2m": [
             10.97,
-            11.2
+            11.2,
+            11.41
           ]
         },
         "uudl": {
           "temperature_2m": [
+            12.0,
             12.0,
             12.0
           ]
@@ -50259,17 +50264,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             11.0,
+            11.0,
             11.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             11.0,
+            11.0,
             11.0
           ]
         }
       },
-      "updated_at": "2026-10-28T13:16:00+03:00"
+      "updated_at": "2026-10-28T13:26:00+03:00"
     }
   },
   "runs": [
@@ -75910,6 +75917,32 @@
         },
         "yartemp": {
           "temperature_2m": 11.2
+        },
+        "uudl": {
+          "temperature_2m": 12.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 11.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 11.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-28T13:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 11.62
+        },
+        "frunze": {
+          "temperature_2m": 10.42
+        },
+        "east": {
+          "temperature_2m": 11.25
+        },
+        "yartemp": {
+          "temperature_2m": 11.41
         },
         "uudl": {
           "temperature_2m": 12.0
