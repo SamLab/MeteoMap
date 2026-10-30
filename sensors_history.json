@@ -52429,35 +52429,40 @@
       "updated_at": "2026-10-30T07:55:00+03:00"
     },
     "2026-10-30T08:00": {
-      "samples": 5,
+      "samples": 10,
       "stations": {
         "penaty": {
           "temperature_2m": [
-            6.04
+            6.04,
+            6.18
           ]
         },
         "frunze": {
           "temperature_2m": [
+            5.88,
             5.88
           ]
         },
         "east": {
           "temperature_2m": [
-            6.19
+            6.19,
+            6.44
           ]
         },
         "uudl": {
           "temperature_2m": [
+            6.0,
             6.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
+            5.0,
             5.0
           ]
         }
       },
-      "updated_at": "2026-10-30T08:06:00+03:00"
+      "updated_at": "2026-10-30T08:15:00+03:00"
     }
   },
   "runs": [
@@ -84411,6 +84416,26 @@
         },
         "east": {
           "temperature_2m": 6.19
+        },
+        "uudl": {
+          "temperature_2m": 6.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 5.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-30T08:16:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 6.18
+        },
+        "frunze": {
+          "temperature_2m": 5.88
+        },
+        "east": {
+          "temperature_2m": 6.44
         },
         "uudl": {
           "temperature_2m": 6.0
