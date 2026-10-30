@@ -1,50 +1,5 @@
 {
   "hours": {
-    "2026-09-30T07:00": {
-      "samples": 24,
-      "stations": {
-        "penaty": {
-          "temperature_2m": [
-            7.23,
-            7.21,
-            7.21,
-            7.21,
-            7.31,
-            7.52
-          ]
-        },
-        "frunze": {
-          "temperature_2m": [
-            8.45,
-            8.45,
-            8.45,
-            8.52,
-            8.73,
-            8.94
-          ]
-        },
-        "east": {
-          "temperature_2m": [
-            9.19,
-            9.12,
-            9.31,
-            9.25,
-            9.44,
-            9.5
-          ]
-        },
-        "yartemp": {
-          "temperature_2m": [
-            5.99,
-            5.96,
-            6.1,
-            6.29,
-            6.51,
-            6.8
-          ]
-        }
-      }
-    },
     "2026-09-30T08:00": {
       "samples": 24,
       "stations": {
@@ -52472,6 +52427,37 @@
         }
       },
       "updated_at": "2026-10-30T07:55:00+03:00"
+    },
+    "2026-10-30T08:00": {
+      "samples": 5,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            6.04
+          ]
+        },
+        "frunze": {
+          "temperature_2m": [
+            5.88
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            6.19
+          ]
+        },
+        "uudl": {
+          "temperature_2m": [
+            6.0
+          ]
+        },
+        "wu-ananyino": {
+          "temperature_2m": [
+            5.0
+          ]
+        }
+      },
+      "updated_at": "2026-10-30T08:06:00+03:00"
     }
   },
   "runs": [
@@ -84405,6 +84391,26 @@
         },
         "east": {
           "temperature_2m": 6.06
+        },
+        "uudl": {
+          "temperature_2m": 6.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 5.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-30T08:06:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 6.04
+        },
+        "frunze": {
+          "temperature_2m": 5.88
+        },
+        "east": {
+          "temperature_2m": 6.19
         },
         "uudl": {
           "temperature_2m": 6.0
