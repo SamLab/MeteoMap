@@ -52844,34 +52844,39 @@
       "updated_at": "2026-10-31T17:56:00+03:00"
     },
     "2026-10-31T18:00": {
-      "samples": 12,
+      "samples": 18,
       "stations": {
         "penaty": {
           "temperature_2m": [
             4.88,
-            4.85
+            4.85,
+            4.69
           ]
         },
         "frunze": {
           "temperature_2m": [
             7.05,
+            6.82,
             6.82
           ]
         },
         "east": {
           "temperature_2m": [
             8.44,
-            8.44
+            8.44,
+            8.25
           ]
         },
         "yartemp": {
           "temperature_2m": [
             7.2,
-            7.04
+            7.04,
+            7.06
           ]
         },
         "uudl": {
           "temperature_2m": [
+            3.0,
             3.0,
             3.0
           ]
@@ -52879,11 +52884,12 @@
         "wu-ananyino": {
           "temperature_2m": [
             7.0,
+            7.0,
             7.0
           ]
         }
       },
-      "updated_at": "2026-10-31T18:16:00+03:00"
+      "updated_at": "2026-10-31T18:26:00+03:00"
     }
   },
   "runs": [
@@ -89571,6 +89577,29 @@
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 3.0
+        }
+      }
+    },
+    {
+      "t": "2026-10-31T18:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 4.69
+        },
+        "frunze": {
+          "temperature_2m": 6.82
+        },
+        "east": {
+          "temperature_2m": 8.25
+        },
+        "yartemp": {
+          "temperature_2m": 7.06
+        },
+        "uudl": {
+          "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 7.0
         }
       }
     }
