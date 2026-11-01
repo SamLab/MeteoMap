@@ -175,15 +175,17 @@ function relDay(d){
 }
 function buildSummary(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+  var SNOW=[71,73,75,77,85,86];
+  function isPrecipCode(c){ return RAIN.indexOf(c)>=0 || SNOW.indexOf(c)>=0; }
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return isPrecipCode(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
   function modelRainCount(j){
-    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(isPrecipCode(code)||(pr!=null&&pr>=0.1))n++;}return n;
   }
   // Модели по консенсус-критерию (код, осадки >= 0.1 мм, или вероятность
   // > 25% без осадков). Подтверждённая строка требует минимум двух таких
   // моделей — как «Предупреждения» на главной.
   function conModelCount(j){
-    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(isPrecipCode(code)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
@@ -202,7 +204,7 @@ function buildSummary(times, data, rawData, idx){
   }
   var peakModels=Infinity,peakMax=-Infinity,conPeak=Infinity,conMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var n=0,cn=0;
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code!=null?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code!=null?isPrecipCode(code):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;if(isPrecipCode(code)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
     if(n<peakModels)peakModels=n;
     if(n>peakMax)peakMax=n;
     if(cn<conPeak)conPeak=cn;
@@ -218,7 +220,12 @@ function buildSummary(times, data, rawData, idx){
     if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
   }
   var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;
-  var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'\u0414\u043E\u0436\u0434\u044C';
+  var tCur2 = data.temperature_2m ? data.temperature_2m[rainHour] : null;
+  var rainType;
+  if (SNOW.indexOf(jCode)>=0) rainType = (WMO[jCode] && WMO[jCode].l.indexOf('\u0421\u043D\u0435\u0433')>=0)?WMO[jCode].l:'\u0421\u043D\u0435\u0433';
+  else if (RAIN.indexOf(jCode)>=0 && WMO[jCode]) rainType = WMO[jCode].l;
+  else if (tCur2 != null && tCur2 < 0) rainType = '\u0421\u043D\u0435\u0433';
+  else rainType = '\u041E\u0441\u0430\u0434\u043A\u0438';
   var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';
   var endIdx=Math.min(jLast+1,times.length-1);
   var en=(times[endIdx].getHours()===0)?'\u0030\u0030\u0447':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'ч':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч');
@@ -236,15 +243,17 @@ function buildSummary(times, data, rawData, idx){
 // счётчиком conCnt.
 function summaryConfirmed(times, data, rawData, idx){
   var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+  var SNOW=[71,73,75,77,85,86];
+  function isPrecipCode(c){ return RAIN.indexOf(c)>=0 || SNOW.indexOf(c)>=0; }
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return isPrecipCode(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
   function conModelCount(j){
-    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(isPrecipCode(code)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
     if(hasRainAt(j)&&conModelCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
-  if(rainHour<0) return '\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0434\u043D\u044F \u0431\u0435\u0437 \u0434\u043E\u0436\u0434\u044F';
+  if(rainHour<0) return '\u041E\u0441\u0442\u0430\u0442\u043E\u043A \u0434\u043D\u044F \u0431\u0435\u0437 \u043E\u0441\u0430\u0434\u043A\u043E\u0432';
   var sumPr=0,maxPp=0;
   for(var j=rainHour;j<=jLast;j++){
     var p=data.precipitation?data.precipitation[j]:0;
@@ -254,14 +263,19 @@ function summaryConfirmed(times, data, rawData, idx){
   }
   var conPeak=Infinity,conMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var cn=0;
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(isPrecipCode(code)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
     if(cn<conPeak)conPeak=cn;
     if(cn>conMax)conMax=cn;
   }
   if(conPeak===Infinity)conPeak=0;
   if(conMax===-Infinity)conMax=0;
   var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;
-  var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'\u0414\u043E\u0436\u0434\u044C';
+  var tCur3 = data.temperature_2m ? data.temperature_2m[rainHour] : null;
+  var rainType;
+  if (SNOW.indexOf(jCode)>=0) rainType = (WMO[jCode] && WMO[jCode].l.indexOf('\u0421\u043D\u0435\u0433')>=0)?WMO[jCode].l:'\u0421\u043D\u0435\u0433';
+  else if (RAIN.indexOf(jCode)>=0 && WMO[jCode]) rainType = WMO[jCode].l;
+  else if (tCur3 != null && tCur3 < 0) rainType = '\u0421\u043D\u0435\u0433';
+  else rainType = '\u041E\u0441\u0430\u0434\u043A\u0438';
   var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'\u0447':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'\u0447';
   var endIdx=Math.min(jLast+1,times.length-1);
   var en=(times[endIdx].getHours()===0)?'\u0030\u0030\u0447':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'\u0447':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'\u0447');
@@ -488,14 +502,16 @@ function render(data){
     var ws = data.weighted.wind_speed_10m ? data.weighted.wind_speed_10m[i] : null;
     var prob = data.weighted.precipitation_probability ? Math.round(data.weighted.precipitation_probability[i]) : 0;
     var mm = data.weighted.precipitation ? data.weighted.precipitation[i] : 0;
-    var rain = prob >= 50 || mm >= 0.1;
+    var SNOWC=[71,73,75,77,85,86];
+    var RAINC=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+    var isPrec = (SNOWC.indexOf(code)>=0 || RAINC.indexOf(code)>=0) || prob >= 50 || mm >= 0.1;
     var tempStr = (temperature > 0 ? '+' : '') + temperature + '\u00B0';
 
     var drop = (mm >= 0.05) ? '\uD83D\uDCA7' : '';
     var probStr = prob > 0 ? (drop + prob + '<span class="ppct">%</span>') : '';
     var mmStr = fmtMm(mm);
 
-    html += '<div class="hour' + (rain ? ' rain' : '') + '" title="' + w.l + '">' +
+    html += '<div class="hour' + (isPrec ? ' rain' : '') + '" title="' + w.l + '">' +
       '<div class="ht">' + pad2(t.getHours()) + 'ч</div>' +
       '<div class="he">' + w.e + '</div>' +
       '<div class="hwnd">' + windArrow(wd, ws) + '</div>' +

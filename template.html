@@ -716,14 +716,23 @@ function buildWeatherHours(){
   const isToday=j=>D.time[j]&&j>=hs&&D.time[j].slice(0,10)===dayStr;
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  function hasRainAt(j){const c=w.weather_code?.[j],p=w.precipitation?.[j],q=w.precipitation_probability?.[j];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+  const snowCodes=[71,73,75,77,85,86];
+  const precCodes=[...rainCodes,...snowCodes];
+  function precTypeName(c,t){
+    if(snowCodes.includes(c))return 'Снег';
+    if(rainCodes.includes(c))return 'Дождь';
+    if(t!=null && t < 0 && precCodes.includes(c))return 'Снег';
+    if(t!=null && t < 0)return 'Осадки';
+    return 'Осадки';
+  }
+  function hasRainAt(j){const c=w.weather_code?.[j],p=w.precipitation?.[j],q=w.precipitation_probability?.[j];return rainCodes.includes(c)||(snowCodes.includes(c))||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
   function modelRainCount(j){
-    let n=0;for(const c of codes){const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;}return n;
+    let n=0;for(const c of codes){const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;if(v!=null?(rainCodes.includes(v)||snowCodes.includes(v)):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;}return n;
   }
   let rainHour=-1,jLast=-1,fromModels=false;
   for(let j=0;j<D.time.length;j++){
     if(!isToday(j))continue;
-    if(sourceCountAt(j,rainCodes,0.1)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
+    if(sourceCountAt(j,precCodes,0.1)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;
   }
   if(rainHour<0){
     for(let j=0;j<D.time.length;j++){
@@ -750,8 +759,8 @@ function buildWeatherHours(){
         const v=D.models[c]?D.models[c].weather_code?.[j]:undefined;
         const pr=D.models[c]?D.models[c].precipitation?.[j]:undefined;
         const pp=D.models[c]?D.models[c].precipitation_probability?.[j]:undefined;
-        if(v!=null?rainCodes.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;
-        if(rainCodes.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;
+        if(v!=null?(rainCodes.includes(v)||snowCodes.includes(v)):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;
+        if(rainCodes.includes(v)||snowCodes.includes(v)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;
       }
       if(n<mCnt)mCnt=n;
       if(n>mX)mX=n;
@@ -763,7 +772,8 @@ function buildWeatherHours(){
     if(ccCnt===Infinity)ccCnt=0;
     if(ccX===-Infinity)ccX=0;
     const jStartCode=w.weather_code?.[ws];
-    const rainType=(rainCodes.includes(jStartCode)&&wcode(jStartCode)[0])?wcode(jStartCode)[0]:'Дождь';
+    const startTemp=w.temperature_2m?.[ws];
+    const rainType=(wcode(jStartCode)&&wcode(jStartCode)[0]&&precCodes.includes(jStartCode))?precTypeName(jStartCode,startTemp):precTypeName(jStartCode,startTemp);
     const stDay=D.time[rainHour].slice(0,10)===D.time[hs].slice(0,10)?'':relDay(D.time[rainHour])+' ';
     const stHour=D.time[rainHour].slice(11,13)+'ч';
     const st=stDay+stHour;
@@ -776,7 +786,7 @@ function buildWeatherHours(){
     const txt=rainType+' '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%';
     const mcLbl='по '+rcLbl(mCnt,mX);
     const ccLbl='по '+rcLbl(ccCnt,ccX);
-    parts.push(fromModels?'Подтвержденного дождя нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+(ccCnt>=1?' · '+ccLbl:''));
+    parts.push(fromModels?'Подтвержденного '+(rainType.toLowerCase())+' нет, но '+(mCnt>=1?mcLbl+' ':'')+'вероятны Осадки '+timeStr+' на '+fmtP(sumPr)+'мм с '+num(maxPp)+'%':txt+(ccCnt>=1?' · '+ccLbl:''));
   }
   else parts.push('Остаток дня без дождя');
   const th=document.getElementById('hourstitle');
@@ -807,19 +817,30 @@ function buildWeather16Title(){
   const dt=D.daily_time||[];
   const parts=[];
   const rainCodes=[51,53,55,56,57,61,63,65,66,67,80,81,82];
+  const snowCodes=[71,73,75,77,85,86];
+  const precCodes=[...rainCodes,...snowCodes];
+  function precTypeName(c,t){
+    if(snowCodes.includes(c))return 'Снег';
+    if(rainCodes.includes(c))return 'Дождь';
+    if(t!=null && t < 0)return 'Осадки';
+    if(rainCodes.includes(c))return 'Дождь';
+    return 'Осадки';
+  }
   const hourIdx=day=>{const o=[];for(let i=0;i<D.time.length;i++){if(D.time[i]&&D.time[i].slice(0,10)===day)o.push(i);}return o;};
   const dayLabel=d=>DOW_S[d.getDay()]+' '+d.getDate();
   const hh=t=>t.slice(11,13)+'ч';
   const todayStr=D.time[curIdx]?D.time[curIdx].slice(0,10):'';
-  function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
-let rainDayI=-1,rainA=-1,rainB=-1;
-  // ближайший дождь: непрерывный эпизод от текущего часа, конец эксклюзивный (час после последнего дождливого)
+  function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||snowCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+let rainDayI=-1,rainA=-1,rainB=-1,precType='Дождь';
+  // ближайшие осадки: непрерывный эпизод от текущего часа
   for(let i=curIdx;i<D.time.length;i++){
     if(!D.time[i]||!hasRainAt(i))continue;
     rainA=i;
     let k=i+1;
     while(k<D.time.length&&D.time[k]&&hasRainAt(k))k++;
     rainB=Math.min(k,D.time.length-1);
+    const c0=D.weighted.weather_code?.[rainA],t0=D.weighted.temperature_2m?.[rainA];
+    precType=precTypeName(c0,t0);
     rainDayI=1;
     break;
   }
@@ -829,7 +850,8 @@ let rainDayI=-1,rainA=-1,rainB=-1;
     const rainNow=D.time[rainA].slice(0,10)===today&&rainA===curIdx;
     const eTs=D.time[rainB],eDay=eTs.slice(0,10),eTime=hh(eTs);
     const endLabel=(eTime==='00ч'&&eDay!==D.time[rainA].slice(0,10))?'00ч':(eDay===D.time[rainA].slice(0,10)?eTime:relDay(eTs)+' '+eTime);
-    parts.push(rainNow?'Ближайший дождь: до '+endLabel:'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+endLabel);
+    const label=(precType==='Снег'?'Ближайший снег':(precType==='Осадки'?'Ближайшие осадки':'Ближайший дождь'));
+    parts.push(rainNow?(label+': до '+endLabel):(label+': '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+endLabel));
   }else parts.push('Ближайший дождь: не ожидается');
   let hotI=-1,hotT=-Infinity,coldI=-1,coldT=Infinity;
   for(let di=0;di<dt.length;di++){
