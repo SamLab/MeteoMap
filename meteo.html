@@ -212,17 +212,16 @@ function relDay(d){
   return DOW[t.getDay()]+' '+t.getDate();
 }
 function buildSummary(times, data, rawData, idx){
-  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  var SNOW=[71,73,75,77,85,86];
-  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return (RAIN.indexOf(c)>=0||SNOW.indexOf(c)>=0)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82,71,73,75,77,85,86];
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
   function modelRainCount(j){
-    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||SNOW.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):0;var pr=m.precipitation?m.precipitation[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1))n++;}return n;
   }
   // Модели по консенсус-критерию (код, осадки >= 0.1 мм, или вероятность
   // > 25% без осадков). Подтверждённая строка требует минимум двух таких
   // моделей — как «Предупреждения» на главной.
   function conModelCount(j){
-    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if((RAIN.indexOf(code)>=0||SNOW.indexOf(code)>=0)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
@@ -241,7 +240,7 @@ function buildSummary(times, data, rawData, idx){
   }
   var peakModels=Infinity,peakMax=-Infinity,conPeak=Infinity,conMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var n=0,cn=0;
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code!=null?(RAIN.indexOf(code)>=0||SNOW.indexOf(code)>=0):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;if((RAIN.indexOf(code)>=0||SNOW.indexOf(code)>=0)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(code!=null?RAIN.indexOf(code)>=0:(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
     if(n<peakModels)peakModels=n;
     if(n>peakMax)peakMax=n;
     if(cn<conPeak)conPeak=cn;
@@ -257,8 +256,8 @@ function buildSummary(times, data, rawData, idx){
     if(p!=null&&p>peakPr){peakPr=p;jPeak=j;}
   }
   var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;
-  var SNOW=[71,73,75,77,85,86];
-  var rainType=(SNOW.indexOf(jCode)>=0)?'Снег':((RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'Осадки');
+  var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'Осадки';
+  if(rainType==='Дождь'&&data.temperature_2m&&data.temperature_2m[rainHour]!=null&&data.temperature_2m[rainHour]<0)rainType='Снег';
   var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';
   var endIdx=Math.min(jLast+1,times.length-1);
   var en=(times[endIdx].getHours()===0)?'00ч':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'ч':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч');
@@ -276,11 +275,10 @@ function buildSummary(times, data, rawData, idx){
 // на главной). Текст повторяет подтверждённую ветку buildSummary, вместе с её
 // счётчиком conCnt.
 function summaryConfirmed(times, data, rawData, idx){
-  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82];
-  var SNOW=[71,73,75,77,85,86];
-  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return (RAIN.indexOf(c)>=0||SNOW.indexOf(c)>=0)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
+  var RAIN=[51,53,55,56,57,61,63,65,66,67,80,81,82,71,73,75,77,85,86];
+  function hasRainAt(j){var c=data.weather_code?Math.round(data.weather_code[j]):0;var p=data.precipitation?data.precipitation[j]:null;var q=data.precipitation_probability?data.precipitation_probability[j]:null;return RAIN.indexOf(c)>=0||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}
   function conModelCount(j){
-    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if((RAIN.indexOf(code)>=0||SNOW.indexOf(code)>=0)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
+    var n=0;for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))n++;}return n;
   }
   var rainHour=-1,jLast=-1;
   for(var j=idx;j<times.length;j++){
@@ -296,15 +294,15 @@ function summaryConfirmed(times, data, rawData, idx){
   }
   var conPeak=Infinity,conMax=-Infinity;
   for(var j=rainHour;j<=jLast;j++){var cn=0;
-    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if((RAIN.indexOf(code)>=0||SNOW.indexOf(code)>=0)||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
+    for(var c in rawData){var m=rawData[c];if(!m)continue;var code=m.weather_code?Math.round(m.weather_code[j]):null;var pr=m.precipitation?m.precipitation[j]:null;var pp=m.precipitation_probability?m.precipitation_probability[j]:null;if(RAIN.indexOf(code)>=0||(pr!=null&&pr>=0.1)||((pr==null||pr<0.1)&&pp!=null&&pp>25))cn++;}
     if(cn<conPeak)conPeak=cn;
     if(cn>conMax)conMax=cn;
   }
   if(conPeak===Infinity)conPeak=0;
   if(conMax===-Infinity)conMax=0;
   var jCode=data.weather_code?Math.round(data.weather_code[rainHour]):0;
-  var SNOW=[71,73,75,77,85,86];
-  var rainType=(SNOW.indexOf(jCode)>=0)?'Снег':((RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'Осадки');
+  var rainType=(RAIN.indexOf(jCode)>=0&&WMO[jCode])?WMO[jCode].l:'Осадки';
+  if(rainType==='Дождь'&&data.temperature_2m&&data.temperature_2m[rainHour]!=null&&data.temperature_2m[rainHour]<0)rainType='Снег';
   var st=times[rainHour].toDateString()===times[idx].toDateString()?pad2(times[rainHour].getHours())+'ч':relDay(times[rainHour])+' '+pad2(times[rainHour].getHours())+'ч';
   var endIdx=Math.min(jLast+1,times.length-1);
   var en=(times[endIdx].getHours()===0)?'00ч':(times[endIdx].toDateString()===times[rainHour].toDateString()?pad2(times[endIdx].getHours())+'ч':relDay(times[endIdx])+' '+pad2(times[endIdx].getHours())+'ч');
