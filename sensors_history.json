@@ -52682,17 +52682,19 @@
       "updated_at": "2026-11-03T12:59:00+03:00"
     },
     "2026-11-03T13:00": {
-      "samples": 16,
+      "samples": 23,
       "stations": {
         "yartemp": {
           "temperature_2m": [
             4.37,
             4.22,
-            4.07
+            4.07,
+            4.15
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
+            2.0,
             2.0,
             2.0,
             2.0
@@ -52701,23 +52703,27 @@
         "penaty": {
           "temperature_2m": [
             3.35,
-            3.29
+            3.29,
+            3.27
           ]
         },
         "frunze": {
           "temperature_2m": [
             2.5,
+            2.57,
             2.57
           ]
         },
         "east": {
           "temperature_2m": [
             3.38,
-            3.38
+            3.38,
+            3.06
           ]
         },
         "uudl": {
           "temperature_2m": [
+            3.0,
             3.0,
             3.0
           ]
@@ -52725,11 +52731,12 @@
         "wu-ananyino": {
           "temperature_2m": [
             2.0,
+            2.0,
             2.0
           ]
         }
       },
-      "updated_at": "2026-11-03T13:16:00+03:00"
+      "updated_at": "2026-11-03T13:26:00+03:00"
     }
   },
   "runs": [
@@ -99613,6 +99620,32 @@
         },
         "yartemp": {
           "temperature_2m": 4.07
+        },
+        "uudl": {
+          "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 2.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-03T13:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 3.27
+        },
+        "frunze": {
+          "temperature_2m": 2.57
+        },
+        "east": {
+          "temperature_2m": 3.06
+        },
+        "yartemp": {
+          "temperature_2m": 4.15
         },
         "uudl": {
           "temperature_2m": 3.0
