@@ -1054,9 +1054,13 @@ def make_weights(mae_by_model, variable):
 SENSOR_CODE = "sensors"
 SENSOR_NAME = "Датчик"
 # Параметры, которые сеть датчиков реально измеряет. Ветер, осадки,
-# облачность, CAPE и WMO недоступны: подставлять их значило бы выдать
+# облачность, CAPE и WMO недоступны: подставлять их значило бы выдрать
 # внешний источник за «Датчик».
 SENSOR_VARS = ("temperature_2m",)
+# Внешние источники датчиков, которые не участвуют в консенсусе Ярославля:
+# консенсус считает среднее только по оставшимся станциям. Локальные станции
+# сети и http-источник (yartemp.com) в консенсус входят.
+SENSOR_CONSENSUS_EXCLUDE_SOURCES = frozenset({"metar", "wu"})
 
 
 def apply_sensor_weights(weights_by_var, model_codes):
@@ -1117,7 +1121,33 @@ def _sensor_station_names(path=None):
     return names
 
 
-def _sensor_hour_value(bucket, var, last=False):
+def _sensor_excluded_stations(sources=None):
+    """Станции, чей источник попадает в SENSOR_CONSENSUS_EXCLUDE_SOURCES.
+
+    Пустой набор — значит «ничего не исключать»: консенсус тогда соберёт
+    среднее по всем источникам как раньше. Конфиг станций нечитаем — та же
+    деградация, что в _sensor_station_names.
+    """
+    if sources is None:
+        sources = SENSOR_CONSENSUS_EXCLUDE_SOURCES
+    try:
+        with open(SENSOR_STATIONS_CONFIG, encoding="utf-8") as f:
+            config = json.load(f)
+        entries = config.get("stations") if isinstance(config, dict) else None
+        if not isinstance(entries, list):
+            return set()
+        excluded = set()
+        for entry in entries:
+            if not isinstance(entry, dict) or not entry.get("id"):
+                continue
+            if str(entry.get("source") or "") in sources:
+                excluded.add(str(entry["id"]))
+        return excluded
+    except (OSError, ValueError):
+        return set()
+
+
+def _sensor_hour_value(bucket, var, last=False, exclude_ids=None):
     """Четвёрка (значение, минимум, максимум, n): статистики часа и число станций.
 
     Станции равноправны независимо от того, сколько прогонов их видели, поэтому
@@ -1142,7 +1172,9 @@ def _sensor_hour_value(bucket, var, last=False):
     if not isinstance(stations, dict):
         return None, None, None, 0
     per_station = []
-    for values in stations.values():
+    for sid, values in stations.items():
+        if exclude_ids and sid in exclude_ids:
+            continue
         samples = values.get(var) if isinstance(values, dict) else None
         if not isinstance(samples, list) or not samples:
             continue
@@ -1175,7 +1207,7 @@ def _sensor_hour_updated(bucket):
     return None
 
 
-def load_sensor_model(grid, path=None):
+def load_sensor_model(grid, path=None, exclude_ids=None):
     """Собирает псевдо-модель «Датчик» по оси grid.
 
     Возвращает None, если истории нет или она нечитаема: столбик тогда просто
@@ -1238,11 +1270,12 @@ def load_sensor_model(grid, path=None):
         nxcolumn = []
         for hour in grid:
             bucket = hours.get(hour)
-            value, minimum, maximum, n = _sensor_hour_value(bucket, var)
+            value, minimum, maximum, n = _sensor_hour_value(
+                bucket, var, exclude_ids=exclude_ids)
             # Тот же час, но по последнему замеру станции: значение для
             # показаний «сейчас». n переиспользуется: набор станций тот же.
             now_value, now_min, now_max, _ = _sensor_hour_value(
-                bucket, var, last=True)
+                bucket, var, last=True, exclude_ids=exclude_ids)
             if value is not None:
                 found = True
             column.append(value)
@@ -1840,8 +1873,19 @@ def build_city_payload(loc, raw_by_model, external_rows, generated_at, external_
                   f"{sum(1 for v in sensor_model['data'].values() if any(x is not None for x in v))} "
                   f"parameters")
 
+    consensus_models = dict(hourly_by_model)
+    if loc["slug"] == "yaroslavl" and SENSOR_CODE in hourly_by_model:
+        # Внешние датчики (METAR/WU) убираются из консенсуса Ярославля:
+        # assemble_consensus получает модель без них. Сам hourly_by_model
+        # не трогаем — через models вкладка «Часы» и вкладка «Датчики»
+        # продолжают показывать эти источники.
+        excluded = _sensor_excluded_stations()
+        if excluded:
+            filtered = load_sensor_model(grid, exclude_ids=excluded)
+            if filtered is not None:
+                consensus_models[SENSOR_CODE] = filtered
     consensus = assemble_consensus(
-        hourly_by_model, HOURLY_VARIABLES, weights_by_var
+        consensus_models, HOURLY_VARIABLES, weights_by_var
     )
     return build_payload(
         city_codes, city_names, hourly_by_model, daily_by_model,
