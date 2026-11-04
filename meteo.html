@@ -480,8 +480,12 @@ function widgetSensorTemp(data, idx){
       var showsMean = slug==='tsedenevo'
         ? sensorShowsMean(data, j)
         : sensorInDayWindow(data, j);
-      var val = (slug==='tsedenevo' && !showsMean && mn && mn[j]!=null) ? mn[j] : x;
-      var t = roundSensorTemp(val);
+      // У Ярославля фактическое текущее значение — консенсусная температура
+      // (модели + датчик взвешенно), у Цеденево — последний замер датчика.
+      var cons = (data.weighted && data.weighted.temperature_2m) ? data.weighted.temperature_2m[j] : null;
+      var val = (slug==='yaroslavl') ? cons : ((slug==='tsedenevo' && !showsMean && mn && mn[j]!=null) ? mn[j] : x);
+      var t = val==null ? '' : roundSensorTemp(val);
+      if(t===''){return '';}
       return(t>0?'+':'')+t;
     }
   }
