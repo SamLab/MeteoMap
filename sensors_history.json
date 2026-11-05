@@ -52605,34 +52605,39 @@
       "updated_at": "2026-11-05T02:56:00+03:00"
     },
     "2026-11-05T03:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             0.06,
-            0.04
+            0.04,
+            0.07
           ]
         },
         "frunze": {
           "temperature_2m": [
             -0.3,
-            -0.3
+            -0.3,
+            -0.35
           ]
         },
         "east": {
           "temperature_2m": [
             0.31,
-            0.31
+            0.31,
+            0.44
           ]
         },
         "yartemp": {
           "temperature_2m": [
             0.42,
-            0.41
+            0.41,
+            0.54
           ]
         },
         "uudl": {
           "temperature_2m": [
+            0.0,
             0.0,
             0.0
           ]
@@ -52640,17 +52645,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -1.0,
+            -1.0,
             -1.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -1.0,
+            -1.0,
             -1.0
           ]
         }
       },
-      "updated_at": "2026-11-05T03:16:00+03:00"
+      "updated_at": "2026-11-05T03:26:00+03:00"
     }
   },
   "runs": [
@@ -105329,6 +105336,32 @@
         },
         "yartemp": {
           "temperature_2m": 0.41
+        },
+        "uudl": {
+          "temperature_2m": 0.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -1.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -1.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-05T03:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 0.07
+        },
+        "frunze": {
+          "temperature_2m": -0.35
+        },
+        "east": {
+          "temperature_2m": 0.44
+        },
+        "yartemp": {
+          "temperature_2m": 0.54
         },
         "uudl": {
           "temperature_2m": 0.0
