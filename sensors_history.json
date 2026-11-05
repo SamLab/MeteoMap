@@ -52606,10 +52606,11 @@
       "updated_at": "2026-11-05T05:56:00+03:00"
     },
     "2026-11-05T06:00": {
-      "samples": 12,
+      "samples": 18,
       "stations": {
         "penaty": {
           "temperature_2m": [
+            0.29,
             0.29,
             0.29
           ]
@@ -52617,23 +52618,27 @@
         "frunze": {
           "temperature_2m": [
             -0.12,
+            -0.12,
             -0.12
           ]
         },
         "east": {
           "temperature_2m": [
             0.56,
-            0.75
+            0.75,
+            0.69
           ]
         },
         "yartemp": {
           "temperature_2m": [
             0.65,
-            0.66
+            0.66,
+            0.77
           ]
         },
         "uudl": {
           "temperature_2m": [
+            0.0,
             0.0,
             0.0
           ]
@@ -52641,11 +52646,12 @@
         "wu-ananyino": {
           "temperature_2m": [
             -1.0,
+            -1.0,
             -1.0
           ]
         }
       },
-      "updated_at": "2026-11-05T06:11:00+03:00"
+      "updated_at": "2026-11-05T06:17:00+03:00"
     }
   },
   "runs": [
@@ -105744,6 +105750,29 @@
         },
         "yartemp": {
           "temperature_2m": 0.66
+        },
+        "uudl": {
+          "temperature_2m": 0.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -1.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-05T06:18:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 0.29
+        },
+        "frunze": {
+          "temperature_2m": -0.12
+        },
+        "east": {
+          "temperature_2m": 0.69
+        },
+        "yartemp": {
+          "temperature_2m": 0.77
         },
         "uudl": {
           "temperature_2m": 0.0
