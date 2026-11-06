@@ -52578,19 +52578,21 @@
       "updated_at": "2026-11-06T14:56:00+03:00"
     },
     "2026-11-06T15:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             2.64,
             2.63,
-            2.71
+            2.71,
+            2.67
           ]
         },
         "frunze": {
           "temperature_2m": [
             2.35,
             2.35,
+            2.42,
             2.42
           ]
         },
@@ -52598,25 +52600,29 @@
           "temperature_2m": [
             2.69,
             2.75,
-            3.0
+            3.0,
+            3.06
           ]
         },
         "yartemp": {
           "temperature_2m": [
             2.33,
             2.55,
-            2.6
+            2.6,
+            2.37
           ]
         },
         "uudl": {
           "temperature_2m": [
             3.0,
             3.0,
-            3.0
+            3.0,
+            2.0
           ]
         },
         "wu-ananyino": {
           "temperature_2m": [
+            2.0,
             2.0,
             2.0,
             2.0
@@ -52626,11 +52632,12 @@
           "temperature_2m": [
             2.0,
             2.0,
+            2.0,
             2.0
           ]
         }
       },
-      "updated_at": "2026-11-06T15:26:00+03:00"
+      "updated_at": "2026-11-06T15:36:00+03:00"
     }
   },
   "runs": [
@@ -110896,6 +110903,32 @@
         },
         "uudl": {
           "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 2.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-06T15:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 2.67
+        },
+        "frunze": {
+          "temperature_2m": 2.42
+        },
+        "east": {
+          "temperature_2m": 3.06
+        },
+        "yartemp": {
+          "temperature_2m": 2.37
+        },
+        "uudl": {
+          "temperature_2m": 2.0
         },
         "wu-ananyino": {
           "temperature_2m": 2.0
