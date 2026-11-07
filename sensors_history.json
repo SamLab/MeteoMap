@@ -52592,18 +52592,20 @@
       "updated_at": "2026-11-07T09:56:00+03:00"
     },
     "2026-11-07T10:00": {
-      "samples": 20,
+      "samples": 27,
       "stations": {
         "penaty": {
           "temperature_2m": [
             0.6,
             0.61,
-            0.64
+            0.64,
+            0.78
           ]
         },
         "frunze": {
           "temperature_2m": [
             -0.22,
+            -0.11,
             -0.11,
             -0.11
           ]
@@ -52612,11 +52614,13 @@
           "temperature_2m": [
             0.88,
             0.62,
+            0.62,
             0.62
           ]
         },
         "uudl": {
           "temperature_2m": [
+            0.0,
             0.0,
             0.0,
             0.0
@@ -52626,11 +52630,13 @@
           "temperature_2m": [
             -1.0,
             -1.0,
+            -1.0,
             -1.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
+            0.0,
             0.0,
             0.0,
             0.0
@@ -52639,11 +52645,12 @@
         "yartemp": {
           "temperature_2m": [
             1.09,
-            1.33
+            1.33,
+            1.07
           ]
         }
       },
-      "updated_at": "2026-11-07T10:26:00+03:00"
+      "updated_at": "2026-11-07T10:36:00+03:00"
     }
   },
   "runs": [
@@ -113942,6 +113949,32 @@
         },
         "yartemp": {
           "temperature_2m": 1.33
+        },
+        "uudl": {
+          "temperature_2m": 0.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -1.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 0.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-07T10:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 0.78
+        },
+        "frunze": {
+          "temperature_2m": -0.11
+        },
+        "east": {
+          "temperature_2m": 0.62
+        },
+        "yartemp": {
+          "temperature_2m": 1.07
         },
         "uudl": {
           "temperature_2m": 0.0
