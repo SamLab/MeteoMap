@@ -461,7 +461,7 @@ def test_detail_summary_column():
 def test_help_text_up_to_date():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "Предупреждения</b> — дождь, заморозки, порывы ветра (≥ 15 м/с)" in tpl
+    assert "Предупреждения</b> — дождь, экстремумы температуры, порывы ветра (≥ 15 м/с)" in tpl
     assert "Ближайшее — по одной модели, подтверждённое (жирным) — по консенсусу" in tpl
     assert "час минимума/максимума дня по консенсусу" in tpl
     assert "Типы погоды" in tpl
@@ -504,11 +504,9 @@ def test_d10_title_line_over_days():
     assert "'На 16 дней — '+parts.join(' — ')" in tpl
     assert "parts.join(' / ')" not in tpl
     assert "не ожидается" in tpl
-    assert "Теплее: " in tpl
-    assert "Холоднее: " in tpl
+    assert "Теплее" not in tpl
+    assert "Холоднее" not in tpl
     assert "D.weighted.weather_code" in tpl
-    assert "D.daily.temperature_2m_max" in tpl
-    assert "D.daily.temperature_2m_min" in tpl
 
 
 def test_d10_rain_uses_consensus_and_crosses_midnight():
@@ -660,8 +658,11 @@ def test_warnings_frost_column_replaces_thunderstorm():
         tpl = f.read()
     assert "temperature_2m?.[i]" in tpl
     assert "🥶" in tpl
-    assert "подтверждено" in tpl
-    assert "Заморозков в ближайшие дни не ожидается" in tpl
+    assert "Макс. " in tpl
+    assert "Мин. " in tpl
+    assert " / " in tpl
+    assert "fRows.push('<div class=\"wr1\">Макс. '+tLbl(hotI)+' '+temp(hotT)+' / '+tLbl(nearHotI)+' '+temp(nearHot)+'</div>');" in tpl
+    assert "fRows.push('<div class=\"wr2\">Мин. '+tLbl(coldI)+' '+temp(coldT)+' / '+tLbl(nearColdI)+' '+temp(nearCold)+'</div>');" in tpl
     assert "v===96||v===99" not in tpl
     assert "риск грозы" not in tpl
     assert "findRisk" not in tpl
@@ -671,10 +672,10 @@ def test_warnings_empty_messages():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
     assert "Осадков в ближайшие дни не ожидается" in tpl
-    assert "Заморозков в ближайшие дни не ожидается" in tpl
     assert "Гроз и града в ближайшие дни не ожидается" not in tpl
     assert "Порывистого ветра в ближайшие дни не ожидается" in tpl
-    assert "Возможный минимум " in tpl
+    assert "Макс. " in tpl
+    assert "Мин. " in tpl
 
 
 def test_warnings_precip_column_wider_than_wind():
