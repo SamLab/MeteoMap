@@ -661,8 +661,8 @@ def test_warnings_frost_column_replaces_thunderstorm():
     assert "Макс. " in tpl
     assert "Мин. " in tpl
     assert " / " in tpl
-    assert "fRows.push('<div class=\"wr1\">Макс. '+tLbl(hotI)+' '+temp(hotT)+' / '+tLbl(nearHotI)+' '+temp(nearHot)+'</div>');" in tpl
-    assert "fRows.push('<div class=\"wr2\">Мин. '+tLbl(coldI)+' '+temp(coldT)+' / '+tLbl(nearColdI)+' '+temp(nearCold)+'</div>');" in tpl
+    assert "fRows.push('<div class=\"wr1\">Макс. '+tLbl(nearHotI)+' '+temp(nearHot)+' / <b>'+tLbl(hotI)+' '+temp(hotT)+'</b></div>');" in tpl
+    assert "fRows.push('<div class=\"wr1\">Мин. '+tLbl(nearColdI)+' '+temp(nearCold)+' / <b>'+tLbl(coldI)+' '+temp(coldT)+'</b></div>');" in tpl
     assert "v===96||v===99" not in tpl
     assert "риск грозы" not in tpl
     assert "findRisk" not in tpl
