@@ -52717,18 +52717,20 @@
       "updated_at": "2026-11-09T00:56:00+03:00"
     },
     "2026-11-09T01:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             3.32,
             3.32,
+            3.35,
             3.35
           ]
         },
         "frunze": {
           "temperature_2m": [
             3.04,
+            3.19,
             3.19,
             3.19
           ]
@@ -52737,6 +52739,7 @@
           "temperature_2m": [
             3.69,
             3.69,
+            3.62,
             3.62
           ]
         },
@@ -52744,11 +52747,13 @@
           "temperature_2m": [
             3.62,
             3.51,
+            3.33,
             3.33
           ]
         },
         "uudl": {
           "temperature_2m": [
+            3.0,
             3.0,
             3.0,
             3.0
@@ -52758,6 +52763,7 @@
           "temperature_2m": [
             3.0,
             3.0,
+            3.0,
             3.0
           ]
         },
@@ -52765,11 +52771,12 @@
           "temperature_2m": [
             3.0,
             3.0,
+            3.0,
             3.0
           ]
         }
       },
-      "updated_at": "2026-11-09T01:26:00+03:00"
+      "updated_at": "2026-11-09T01:36:00+03:00"
     }
   },
   "runs": [
@@ -120342,6 +120349,32 @@
     },
     {
       "t": "2026-11-09T01:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 3.35
+        },
+        "frunze": {
+          "temperature_2m": 3.19
+        },
+        "east": {
+          "temperature_2m": 3.62
+        },
+        "yartemp": {
+          "temperature_2m": 3.33
+        },
+        "uudl": {
+          "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 3.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 3.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-09T01:36:00+03:00",
       "stations": {
         "penaty": {
           "temperature_2m": 3.35
