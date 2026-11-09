@@ -52773,12 +52773,13 @@
       "updated_at": "2026-11-09T22:56:00+03:00"
     },
     "2026-11-09T23:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             5.38,
             5.38,
+            5.35,
             5.35
           ]
         },
@@ -52786,11 +52787,13 @@
           "temperature_2m": [
             5.32,
             5.32,
+            5.26,
             5.26
           ]
         },
         "east": {
           "temperature_2m": [
+            5.62,
             5.62,
             5.62,
             5.62
@@ -52800,11 +52803,13 @@
           "temperature_2m": [
             5.37,
             5.22,
-            5.26
+            5.26,
+            5.29
           ]
         },
         "uudl": {
           "temperature_2m": [
+            5.0,
             5.0,
             5.0,
             5.0
@@ -52814,6 +52819,7 @@
           "temperature_2m": [
             5.0,
             5.0,
+            5.0,
             5.0
           ]
         },
@@ -52821,11 +52827,12 @@
           "temperature_2m": [
             5.0,
             5.0,
+            5.0,
             5.0
           ]
         }
       },
-      "updated_at": "2026-11-09T23:26:00+03:00"
+      "updated_at": "2026-11-09T23:36:00+03:00"
     }
   },
   "runs": [
@@ -123868,6 +123875,32 @@
         },
         "yartemp": {
           "temperature_2m": 5.26
+        },
+        "uudl": {
+          "temperature_2m": 5.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 5.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 5.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-09T23:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 5.35
+        },
+        "frunze": {
+          "temperature_2m": 5.26
+        },
+        "east": {
+          "temperature_2m": 5.62
+        },
+        "yartemp": {
+          "temperature_2m": 5.29
         },
         "uudl": {
           "temperature_2m": 5.0
