@@ -1,81 +1,5 @@
 {
   "hours": {
-    "2026-10-10T11:00": {
-      "samples": 42,
-      "stations": {
-        "penaty": {
-          "temperature_2m": [
-            8.51,
-            8.63,
-            8.67,
-            8.78,
-            8.87,
-            8.96
-          ]
-        },
-        "frunze": {
-          "temperature_2m": [
-            7.81,
-            7.99,
-            7.99,
-            8.2,
-            8.2,
-            8.42
-          ]
-        },
-        "east": {
-          "temperature_2m": [
-            8.5,
-            8.56,
-            8.62,
-            8.69,
-            9.25,
-            9.25
-          ]
-        },
-        "yartemp": {
-          "temperature_2m": [
-            8.55,
-            8.8,
-            8.95,
-            9.08,
-            9.12,
-            9.16
-          ]
-        },
-        "uudl": {
-          "temperature_2m": [
-            8.0,
-            8.0,
-            8.0,
-            8.0,
-            8.0,
-            8.0
-          ]
-        },
-        "wu-ananyino": {
-          "temperature_2m": [
-            7.0,
-            7.0,
-            7.0,
-            7.0,
-            7.0,
-            8.0
-          ]
-        },
-        "wu-zavolzhskoe": {
-          "temperature_2m": [
-            7.0,
-            7.0,
-            7.0,
-            7.0,
-            7.0,
-            7.0
-          ]
-        }
-      },
-      "updated_at": "2026-10-10T11:56:00+03:00"
-    },
     "2026-10-10T12:00": {
       "samples": 42,
       "stations": {
@@ -52875,6 +52799,47 @@
         }
       },
       "updated_at": "2026-11-09T11:56:00+03:00"
+    },
+    "2026-11-09T12:00": {
+      "samples": 7,
+      "stations": {
+        "penaty": {
+          "temperature_2m": [
+            4.34
+          ]
+        },
+        "frunze": {
+          "temperature_2m": [
+            3.91
+          ]
+        },
+        "east": {
+          "temperature_2m": [
+            4.44
+          ]
+        },
+        "yartemp": {
+          "temperature_2m": [
+            4.6
+          ]
+        },
+        "uudl": {
+          "temperature_2m": [
+            4.0
+          ]
+        },
+        "wu-ananyino": {
+          "temperature_2m": [
+            3.0
+          ]
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": [
+            3.0
+          ]
+        }
+      },
+      "updated_at": "2026-11-09T12:07:00+03:00"
     }
   },
   "runs": [
@@ -122149,6 +122114,32 @@
         },
         "yartemp": {
           "temperature_2m": 4.7
+        },
+        "uudl": {
+          "temperature_2m": 4.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 3.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 3.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-09T12:07:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 4.34
+        },
+        "frunze": {
+          "temperature_2m": 3.91
+        },
+        "east": {
+          "temperature_2m": 4.44
+        },
+        "yartemp": {
+          "temperature_2m": 4.6
         },
         "uudl": {
           "temperature_2m": 4.0
