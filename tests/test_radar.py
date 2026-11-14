@@ -82,7 +82,7 @@ def test_hours_title_uses_remaining_today_window():
     assert "const start=curIdx;" in tpl
     # окно «по часам» считает от текущего часа включительно — цифры совпадают с виджетом и предупреждениями
     assert "const hs=Math.min(curIdx,D.time.length-1);" in tpl
-    # сводка — только на сегодня: часы за полночь в интервал не берутся
+    # начало эпизода ищется в сегодняшних часах; конец может уходить за полночь
     assert "const dayStr=D.time[hs]?D.time[hs].slice(0,10):'';" in tpl
     assert "const isToday=j=>D.time[j]&&j>=hs&&D.time[j].slice(0,10)===dayStr;" in tpl
     assert "const th=document.getElementById('hourstitle')" in tpl
@@ -187,7 +187,7 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "const jPeakCode=w.weather_code?.[jPeak];" not in tpl
     assert "RainType" not in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
-    assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
+    assert "const enLabel=enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime;" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "const ccLbl='по '+rcLbl(ccCnt,ccX);" in tpl
@@ -202,17 +202,21 @@ def test_hourstitle_rain_type_uses_window_start_code():
     assert "Сегодня подтвержденного дождя нет" not in tpl
 
 
-def test_hourstitle_interval_requires_two_models_and_breaks_on_first_dry_hour():
-    # «По часам» переведено на строгое правило ближайшего из «Предупреждений»:
-    # интервал — первый непрерывный эпизод, где >= 2 модели дают дождь
-    # (дождевой код или осадки >= 0.1 мм; вероятность не смотрится), и тянется,
-    # пока в каждом следующем часу >= 2 модели дают дождь. Консенсусный
-    # fallback остаётся для остатка дня, где двух моделей нет ни в одном часу.
+def test_hourstitle_interval_starts_with_two_models_and_follows_any_model():
+    # «По часам»: начало — первый час, где >= 2 модели дают дождь (дождевой код
+    # или осадки >= 0.1 мм; вероятность не смотрится). Дальше серия тянется
+    # непрерывно, пока дождь даёт хотя бы одна модель — как «ближайшее»
+    # в «Предупреждениях»; это позволяет показать реальный конец эпизода,
+    # даже если он уходит за полночь. Консенсусный fallback остаётся для
+    # остатка дня, где двух моделей нет ни в одном часу.
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "if(sourceCountAt(j,rainCodes,0.1)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    assert "if(sourceCountAt(j,rainCodes,0.1)>=2){rainHour=j;break;}" in tpl
     assert "if(hasRainAt(j)){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" not in tpl
-    assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    assert "if(hasRainAt(j)||modelRainCount(j)>=2){rainHour=j;fromModels=true;break;}" in tpl
+    # эпизод тянется за полночь: конец ищется по всему прогнозу
+    assert "const cont=fromModels?(j=>hasRainAt(j)||modelRainCount(j)>=2):(j=>sourceCountAt(j,rainCodes,0.1)>=1);" in tpl
+    assert "for(let j=rainHour+1;j<D.time.length;j++){if(!cont(j))break;jLast=j;}" in tpl
 
 
 def test_consensus_rain_confirmed_by_code_mm_or_prob_in_all_four():
@@ -347,7 +351,7 @@ def test_widget_nearest_uses_warnings_rule_and_hides_duplicate():
 def test_widget_nearest_uses_one_model_while_confirmed_needs_consensus():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    assert "if(hasRainAt(j)||modelRainCount(j)>=2){if(rainHour<0)rainHour=j;jLast=j;}else if(rainHour>=0)break;" in tpl
+    assert "if(hasRainAt(j)||modelRainCount(j)>=2){rainHour=j;fromModels=true;break;}" in tpl
     # виджет: ближайшее с одной модели (как ближайшее в «Предупреждениях»), а
     # продолжение интервала по консенсусу живёт в подтверждённой строке.
     for fname in ("meteo.html", "meteow.html"):
@@ -362,7 +366,7 @@ def test_hourstitle_rain_interval():
         tpl = f.read()
     assert "const jStartCode=w.weather_code?.[ws];" in tpl
     assert "const enIdx=Math.min(jLast+1,D.time.length-1);" in tpl
-    assert "const enLabel=(enTime==='00ч'&&enDay!==D.time[rainHour].slice(0,10))?'00ч':(enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime);" in tpl
+    assert "const enLabel=enDay===D.time[rainHour].slice(0,10)?enTime:relDay(enTs)+' '+enTime;" in tpl
     assert "const timeStr=nowRain?'до '+enLabel:(st===enLabel?stDay+'в '+stHour:stDay+'с '+stHour+' до '+enLabel);" in tpl
     assert "const mcLbl='по '+rcLbl(mCnt,mX);" in tpl
     assert "if(n>mX)mX=n;" in tpl
@@ -381,14 +385,15 @@ def test_hourstitle_includes_current_hour_when_raining():
     assert tpl.count("if(!inWin(j))continue;") >= 2
 
 
-def test_hourstitle_search_limited_to_today():
+def test_hourstitle_start_in_today_episode_crosses_midnight():
     with open(os.path.join(HERE, "template.html"), encoding="utf-8") as f:
         tpl = f.read()
-    # эпизод ищется от curIdx и обрывается на границе СЕГОДНЯШНЕГО дня: сводка
-    # не заходит за полночь, поэтому «Сегодня — …» всегда описывает только
-    # сегодня, а завтрашний дождь в заголовке не показывается.
+    # начало эпизода ищется только в сегодняшних часах, но сам эпизод тянется
+    # за полночь: конец ищется по всему прогнозу, и в заголовке появляется день
+    # («до Завтра 07ч»), а не «до 00ч».
     assert "const isToday=j=>D.time[j]&&j>=hs&&D.time[j].slice(0,10)===dayStr;" in tpl
     assert "const isToday=j=>D.time[j]&&j>=hs;" not in tpl
+    assert "for(let j=rainHour+1;j<D.time.length;j++){if(!cont(j))break;jLast=j;}" in tpl
     assert "const inWin=j=>j>=ws&&D.time[j];" in tpl
     assert "th.textContent='Сегодня — '+parts.join(', ');" in tpl
 
@@ -514,7 +519,7 @@ def test_d10_rain_uses_consensus_and_crosses_midnight():
         tpl = f.read()
     assert "function hasRainAt(i){const c=D.weighted.weather_code?.[i],p=D.weighted.precipitation?.[i],q=D.weighted.precipitation_probability?.[i];return rainCodes.includes(c)||(p!=null&&p>=0.1)||((p==null||p<0.1)&&q!=null&&q>25);}" in tpl
     assert "if(!D.time[i]||!hasRainAt(i))continue;" in tpl
-    assert "const endLabel=(eTime==='00ч'&&eDay!==D.time[rainA].slice(0,10))?'00ч':(eDay===D.time[rainA].slice(0,10)?eTime:relDay(eTs)+' '+eTime);" in tpl
+    assert "const endLabel=eDay===D.time[rainA].slice(0,10)?eTime:relDay(eTs)+' '+eTime;" in tpl
     assert "'Ближайший дождь: '+dayLabel(d)+' с '+hh(D.time[rainA])+' до '+endLabel" in tpl
 
 
