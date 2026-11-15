@@ -53046,17 +53046,19 @@
       "updated_at": "2026-11-15T10:58:00+03:00"
     },
     "2026-11-15T11:00": {
-      "samples": 17,
+      "samples": 24,
       "stations": {
         "penaty": {
           "temperature_2m": [
             3.65,
             3.71,
-            3.6
+            3.6,
+            3.45
           ]
         },
         "frunze": {
           "temperature_2m": [
+            2.84,
             2.84,
             2.84,
             2.84
@@ -53066,6 +53068,7 @@
           "temperature_2m": [
             3.19,
             3.38,
+            3.44,
             3.44
           ]
         },
@@ -53073,11 +53076,13 @@
           "temperature_2m": [
             3.57,
             3.72,
-            3.88
+            3.88,
+            3.65
           ]
         },
         "uudl": {
           "temperature_2m": [
+            3.0,
             3.0,
             3.0
           ]
@@ -53085,16 +53090,18 @@
         "wu-ananyino": {
           "temperature_2m": [
             2.0,
+            2.0,
             2.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
+            3.0,
             3.0
           ]
         }
       },
-      "updated_at": "2026-11-15T11:16:00+03:00"
+      "updated_at": "2026-11-15T11:26:00+03:00"
     }
   },
   "runs": [
@@ -144873,6 +144880,32 @@
         },
         "yartemp": {
           "temperature_2m": 3.88
+        },
+        "uudl": {
+          "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 2.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 3.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-15T11:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 3.45
+        },
+        "frunze": {
+          "temperature_2m": 2.84
+        },
+        "east": {
+          "temperature_2m": 3.44
+        },
+        "yartemp": {
+          "temperature_2m": 3.65
         },
         "uudl": {
           "temperature_2m": 3.0
