@@ -53066,34 +53066,39 @@
       "updated_at": "2026-11-16T15:56:00+03:00"
     },
     "2026-11-16T16:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             3.4,
-            3.21
+            3.21,
+            3.09
           ]
         },
         "frunze": {
           "temperature_2m": [
             3.41,
+            3.2,
             3.2
           ]
         },
         "east": {
           "temperature_2m": [
             3.44,
-            3.25
+            3.25,
+            3.06
           ]
         },
         "yartemp": {
           "temperature_2m": [
             2.45,
-            2.38
+            2.38,
+            2.23
           ]
         },
         "uudl": {
           "temperature_2m": [
+            3.0,
             3.0,
             3.0
           ]
@@ -53101,17 +53106,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             3.0,
-            3.0
+            3.0,
+            2.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             3.0,
+            2.0,
             2.0
           ]
         }
       },
-      "updated_at": "2026-11-16T16:16:00+03:00"
+      "updated_at": "2026-11-16T16:26:00+03:00"
     }
   },
   "runs": [
@@ -149323,6 +149330,32 @@
         },
         "wu-ananyino": {
           "temperature_2m": 3.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-16T16:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 3.09
+        },
+        "frunze": {
+          "temperature_2m": 3.2
+        },
+        "east": {
+          "temperature_2m": 3.06
+        },
+        "yartemp": {
+          "temperature_2m": 2.23
+        },
+        "uudl": {
+          "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 2.0
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 2.0
