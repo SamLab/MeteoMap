@@ -558,7 +558,15 @@ def test_warnings_nearest_row_uses_one_model_threshold_and_first_dry_boundary():
     assert "if(sourceCountAt(k,list,precipMin)<2)break;sE=k;" not in tpl
     assert "'Вероятен','Дождь',1,'wcol-precip')" in tpl
     assert "sourceList(s,list,precipMin)" not in tpl
-    assert "const R=rainModelRange(s,sE);const sLabel=R.mn>=1?'по '+rcLbl(R.mn,R.mx):''" in tpl
+    assert "const R=rainModelRange(s,sE);const sLabel=R.mn>=1?'по '+rcLbl(R.mn,R.mx):'';const S=rainModelSpan(s,sE);" in tpl
+    assert "rows.push('<div class=\"wr1\">'+sLbl+wetValAll(S.prMn,S.prMx,S.ppMn,S.ppMx)" in tpl
+    assert "wetValAll(S.prMn,S.prMx,S.ppMn,S.ppMx)" in tpl
+    assert "rows.push('<div class=\"wr1\">'+sLbl+wetSpan(s,sE)" not in tpl
+    assert "function rainModelSpan(a,b){" in tpl
+    # ближайшая строка считает модели по тому же правилу, по которому найден
+    # её первый час: дождевой код или осадки >= 0.1 мм (код не мешает осадкам)
+    assert "if(RAIN_CODES.includes(v)||(pr!=null&&pr>=0.1))n++;" in tpl
+    assert "if(v!=null?RAIN_CODES.includes(v):(pr!=null&&pr>=0.1||(pp!=null&&pp>33)))n++;" not in tpl
     assert "endLabel(ts[Math.min(sE+1,ts.length-1)]," in tpl
     assert "function rainModelRange(a,b){" in tpl
     assert "function rcLbl(mn,mx){" in tpl

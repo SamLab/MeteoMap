@@ -1556,6 +1556,46 @@ def test_warnings_span_shows_ranges_min_to_max(tmp_path):
     assert got["sameMm"] == " на 0.3мм с 4%", got
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="нужен node")
+def test_warnings_nearest_count_and_span_come_from_models(tmp_path):
+    """Ближайшая строка «Предупреждений» считает модели и мм/% по моделям.
+
+    Регрессия: модель с непустым кодом (например, снеговым 71) и осадками
+    0.1 мм не попадала в «по N моделям», хотя именно по этой модели находился
+    первый час строки. В результате первая строка оставалась голой:
+    «Завтра с 08ч до 09ч». Теперь подсчёт моделей и значения диапазона берутся
+    по моделям с осадками, а нули сохраняются («на 0.1мм с 0%»).
+    """
+    code = (
+        "const RAIN_CODES=[51,53,55,56,57,61,63,65,66,67,80,81,82];\n"
+        + _page_function("rainModelRange") + "\n"
+        + _page_function("rainModelSpan") + "\n"
+        + "return {rainModelRange, rainModelSpan};"
+    )
+    js = tmp_path / "warn_models.js"
+    js.write_text(
+        "const code=" + json.dumps(code) + ";\n"
+        "const D={models:{\n"
+        "  snow:{weather_code:[71,61],precipitation:[0.1,0.3],precipitation_probability:[0,10]},\n"
+        "  dry:{weather_code:[3,3],precipitation:[0,0],precipitation_probability:[0,0]},\n"
+        "  trace:{weather_code:[null,3],precipitation:[0.2,0],precipitation_probability:[50,0]}}};\n"
+        "const codes=['snow','dry','trace'];\n"
+        "const f=new Function('D','codes',code)(D,codes);\n"
+        "console.log(JSON.stringify({\n"
+        "  range:f.rainModelRange(0,1),\n"
+        "  span:f.rainModelSpan(0,1)}));\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run(["node", str(js)], capture_output=True, text=True,
+                         timeout=60, encoding="utf-8", errors="replace")
+    assert out.returncode == 0, (out.stdout[-500:], out.stderr[-500:])
+    got = json.loads(out.stdout.strip().splitlines()[-1])
+    # час 0: снеговая модель с 0.1 мм + trace-модель с 0.2 мм; час 1: одна
+    assert got["range"] == {"mn": 1, "mx": 2}, got
+    # нулевая вероятность снеговой модели сохраняется
+    assert got["span"] == {"prMn": 0.1, "prMx": 0.3, "ppMn": 0, "ppMx": 50}, got
+
+
 def _page_function(name):
     """Возвращает исходник функции страницы по имени (с балансировкой скобок)."""
     html = read_template()
