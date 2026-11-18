@@ -52998,19 +52998,21 @@
       "updated_at": "2026-11-18T10:56:00+03:00"
     },
     "2026-11-18T11:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             0.14,
             0.18,
-            0.28
+            0.28,
+            0.37
           ]
         },
         "frunze": {
           "temperature_2m": [
             0.07,
             0.07,
+            0.15,
             0.15
           ]
         },
@@ -53018,18 +53020,21 @@
           "temperature_2m": [
             0.38,
             0.38,
-            0.5
+            0.5,
+            0.56
           ]
         },
         "yartemp": {
           "temperature_2m": [
             0.97,
             1.17,
-            1.33
+            1.33,
+            1.48
           ]
         },
         "uudl": {
           "temperature_2m": [
+            0.0,
             0.0,
             0.0,
             0.0
@@ -53039,18 +53044,20 @@
           "temperature_2m": [
             0.0,
             0.0,
-            -1.0
+            -1.0,
+            0.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             0.0,
             0.0,
+            0.0,
             0.0
           ]
         }
       },
-      "updated_at": "2026-11-18T11:26:00+03:00"
+      "updated_at": "2026-11-18T11:36:00+03:00"
     }
   },
   "runs": [
@@ -155951,6 +155958,32 @@
         },
         "wu-ananyino": {
           "temperature_2m": -1.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 0.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-18T11:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 0.37
+        },
+        "frunze": {
+          "temperature_2m": 0.15
+        },
+        "east": {
+          "temperature_2m": 0.56
+        },
+        "yartemp": {
+          "temperature_2m": 1.48
+        },
+        "uudl": {
+          "temperature_2m": 0.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 0.0
         },
         "wu-zavolzhskoe": {
           "temperature_2m": 0.0
