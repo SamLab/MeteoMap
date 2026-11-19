@@ -52967,19 +52967,21 @@
       "updated_at": "2026-11-19T21:56:00+03:00"
     },
     "2026-11-19T22:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             2.61,
             2.56,
-            2.46
+            2.46,
+            2.39
           ]
         },
         "frunze": {
           "temperature_2m": [
             2.5,
             2.5,
+            2.71,
             2.71
           ]
         },
@@ -52987,6 +52989,7 @@
           "temperature_2m": [
             2.94,
             3.0,
+            3.06,
             3.06
           ]
         },
@@ -52994,11 +52997,13 @@
           "temperature_2m": [
             3.36,
             3.41,
+            3.31,
             3.31
           ]
         },
         "uudl": {
           "temperature_2m": [
+            3.0,
             3.0,
             3.0,
             3.0
@@ -53008,6 +53013,7 @@
           "temperature_2m": [
             3.0,
             3.0,
+            3.0,
             3.0
           ]
         },
@@ -53015,11 +53021,12 @@
           "temperature_2m": [
             2.0,
             2.0,
+            2.0,
             2.0
           ]
         }
       },
-      "updated_at": "2026-11-19T22:22:00+03:00"
+      "updated_at": "2026-11-19T22:29:00+03:00"
     }
   },
   "runs": [
@@ -161422,6 +161429,32 @@
       "stations": {
         "penaty": {
           "temperature_2m": 2.46
+        },
+        "frunze": {
+          "temperature_2m": 2.71
+        },
+        "east": {
+          "temperature_2m": 3.06
+        },
+        "yartemp": {
+          "temperature_2m": 3.31
+        },
+        "uudl": {
+          "temperature_2m": 3.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 3.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-19T22:29:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 2.39
         },
         "frunze": {
           "temperature_2m": 2.71
