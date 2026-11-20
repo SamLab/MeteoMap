@@ -53042,19 +53042,21 @@
       "updated_at": "2026-11-20T07:56:00+03:00"
     },
     "2026-11-20T08:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             5.28,
             5.24,
-            5.2
+            5.2,
+            5.23
           ]
         },
         "frunze": {
           "temperature_2m": [
             5.07,
             5.07,
+            5.16,
             5.16
           ]
         },
@@ -53062,18 +53064,21 @@
           "temperature_2m": [
             5.56,
             5.62,
-            5.56
+            5.56,
+            5.5
           ]
         },
         "yartemp": {
           "temperature_2m": [
             5.96,
             5.74,
-            5.76
+            5.76,
+            6.04
           ]
         },
         "uudl": {
           "temperature_2m": [
+            5.0,
             5.0,
             5.0,
             5.0
@@ -53083,6 +53088,7 @@
           "temperature_2m": [
             5.0,
             5.0,
+            5.0,
             5.0
           ]
         },
@@ -53090,11 +53096,12 @@
           "temperature_2m": [
             3.0,
             3.0,
+            3.0,
             3.0
           ]
         }
       },
-      "updated_at": "2026-11-20T08:26:00+03:00"
+      "updated_at": "2026-11-20T08:36:00+03:00"
     }
   },
   "runs": [
@@ -163060,6 +163067,32 @@
         },
         "yartemp": {
           "temperature_2m": 5.76
+        },
+        "uudl": {
+          "temperature_2m": 5.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": 5.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": 3.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-20T08:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": 5.23
+        },
+        "frunze": {
+          "temperature_2m": 5.16
+        },
+        "east": {
+          "temperature_2m": 5.5
+        },
+        "yartemp": {
+          "temperature_2m": 6.04
         },
         "uudl": {
           "temperature_2m": 5.0
