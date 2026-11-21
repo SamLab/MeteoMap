@@ -17,11 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
 
@@ -68,11 +65,20 @@ jobs:
           cp -r data _site/
           echo "" > _site/.nojekyll
 
-      - uses: actions/configure-pages@v5
-
       - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # actions/deploy-pages#451: если деплоить в том же job, где артефакт
+      # только что загружен, lookup иногда возвращает 0 артефактов. Раздельный
+      # job плюс короткая пауза дают API время увидеть загруженный артефакт.
+      - name: Wait for the Pages artifact
+        run: sleep 5
 
       - name: Deploy to GitHub Pages
         id: deployment

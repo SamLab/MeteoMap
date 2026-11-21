@@ -158,6 +158,26 @@ def test_sensors_push_retries_against_a_moved_main():
     assert "exit 1" in script, "после исчерпания попыток прогон обязан упасть явно"
 
 
+def test_pages_upload_and_deploy_are_in_separate_jobs():
+    # actions/deploy-pages#451: когда upload-pages-artifact и deploy-pages идут
+    # в одном job, lookup артефакта иногда возвращает «Found 0 artifact(s)» —
+    # артефакт уже зафиксирован, но API о нём ещё не знает. Заканчивалось так:
+    # 9 из 10 падений в ноябре были именно на шаге Deploy to GitHub Pages.
+    # Раздельный job и пауза перед деплоем убирают гонку.
+    yml = read_workflow("deploy.yml")
+    lines = yml.splitlines()
+    build = next(i for i, ln in enumerate(lines) if ln.startswith("  build:"))
+    deploy = next(i for i, ln in enumerate(lines) if ln.startswith("  deploy:"))
+    assert build < deploy
+    build_job = "\n".join(lines[build:deploy])
+    deploy_job = "\n".join(lines[deploy:])
+    assert "actions/upload-pages-artifact" in build_job
+    assert "actions/deploy-pages" not in build_job
+    assert "actions/deploy-pages" in deploy_job
+    assert "needs: build" in deploy_job
+    assert "sleep 5" in deploy_job
+
+
 def test_deploy_does_not_publish_the_snapshot_nobody_reads():
     # Инверсия потерянного с Task 6 теста (test_deploy_copies_snapshot_into_site).
     # deploy.yml копирует в _site/ явный список файлов, и снимок был в нём
