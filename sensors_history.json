@@ -53696,34 +53696,39 @@
       "updated_at": "2026-11-25T00:56:00+03:00"
     },
     "2026-11-25T01:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -1.33,
-            -1.33
+            -1.33,
+            -1.3
           ]
         },
         "frunze": {
           "temperature_2m": [
             -1.49,
+            -1.46,
             -1.46
           ]
         },
         "east": {
           "temperature_2m": [
             -1.12,
-            -1.06
+            -1.06,
+            -1.12
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -2.07,
-            -2.04
+            -2.04,
+            -2.01
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -1.0,
             -1.0,
             -1.0
           ]
@@ -53731,17 +53736,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -2.0,
+            -2.0,
             -2.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -2.0,
+            -2.0,
             -2.0
           ]
         }
       },
-      "updated_at": "2026-11-25T01:16:00+03:00"
+      "updated_at": "2026-11-25T01:26:00+03:00"
     }
   },
   "runs": [
@@ -165279,6 +165286,32 @@
         },
         "yartemp": {
           "temperature_2m": -2.04
+        },
+        "uudl": {
+          "temperature_2m": -1.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -2.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-25T01:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -1.3
+        },
+        "frunze": {
+          "temperature_2m": -1.46
+        },
+        "east": {
+          "temperature_2m": -1.12
+        },
+        "yartemp": {
+          "temperature_2m": -2.01
         },
         "uudl": {
           "temperature_2m": -1.0
