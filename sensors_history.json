@@ -53683,24 +53683,27 @@
       "updated_at": "2026-11-25T13:56:00+03:00"
     },
     "2026-11-25T14:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -0.92,
             -0.96,
-            -1.01
+            -1.01,
+            -1.07
           ]
         },
         "frunze": {
           "temperature_2m": [
             -1.01,
             -1.01,
-            -1.01
+            -1.01,
+            -1.07
           ]
         },
         "east": {
           "temperature_2m": [
+            -0.75,
             -0.75,
             -0.75,
             -0.75
@@ -53710,11 +53713,13 @@
           "temperature_2m": [
             -0.02,
             -0.22,
-            -0.22
+            -0.22,
+            -0.44
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -1.0,
             -1.0,
             -1.0,
             -1.0
@@ -53724,6 +53729,7 @@
           "temperature_2m": [
             -2.0,
             -2.0,
+            -2.0,
             -2.0
           ]
         },
@@ -53731,11 +53737,12 @@
           "temperature_2m": [
             -1.0,
             -1.0,
-            -1.0
+            -1.0,
+            -2.0
           ]
         }
       },
-      "updated_at": "2026-11-25T14:26:00+03:00"
+      "updated_at": "2026-11-25T14:36:00+03:00"
     }
   },
   "runs": [
@@ -165259,6 +165266,32 @@
         },
         "wu-zavolzhskoe": {
           "temperature_2m": -1.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-25T14:36:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -1.07
+        },
+        "frunze": {
+          "temperature_2m": -1.07
+        },
+        "east": {
+          "temperature_2m": -0.75
+        },
+        "yartemp": {
+          "temperature_2m": -0.44
+        },
+        "uudl": {
+          "temperature_2m": -1.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -2.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -2.0
         }
       }
     }
