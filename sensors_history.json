@@ -53696,18 +53696,20 @@
       "updated_at": "2026-11-26T20:56:00+03:00"
     },
     "2026-11-26T21:00": {
-      "samples": 21,
+      "samples": 28,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -1.65,
             -1.78,
-            -1.88
+            -1.88,
+            -1.9
           ]
         },
         "frunze": {
           "temperature_2m": [
             -2.18,
+            -1.96,
             -1.96,
             -1.96
           ]
@@ -53716,18 +53718,21 @@
           "temperature_2m": [
             -1.75,
             -1.75,
-            -1.75
+            -1.75,
+            -1.56
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -2.32,
             -2.48,
+            -2.48,
             -2.48
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -2.0,
             -2.0,
             -2.0,
             -2.0
@@ -53737,6 +53742,7 @@
           "temperature_2m": [
             -3.0,
             -3.0,
+            -3.0,
             -3.0
           ]
         },
@@ -53744,11 +53750,12 @@
           "temperature_2m": [
             -2.0,
             -2.0,
+            -2.0,
             -2.0
           ]
         }
       },
-      "updated_at": "2026-11-26T21:26:00+03:00"
+      "updated_at": "2026-11-26T21:32:00+03:00"
     }
   },
   "runs": [
@@ -165238,6 +165245,32 @@
         },
         "east": {
           "temperature_2m": -1.75
+        },
+        "yartemp": {
+          "temperature_2m": -2.48
+        },
+        "uudl": {
+          "temperature_2m": -2.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -3.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-26T21:32:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -1.9
+        },
+        "frunze": {
+          "temperature_2m": -1.96
+        },
+        "east": {
+          "temperature_2m": -1.56
         },
         "yartemp": {
           "temperature_2m": -2.48
