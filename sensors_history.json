@@ -53664,16 +53664,18 @@
       "updated_at": "2026-11-26T02:56:00+03:00"
     },
     "2026-11-26T03:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -3.81,
-            -3.74
+            -3.74,
+            -3.71
           ]
         },
         "frunze": {
           "temperature_2m": [
+            -4.5,
             -4.5,
             -4.5
           ]
@@ -53681,17 +53683,20 @@
         "east": {
           "temperature_2m": [
             -3.75,
-            -3.69
+            -3.69,
+            -3.5
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -3.29,
-            -3.18
+            -3.18,
+            -3.02
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -4.0,
             -4.0,
             -4.0
           ]
@@ -53699,17 +53704,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -5.0,
+            -5.0,
             -5.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -5.0,
+            -5.0,
             -5.0
           ]
         }
       },
-      "updated_at": "2026-11-26T03:12:00+03:00"
+      "updated_at": "2026-11-26T03:19:00+03:00"
     }
   },
   "runs": [
@@ -165126,6 +165133,32 @@
         },
         "yartemp": {
           "temperature_2m": -3.18
+        },
+        "uudl": {
+          "temperature_2m": -4.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -5.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -5.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-26T03:19:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -3.71
+        },
+        "frunze": {
+          "temperature_2m": -4.5
+        },
+        "east": {
+          "temperature_2m": -3.5
+        },
+        "yartemp": {
+          "temperature_2m": -3.02
         },
         "uudl": {
           "temperature_2m": -4.0
