@@ -53691,34 +53691,39 @@
       "updated_at": "2026-11-27T03:56:00+03:00"
     },
     "2026-11-27T04:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -1.47,
-            -1.53
+            -1.53,
+            -1.51
           ]
         },
         "frunze": {
           "temperature_2m": [
             -2.11,
+            -2.18,
             -2.18
           ]
         },
         "east": {
           "temperature_2m": [
             -1.88,
-            -1.94
+            -1.94,
+            -2.0
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -2.02,
-            -2.02
+            -2.02,
+            -2.1
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -1.0,
             -1.0,
             -1.0
           ]
@@ -53726,17 +53731,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -3.0,
+            -3.0,
             -3.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -2.0,
+            -2.0,
             -2.0
           ]
         }
       },
-      "updated_at": "2026-11-27T04:16:00+03:00"
+      "updated_at": "2026-11-27T04:26:00+03:00"
     }
   },
   "runs": [
@@ -165183,6 +165190,32 @@
         },
         "yartemp": {
           "temperature_2m": -2.02
+        },
+        "uudl": {
+          "temperature_2m": -1.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -3.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -2.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-27T04:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -1.51
+        },
+        "frunze": {
+          "temperature_2m": -2.18
+        },
+        "east": {
+          "temperature_2m": -2.0
+        },
+        "yartemp": {
+          "temperature_2m": -2.1
         },
         "uudl": {
           "temperature_2m": -1.0
