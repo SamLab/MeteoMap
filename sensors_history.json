@@ -53778,34 +53778,39 @@
       "updated_at": "2026-11-28T07:56:00+03:00"
     },
     "2026-11-28T08:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -5.97,
-            -6.07
+            -6.07,
+            -6.16
           ]
         },
         "frunze": {
           "temperature_2m": [
             -5.22,
+            -5.44,
             -5.44
           ]
         },
         "east": {
           "temperature_2m": [
             -5.06,
-            -5.06
+            -5.06,
+            -5.12
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -5.85,
-            -5.9
+            -5.9,
+            -5.88
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -6.0,
             -6.0,
             -6.0
           ]
@@ -53813,17 +53818,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -6.0,
+            -6.0,
             -6.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -6.0,
+            -6.0,
             -6.0
           ]
         }
       },
-      "updated_at": "2026-11-28T08:16:00+03:00"
+      "updated_at": "2026-11-28T08:26:00+03:00"
     }
   },
   "runs": [
@@ -165430,6 +165437,32 @@
         },
         "yartemp": {
           "temperature_2m": -5.9
+        },
+        "uudl": {
+          "temperature_2m": -6.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -6.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -6.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-28T08:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -6.16
+        },
+        "frunze": {
+          "temperature_2m": -5.44
+        },
+        "east": {
+          "temperature_2m": -5.12
+        },
+        "yartemp": {
+          "temperature_2m": -5.88
         },
         "uudl": {
           "temperature_2m": -6.0
