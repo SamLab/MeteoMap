@@ -53788,34 +53788,39 @@
       "updated_at": "2026-11-28T08:56:00+03:00"
     },
     "2026-11-28T09:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -5.86,
-            -5.75
+            -5.75,
+            -5.6
           ]
         },
         "frunze": {
           "temperature_2m": [
             -5.44,
+            -5.23,
             -5.23
           ]
         },
         "east": {
           "temperature_2m": [
             -5.06,
-            -4.88
+            -4.88,
+            -4.69
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -5.62,
-            -5.41
+            -5.41,
+            -5.2
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -6.0,
             -6.0,
             -6.0
           ]
@@ -53823,17 +53828,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -6.0,
+            -6.0,
             -6.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -6.0,
+            -6.0,
             -6.0
           ]
         }
       },
-      "updated_at": "2026-11-28T09:16:00+03:00"
+      "updated_at": "2026-11-28T09:26:00+03:00"
     }
   },
   "runs": [
@@ -165458,6 +165465,32 @@
         },
         "yartemp": {
           "temperature_2m": -5.41
+        },
+        "uudl": {
+          "temperature_2m": -6.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -6.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -6.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-28T09:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -5.6
+        },
+        "frunze": {
+          "temperature_2m": -5.23
+        },
+        "east": {
+          "temperature_2m": -4.69
+        },
+        "yartemp": {
+          "temperature_2m": -5.2
         },
         "uudl": {
           "temperature_2m": -6.0
