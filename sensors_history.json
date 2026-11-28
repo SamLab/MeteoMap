@@ -53784,34 +53784,39 @@
       "updated_at": "2026-11-28T10:56:00+03:00"
     },
     "2026-11-28T11:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -3.67,
-            -3.53
+            -3.53,
+            -3.28
           ]
         },
         "frunze": {
           "temperature_2m": [
             -4.21,
+            -4.0,
             -4.0
           ]
         },
         "east": {
           "temperature_2m": [
             -3.44,
-            -3.25
+            -3.25,
+            -2.94
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -3.2,
-            -2.87
+            -2.87,
+            -2.65
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -4.0,
             -4.0,
             -4.0
           ]
@@ -53819,17 +53824,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -5.0,
+            -5.0,
             -5.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -5.0,
+            -4.0,
             -4.0
           ]
         }
       },
-      "updated_at": "2026-11-28T11:16:00+03:00"
+      "updated_at": "2026-11-28T11:26:00+03:00"
     }
   },
   "runs": [
@@ -165437,6 +165444,32 @@
         },
         "yartemp": {
           "temperature_2m": -2.87
+        },
+        "uudl": {
+          "temperature_2m": -4.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -5.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -4.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-28T11:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -3.28
+        },
+        "frunze": {
+          "temperature_2m": -4.0
+        },
+        "east": {
+          "temperature_2m": -2.94
+        },
+        "yartemp": {
+          "temperature_2m": -2.65
         },
         "uudl": {
           "temperature_2m": -4.0
