@@ -53768,16 +53768,18 @@
       "updated_at": "2026-11-28T06:56:00+03:00"
     },
     "2026-11-28T07:00": {
-      "samples": 14,
+      "samples": 21,
       "stations": {
         "penaty": {
           "temperature_2m": [
             -5.25,
-            -5.42
+            -5.42,
+            -5.54
           ]
         },
         "frunze": {
           "temperature_2m": [
+            -5.01,
             -5.01,
             -5.01
           ]
@@ -53785,17 +53787,20 @@
         "east": {
           "temperature_2m": [
             -4.56,
+            -4.75,
             -4.75
           ]
         },
         "yartemp": {
           "temperature_2m": [
             -5.39,
-            -5.53
+            -5.53,
+            -5.63
           ]
         },
         "uudl": {
           "temperature_2m": [
+            -5.0,
             -5.0,
             -5.0
           ]
@@ -53803,17 +53808,19 @@
         "wu-ananyino": {
           "temperature_2m": [
             -5.0,
+            -5.0,
             -5.0
           ]
         },
         "wu-zavolzhskoe": {
           "temperature_2m": [
             -6.0,
+            -6.0,
             -6.0
           ]
         }
       },
-      "updated_at": "2026-11-28T07:16:00+03:00"
+      "updated_at": "2026-11-28T07:26:00+03:00"
     }
   },
   "runs": [
@@ -165402,6 +165409,32 @@
         },
         "yartemp": {
           "temperature_2m": -5.53
+        },
+        "uudl": {
+          "temperature_2m": -5.0
+        },
+        "wu-ananyino": {
+          "temperature_2m": -5.0
+        },
+        "wu-zavolzhskoe": {
+          "temperature_2m": -6.0
+        }
+      }
+    },
+    {
+      "t": "2026-11-28T07:26:00+03:00",
+      "stations": {
+        "penaty": {
+          "temperature_2m": -5.54
+        },
+        "frunze": {
+          "temperature_2m": -5.01
+        },
+        "east": {
+          "temperature_2m": -4.75
+        },
+        "yartemp": {
+          "temperature_2m": -5.63
         },
         "uudl": {
           "temperature_2m": -5.0
